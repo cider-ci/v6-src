@@ -1,38 +1,25 @@
-(ns cider-ci.main
+(ns cider-ci.server.main
   (:require
-    [cider-ci.server.main :as server]
-    [cider-ci.shared.logging :as logging]
-    [cider-ci.shared.repl :as repl]
     [clj-yaml.core :as yaml]
     [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
-    [logbug.thrown :as thrown]
     [taoensso.timbre :refer [debug info warn error]]
     )
   (:gen-class))
 
-(thrown/reset-ns-filter-regex #"^(cider-ci)\..*")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def cli-options
   (concat
-    [["-h" "--help"]
-     [nil "--dev-mode DEV_MODE" "dev mode"
-      :default (or (some-> :dev-mode env yaml/parse-string) false)
-      :parse-fn #(yaml/parse-string %)
-      :validate [boolean? "Must parse to a boolean"]]]
-    repl/cli-options))
+    [["-h" "--help"]]
+    ))
 
 (defn main-usage [options-summary & more]
   (->> ["Cider-ci"
         ""
-        "usage: cider-ci [<opts>] SCOPE [<scope-opts>] SCOPE|COMMAND [<scope-opts>] ..."
-        ""
-        "available scopes: server"
+        "usage: cider-ci [<opts>] server [<server-opts>] SCOPE|COMMAND [<scope-opts>] ..."
         ""
         "Options:"
         options-summary
@@ -47,28 +34,19 @@
 
 (defonce args* (atom nil))
 
-(defn main []
-  (logging/init)
+(defn main [gopts args]
   (let [args @args*
         {:keys [options arguments errors summary]}
         (cli/parse-opts args cli-options :in-order true)
         pass-on-args (->> [options (rest arguments)]
                           flatten (into []))
         cmd (some-> arguments first keyword)
-        options (into (sorted-map) options)
+        options (merge gopts options)
         print-summary #(println (main-usage summary {:args args :options options}))]
     (info *ns* {'args args 'options options 'cmd cmd})
-    (repl/init options)
     (cond
       (:help options) (print-summary)
       :else (case cmd
-              :server (server/main options pass-on-args)
               (print-summary)))))
 
 
-; dynamic restart on require
-(when @args* (main))
-
-(defn -main [& args]
-  (reset! args* (or args []))
-  (main))

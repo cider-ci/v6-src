@@ -1,11 +1,14 @@
 {:paths [:cljc-paths :resource-paths]
  :deps {
+        clj-commons/clj-yaml {:mvn/version "0.7.107"}
         com.github.seancorfield/honeysql {:mvn/version "2.0.813"}
         com.github.seancorfield/next.jdbc {:mvn/version "1.2.753"}
         com.taoensso/timbre {:mvn/version "5.1.0"}
         environ/environ {:mvn/version "1.2.0"}
         funcool/cuerdas {:mvn/version "2021.05.29-0"}
         hikari-cp/hikari-cp {:mvn/version "2.13.0"}
+        logbug/logbug {:mvn/version "5.0.0"}
+        nrepl/nrepl {:mvn/version "0.9.0"}
         org.clojure/tools.cli {:mvn/version "1.0.206"}
 
         org.clojure/clojure {:mvn/version "1.10.3"}

@@ -1,0 +1,15 @@
+name: CIDER-CI/v6
+windows:
+  2:
+    name: back-repl-run
+    command: |
+      export DB_NAME=cider_ci_v6
+      ./bin/clj-run run
+  3:
+    name: front-repl-run
+    command: |
+      ./bin/cljs-watch-app
+  5:
+    name: psql
+    command: |
+      psql -d cider_ci_v6

@@ -1,0 +1,12 @@
+**/.DS_Store
+*pem
+.nrepl-port
+.rebel_readline_history
+/.cpcache
+/.sass-cache
+/.shadow-cljs
+/node_modules
+/resources/public/cider-ci/js/
+/target
+/tmp
+resources/built-info.yml

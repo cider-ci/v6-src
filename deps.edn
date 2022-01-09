@@ -1,0 +1,21 @@
+{:paths [:cljc-paths :resource-paths]
+ :deps {
+        com.github.seancorfield/honeysql {:mvn/version "2.0.813"}
+        com.github.seancorfield/next.jdbc {:mvn/version "1.2.753"}
+        com.taoensso/timbre {:mvn/version "5.1.0"}
+        environ/environ {:mvn/version "1.2.0"}
+        funcool/cuerdas {:mvn/version "2021.05.29-0"}
+        hikari-cp/hikari-cp {:mvn/version "2.13.0"}
+        org.clojure/tools.cli {:mvn/version "1.0.206"}
+
+        org.clojure/clojure {:mvn/version "1.10.3"}
+        org.clojure/clojurescript {:mvn/version "1.10.914"}
+        com.google.javascript/closure-compiler-unshaded {:mvn/version "v20211006"}
+        }
+ :aliases
+ {:cljc-paths ["src" "shared-clj/src"]
+  :cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.16.9"}}}
+  :resource-paths ["resources"]
+  :build {:deps {io.github.clojure/tools.build
+                 {:git/tag "v0.7.2" :git/sha "0361dde"}}
+          :ns-default scripts.build}}}

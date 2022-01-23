@@ -14,8 +14,12 @@
 (def cli-options
   (concat
     [["-h" "--help"]
-     ["-t" "--target VERSION" "Migrate up (or down) to VERSION"]
-     :default []]))
+     ["-s" "--start START_VERSION" "Migrate down to START_VERSION before migrating up to TARGET_VERSION"
+      :default nil
+      :parse-fn yaml/parse-string]
+     ["-t" "--target TARGET_VERSION" "Migrate up to TARGET_VERSION, defaults to max avail version"
+      :default nil
+      :parse-fn yaml/parse-string]]))
 
 (defn main-usage [options-summary & more]
   (->> ["Cider-ci"
@@ -34,6 +38,9 @@
            "-------------------------------------------------------------------"])]
        flatten (clojure.string/join \newline)))
 
+(defn migrate [options]
+  (info 'migrate options))
+
 
 (defn main [gopts args]
   (debug 'main {'gopts gopts 'args args})
@@ -44,9 +51,8 @@
         options (merge gopts options)
         print-summary #(println (main-usage summary {:args args :options options}))]
     (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
-    (cond
+    (if
       (:help options) (print-summary)
-      :else (case cmd
-              (print-summary)))))
+      (migrate options))))
 
 

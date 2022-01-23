@@ -14,8 +14,7 @@
 
 (def cli-options
   (concat
-    [["-h" "--help"]
-     :default []]))
+    [["-h" "--help"]]))
 
 (defn main-usage [options-summary & more]
   (->> ["Cider-ci"
@@ -37,8 +36,8 @@
 
 (defn main [gopts args]
   (debug 'main {'gopts gopts 'args args})
-  (let [{:keys [options arguments errors summary]}
-        (cli/parse-opts args cli-options :in-order true)
+  (let [{:keys [options arguments
+                errors summary]} (cli/parse-opts args cli-options :in-order true)
         cmd (some-> arguments first keyword)
         pass-on-args (->> (rest arguments) flatten (into []))
         options (merge gopts options)

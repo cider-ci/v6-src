@@ -1,12 +1,13 @@
 (ns cider-ci.server.db.core
   (:refer-clojure :exclude [str keyword])
   (:require
+    ;[pg-types.all]
+    ;[ring.util.codec]
     [cider-ci.utils.core :refer [str keyword]]
     [clojure.tools.logging :as logging]
     [cuerdas.core :as string :refer [snake kebab upper human]]
     [environ.core :refer [env]]
     [hikari-cp.core :as hikari]
-
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [logbug.catcher :as catcher]
@@ -14,8 +15,6 @@
     [logbug.ring :refer [wrap-handler-with-logging]]
     [logbug.thrown :as thrown]
     [next.jdbc :as jdbc]
-    ;[pg-types.all]
-    ;[ring.util.codec]
     [taoensso.timbre :refer [debug info warn error spy]]))
 
 

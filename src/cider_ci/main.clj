@@ -52,12 +52,11 @@
   (let [args @args*
         {:keys [options arguments errors summary]}
         (cli/parse-opts args cli-options :in-order true)
-        pass-on-args (->> [options (rest arguments)]
-                          flatten (into []))
         cmd (some-> arguments first keyword)
+        pass-on-args (->> (rest arguments) flatten (into []))
         options (into (sorted-map) options)
         print-summary #(println (main-usage summary {:args args :options options}))]
-    (info *ns* {'args args 'options options 'cmd cmd})
+    (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
     (repl/init options)
     (cond
       (:help options) (print-summary)

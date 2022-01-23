@@ -4,11 +4,11 @@
 
 (def LOGGING_CONFIG
   {:min-level [[#{
-                  ; "cider-ci.server.*"
+                  "cider-ci.server.*"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")
-                  "leihs.*"} :info]
+                  "cider-ci.*"} :info]
                [#{"*"} :warn]]
    :log-level nil})
 

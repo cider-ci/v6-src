@@ -1,7 +1,6 @@
-(ns cider-ci.server.main
+(ns cider-ci.server.db.migrations.main
   (:require
     [cider-ci.server.db.core :as db]
-    [cider-ci.server.db.main :as db-main]
     [clj-yaml.core :as yaml]
     [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
@@ -14,16 +13,16 @@
 
 (def cli-options
   (concat
-    [["-h" "--help"]]
-    db/cli-options
-    ))
+    [["-h" "--help"]
+     ["-t" "--target VERSION" "Migrate up (or down) to VERSION"]
+     :default []]))
 
 (defn main-usage [options-summary & more]
   (->> ["Cider-ci"
         ""
-        "usage: cider-ci [<opts>] server [<server-opts>] SCOPE|COMMAND [<scope-opts>] ..."
+        "usage: cider-ci [<opts>] server [<server-opts>] db [<db-opts>] migrate [<migration-opts>] ..."
         ""
-        "score / commands: db, run"
+        "Commands: migrate "
         ""
         "Options:"
         options-summary
@@ -34,7 +33,6 @@
            (with-out-str (pprint more))
            "-------------------------------------------------------------------"])]
        flatten (clojure.string/join \newline)))
-
 
 
 (defn main [gopts args]
@@ -49,7 +47,6 @@
     (cond
       (:help options) (print-summary)
       :else (case cmd
-              :db (db-main/main options pass-on-args)
               (print-summary)))))
 
 

@@ -1,5 +1,6 @@
 (ns cider-ci.main
   (:require
+    [cider-ci.dev]
     [cider-ci.server.main :as server]
     [cider-ci.shared.logging :as logging]
     [cider-ci.shared.repl :as repl]
@@ -45,18 +46,16 @@
        flatten (clojure.string/join \newline)))
 
 
-(defonce args* (atom nil))
-
-(defn main []
+(defn main [args]
   (logging/init)
-  (let [args @args*
-        {:keys [options arguments errors summary]}
+  (let [{:keys [options arguments errors summary]}
         (cli/parse-opts args cli-options :in-order true)
         cmd (some-> arguments first keyword)
         pass-on-args (->> (rest arguments) flatten (into []))
         options (into (sorted-map) options)
         print-summary #(println (main-usage summary {:args args :options options}))]
     (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
+    (when (:dev-mode options) (cider-ci.dev/init #'cider-ci.main/main args))
     (repl/init options)
     (cond
       (:help options) (print-summary)
@@ -64,10 +63,7 @@
               :server (server/main options pass-on-args)
               (print-summary)))))
 
-
-; dynamic restart on require
-(when @args* (main))
+;(cider-ci.dev/reload!)
 
 (defn -main [& args]
-  (reset! args* (or args []))
-  (main))
+  (main args))

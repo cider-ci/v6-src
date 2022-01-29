@@ -6,7 +6,6 @@
     [clojure.tools.logging :as logging]
     [cuerdas.core :as string :refer [snake kebab upper human]]
     [environ.core :refer [env]]
-    [hikari-cp.core :as hikari]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [logbug.catcher :as catcher]
@@ -14,8 +13,11 @@
     [logbug.ring :refer [wrap-handler-with-logging]]
     [logbug.thrown :as thrown]
     [next.jdbc :as jdbc]
+    [next.jdbc.connection :as connection]
     [pg-types.all]
-    [taoensso.timbre :refer [debug info warn error spy]]))
+    [taoensso.timbre :refer [debug info warn error spy]])
+  (:import
+    [com.zaxxer.hikari HikariDataSource]))
 
 
 (defonce ds* (atom nil))
@@ -98,32 +100,33 @@
   (when @ds*
     (do
       (logging/info "Closing db pool ...")
-      (-> @ds* :datasource hikari/close-datasource)
+      (.close ^HikariDataSource @ds*)
+
       (reset! ds* nil)
       (logging/info "Closing db pool done."))))
 
 (defn init-ds [db-options]
   (close)
-  (reset!
-    ds*
-    {:datasource
-     (hikari/make-datasource
-       {:auto-commit        true
-        :read-only          false
-        :connection-timeout 30000
-        :validation-timeout 5000
-        :idle-timeout       (* 1 60 1000) ; 1 minute
-        :max-lifetime       (* 1 60 60 1000) ; 1 hour
-        :minimum-idle       (get db-options db-min-pool-size-key)
-        :maximum-pool-size  (get db-options db-max-pool-size-key)
-        :pool-name          "db-pool"
-        :adapter            "postgresql"
-        :username           (get db-options db-user-key)
-        :password           (get db-options db-password-key)
-        :database-name      (get db-options db-name-key)
-        :server-name        (get db-options db-host-key)
-        :port-number        (get db-options db-port-key)
-        :register-mbeans    false})}))
+  (let [ds (connection/->pool
+             HikariDataSource
+             {:dbtype "postgres"
+              :dbname (get db-options db-name-key)
+              :username (get db-options db-user-key)
+              :password (get db-options db-password-key)
+              :host (get db-options db-host-key)
+              :port (get db-options db-port-key)
+              :maximumPoolSize  (get db-options db-max-pool-size-key)
+              :minimumIdle       (get db-options db-min-pool-size-key)
+              :autoCommit true
+              :connectionTimeout 30000
+              :validationTimeout 5000
+              :idleTimeout       (* 1 60 1000) ; 1 minute
+              :maxLifetime       (* 1 60 60 1000) ; 1 hour
+              })]
+    ;; this code initializes the pool and performs a validation check:
+    (.close (jdbc/get-connection ds))
+    (reset! ds* ds)
+    ds))
 
 (defn init
   ([options]

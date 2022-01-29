@@ -1,8 +1,10 @@
 (ns cider-ci.server.db.migrations.main
   (:require
+    [next.jdbc :as jdbc]
     [cider-ci.server.db.core :as db]
     [clj-yaml.core :as yaml]
     [clojure.pprint :refer [pprint]]
+    [clojure.java.io :as io]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
     [taoensso.timbre :refer [debug info warn error]]
@@ -38,9 +40,17 @@
            "-------------------------------------------------------------------"])]
        flatten (clojure.string/join \newline)))
 
-(defn migrate [options]
-  (info 'migrate options))
+(defn init [options]
+  (info 'init)
+  (let [init-up (-> "migrations/00000_up.sql" io/resource slurp)]
+    (debug {'init-up init-up})
+    (jdbc/execute! @db/ds* [init-up])
+    ))
 
+(defn migrate [options]
+  (info 'migrate options)
+  (db/init options)
+  (init options))
 
 (defn main [gopts args]
   (debug 'main {'gopts gopts 'args args})

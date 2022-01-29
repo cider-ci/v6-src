@@ -5,6 +5,8 @@
     [clojure.tools.namespace.repl :as ctnr :refer [refresh disable-reload!]]
     [taoensso.timbre :refer [debug info warn error]]))
 
+(disable-reload!)
+
 (defonce enabled?* (atom false))
 
 (defonce args* (atom nil))
@@ -17,7 +19,6 @@
 
 (defn init [main args]
   (info 'init [main args])
-  (disable-reload!)
   (disable-reload! (create-ns 'cider-ci.shared.repl))
   (reset! enabled?* true)
   (reset! args* (or args []))
@@ -30,3 +31,5 @@
         (cider-ci.server.db.core/close)
         (refresh)
         (@main* @args*))))
+
+;(reload!)

@@ -5,6 +5,7 @@
 (def LOGGING_CONFIG
   {:min-level [[#{
                   "cider-ci.server.*"
+                  "cider-ci.server.db.migrations.main"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

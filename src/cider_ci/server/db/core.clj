@@ -1,7 +1,6 @@
 (ns cider-ci.server.db.core
   (:refer-clojure :exclude [str keyword])
   (:require
-    ;[pg-types.all]
     ;[ring.util.codec]
     [cider-ci.utils.core :refer [str keyword]]
     [clojure.tools.logging :as logging]
@@ -15,6 +14,7 @@
     [logbug.ring :refer [wrap-handler-with-logging]]
     [logbug.thrown :as thrown]
     [next.jdbc :as jdbc]
+    [pg-types.all]
     [taoensso.timbre :refer [debug info warn error spy]]))
 
 
@@ -103,6 +103,7 @@
       (logging/info "Closing db pool done."))))
 
 (defn init-ds [db-options]
+  (close)
   (reset!
     ds*
     {:datasource

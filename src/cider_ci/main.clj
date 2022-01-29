@@ -65,5 +65,9 @@
 
 ;(cider-ci.dev/reload!)
 
+(defonce args* (atom nil))
+(when @args* (main @args*))
+
 (defn -main [& args]
+  (reset! args* (or args []))
   (main args))

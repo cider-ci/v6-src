@@ -1,12 +1,14 @@
 (ns cider-ci.server.db.migrations.main
   (:require
-    [next.jdbc :as jdbc]
     [cider-ci.server.db.core :as db]
+    [cider-ci.server.db.migrations.migrations :as migrations]
     [clj-yaml.core :as yaml]
-    [clojure.pprint :refer [pprint]]
     [clojure.java.io :as io]
+    [clojure.pprint :refer [pprint]]
+    [clojure.set :refer [difference]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
+    [next.jdbc :as jdbc]
     [taoensso.timbre :refer [debug info warn error]]
     ))
 
@@ -20,7 +22,7 @@
       :default nil
       :parse-fn yaml/parse-string]
      ["-t" "--target TARGET_VERSION" "Migrate up to TARGET_VERSION, defaults to max avail version"
-      :default nil
+      :default (apply max (migrations/available))
       :parse-fn yaml/parse-string]]))
 
 (defn main-usage [options-summary & more]
@@ -42,15 +44,44 @@
 
 (defn init [options]
   (info 'init)
-  (let [init-up (-> "migrations/00000_up.sql" io/resource slurp)]
-    (debug {'init-up init-up})
-    (jdbc/execute! @db/ds* [init-up])
+  (apply (-> migrations/migrations (get 0) (get :up)) [@db/ds*])
+  (->> ["SELECT * FROM migrations ORDER BY id;"]
+       (jdbc/execute! @db/ds*)
+       (map :migrations/id)))
+
+(defn migrate-downs! [ds downs]
+
+  )
+
+(defn migrate-ups! [ds ups]
+  (doseq [up ups]
+
+
     ))
 
 (defn migrate [options]
   (info 'migrate options)
   (db/init options)
-  (init options))
+  (let [target (:target options)
+        migrated (init options)
+        available (migrations/available)
+        start (or (:start options)
+                  (apply max migrated))
+        downs (->> migrated
+                   (filter #(< % start))
+                   (into (sorted-set)))
+        ups (->> (difference available migrated)
+                 (filter #(<= % target))
+                 (into (sorted-set)))]
+    (info {'migrated migrated
+           'available available
+           'start start
+           'target target
+           'downs downs
+           'ups ups})
+    (jdbc/with-transaction [tx @db/ds*]
+      (migrate-downs! tx downs)
+      (migrate-up! tx ups))))
 
 (defn main [gopts args]
   (debug 'main {'gopts gopts 'args args})

@@ -9,6 +9,7 @@
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
     [next.jdbc :as jdbc]
+    [next.jdbc.sql :as jdbc-sql]
     [taoensso.timbre :refer [debug info warn error]]
     ))
 
@@ -50,14 +51,16 @@
        (map :migrations/id)))
 
 (defn migrate-downs! [ds downs]
+  ;TODO
 
   )
 
 (defn migrate-ups! [ds ups]
   (doseq [up ups]
-
-
-    ))
+    (info "migrating up " up " ... ")
+    ((-> migrations/migrations (get up) (get :up)) ds)
+    (jdbc-sql/insert! ds :migrations {:id up})
+    (info "migrated up " up)))
 
 (defn migrate [options]
   (info 'migrate options)
@@ -81,7 +84,7 @@
            'ups ups})
     (jdbc/with-transaction [tx @db/ds*]
       (migrate-downs! tx downs)
-      (migrate-up! tx ups))))
+      (migrate-ups! tx ups))))
 
 (defn main [gopts args]
   (debug 'main {'gopts gopts 'args args})

@@ -3,7 +3,7 @@
     [cider-ci.server.db.core :as db]
     [clojure.java.io :as io]
     [next.jdbc :as jdbc]
-    [cider-ci.server.db.migrations.utils :refer [exec-resource-sql]]
+    [cider-ci.server.db.migrations.utils :refer [exec-resource-sql!]]
     [taoensso.timbre :refer [debug info warn error]]
     ))
 

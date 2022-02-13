@@ -5,7 +5,7 @@
     [clj-yaml.core :as yaml]
     [clojure.java.io :as io]
     [clojure.pprint :refer [pprint]]
-    [clojure.set :refer [difference]]
+    [clojure.set :refer [difference union]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
     [next.jdbc :as jdbc]
@@ -51,9 +51,11 @@
        (map :migrations/id)))
 
 (defn migrate-downs! [ds downs]
-  ;TODO
-
-  )
+  (doseq [down downs]
+    (info "migrating down " down " ... ")
+    ((-> migrations/migrations (get down) (get :down)) ds)
+    (jdbc-sql/delete! ds :migrations {:id down})
+    (info "migrated down " down)))
 
 (defn migrate-ups! [ds ups]
   (doseq [up ups]
@@ -71,9 +73,10 @@
         start (or (:start options)
                   (apply max migrated))
         downs (->> migrated
-                   (filter #(< % start))
+                   (filter #(> % start))
                    (into (sorted-set)))
         ups (->> (difference available migrated)
+                 (union downs)
                  (filter #(<= % target))
                  (into (sorted-set)))]
     (info {'migrated migrated

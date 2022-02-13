@@ -11,8 +11,7 @@
     [logbug.catcher :as catcher]
     [logbug.debug :as debug]
     [logbug.thrown :as thrown]
-    [taoensso.timbre :refer [debug info warn error]]
-    )
+    [taoensso.timbre :refer [debug info warn error]])
   (:gen-class))
 
 (thrown/reset-ns-filter-regex #"^(cider-ci)\..*")

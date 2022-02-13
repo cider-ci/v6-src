@@ -1,13 +1,14 @@
 {:paths [:cljc-paths :resource-paths]
  :deps {
         clj-commons/clj-yaml {:mvn/version "0.7.107"}
-        com.github.seancorfield/honeysql {:mvn/version "2.2.858"}
-        com.github.seancorfield/next.jdbc {:mvn/version "1.2.761"}
+        com.github.seancorfield/honeysql {:mvn/version "2.2.861"}
+        com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
         com.taoensso/timbre {:mvn/version "5.1.2"}
-        com.zaxxer/HikariCP {:mvn/version "3.3.1"}
+        com.zaxxer/HikariCP {:mvn/version "5.0.1"}
         environ/environ {:mvn/version "1.2.0"}
         funcool/cuerdas {:mvn/version "2022.01.14-391"}
         logbug/logbug {:mvn/version "5.0.0"}
+        metosin/reitit {:mvn/version "0.5.15"}
         nrepl/nrepl {:mvn/version "0.9.0"}
         org.clojure/tools.cli {:mvn/version "1.0.206"}
         org.clojure/tools.namespace {:mvn/version "1.2.0"}
@@ -15,19 +16,19 @@
 
         org.clojure/clojure {:mvn/version "1.10.3"}
         org.clojure/clojurescript {:mvn/version "1.11.4"}
-        com.google.javascript/closure-compiler-unshaded {:mvn/version "v20220104"}
+        com.google.javascript/closure-compiler-unshaded {:mvn/version "v20220202"}
         }
  :aliases {
 
            :build-leihs {:deps
-                         {io.github.leihs/tools.build {:git/sha "700af097d4a7d2bf4739d0d4b1d1ac2c11019ff7"}}
+                         {io.github.leihs/tools.build {:git/sha "c0d555bc261ffa963f9fedeba3df338fc19508b7"}}
                          :ns-default scripts.build}
 
            :cljc-paths ["src" "shared-clj/src"]
 
-           :cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.16.12"}}}
+           :cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.17.2"}}}
 
-           :outdated {:extra-deps {com.github.liquidz/antq {:mvn/version "1.4.0"} }
+           :outdated {:extra-deps {com.github.liquidz/antq {:mvn/version "1.5.0"} }
                       :main-opts ["-m" "antq.core"]}
 
            :resource-paths ["resources"]

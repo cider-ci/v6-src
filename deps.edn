@@ -1,5 +1,6 @@
 {:paths [:cljc-paths :resource-paths]
  :deps {
+        cheshire/cheshire {:mvn/version "5.10.2"}
         clj-commons/clj-yaml {:mvn/version "0.7.107"}
         com.github.seancorfield/honeysql {:mvn/version "2.2.861"}
         com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
@@ -7,6 +8,7 @@
         com.zaxxer/HikariCP {:mvn/version "5.0.1"}
         environ/environ {:mvn/version "1.2.0"}
         funcool/cuerdas {:mvn/version "2022.01.14-391"}
+        http-kit/http-kit {:mvn/version "2.5.3"}
         logbug/logbug {:mvn/version "5.0.0"}
         metosin/reitit {:mvn/version "0.5.15"}
         nrepl/nrepl {:mvn/version "0.9.0"}

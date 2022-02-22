@@ -2,9 +2,9 @@
   (:refer-clojure :exclude [str keyword])
   (:require
     ;[ring.util.codec]
+    [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [str keyword]]
     [clojure.tools.logging :as logging]
-    [cuerdas.core :as string :refer [snake kebab upper human]]
     [environ.core :refer [env]]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -26,9 +26,6 @@
 
 
 ;;; CLI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn long-opt-for-key [k]
-  (str "--" (kebab k) " " (-> k snake upper)))
 
 (def db-name-key :db-name)
 (def db-port-key :db-port)

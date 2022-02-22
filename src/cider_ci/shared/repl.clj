@@ -1,7 +1,7 @@
 (ns cider-ci.shared.repl
   (:refer-clojure :exclude [str keyword])
   (:require
-    [camel-snake-kebab.core :refer [->snake_case]]
+    [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [presence keyword str]]
     [clj-yaml.core :as yaml]
     [clojure.java.io :as io]
@@ -14,9 +14,6 @@
 
 
 ;;; cli-options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn long-opt-for-key [k]
-  (str "--" k " " (-> k str ->snake_case upper-case)))
 
 (defonce options* (atom nil))
 

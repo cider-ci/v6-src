@@ -1,11 +1,10 @@
-(ns cider-ci.http.server
+(ns cider-ci.server.http.server
   (:refer-clojure :exclude [str keyword])
   (:require
-    [clojure.tools.logging :as logging]
+    [cider-ci.utils.cli :refer [long-opt-for-key]]
     [environ.core :refer [env]]
-    [madek.media-service.utils.cli-options :refer [long-opt-for-key]]
-    [madek.media-service.utils.core :refer [keyword presence str]]
-    [org.httpkit.server :as http-kit]))
+    [org.httpkit.server :as http-kit]
+    [taoensso.timbre :refer [debug info warn error]]))
 
 
 ;;; cli-options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -21,7 +20,7 @@
 
 (def cli-options
   [[nil (long-opt-for-key http-server-port-key)
-    :default (or (some-> http-server-port-key env Integer/parseInt) 3180)
+    :default (or (some-> http-server-port-key env Integer/parseInt) 3838)
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    [nil (long-opt-for-key http-server-bind-key)
@@ -39,14 +38,14 @@
 
 (defn stop []
   (when-not (nil? @server*)
-    (logging/info "stopping HTTP server" @server*)
+    (info "stopping HTTP server" @server*)
     (@server* :timeout 100)
     (reset! server* nil)))
 
 (defn init [handler all-options]
   (reset! options* (select-keys all-options options-keys))
   (stop)
-  (logging/info "starting HTTP server " @options* " ...")
+  (info "starting HTTP server " @options* " ...")
   (reset! server*
           (http-kit/run-server
             handler
@@ -54,4 +53,4 @@
              :port (http-server-port-key @options*)
              :thread (http-server-threads-key @options*)
              :worker-name-prefix "http-server-worker-"}))
-  (logging/info "started HTTP server"))
+  (info "started HTTP server"))

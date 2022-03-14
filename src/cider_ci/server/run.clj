@@ -1,16 +1,19 @@
 (ns cider-ci.server.run
   (:require
-    [clojure.pprint :refer [pprint]]
+    [cider-ci.server.http.server :as http-server]
     [cider-ci.server.db.core :as db]
+    [cider-ci.server.routing :as routing]
+    [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
-    [taoensso.timbre :refer [debug info warn error]]
+
     ))
 
 (def cli-options
   (concat
     [["-h" "--help"]]
-        db/cli-options
+    db/cli-options
+    http-server/cli-options
     ))
 
 
@@ -31,7 +34,10 @@
 
 
 (defn run [options]
-  (info "run with " options))
+  (info "run with " options)
+  (let [routes (routing/init options)]
+    (http-server/init routes options)
+    ))
 
 
 (defn main [gopts args]

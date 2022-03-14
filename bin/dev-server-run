@@ -1,0 +1,9 @@
+#!/bin/bash -eu
+
+set -euo
+PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
+cd $PROJECT_DIR
+source $PROJECT_DIR/support/clojure/bin/activate
+clj -M -m cider-ci.main --dev-mode true --repl true server run "$@"
+
+# vi: ft=sh

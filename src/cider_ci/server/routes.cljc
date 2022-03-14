@@ -24,11 +24,6 @@
       first
       (->> (reitit/match-by-path router))))
 
-; (route "/media-service/uploads/")
-; (route "/media-service/uploads/?debug=true")
-; (route "/media-service/uploads/foo/")
-; (route "/media-service/uploads/foo/parts/5")
-
 (defn path
   ([kw]
    (path kw {}))

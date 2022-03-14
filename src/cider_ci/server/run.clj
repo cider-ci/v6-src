@@ -1,30 +1,23 @@
-(ns cider-ci.server.main
+(ns cider-ci.server.run
   (:require
-    [cider-ci.server.db.core :as db]
-    [cider-ci.server.db.main :as db-main]
-    [cider-ci.server.run :as run]
-    [clj-yaml.core :as yaml]
     [clojure.pprint :refer [pprint]]
+    [cider-ci.server.db.core :as db]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
     [taoensso.timbre :refer [debug info warn error]]
     ))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (def cli-options
   (concat
     [["-h" "--help"]]
-    db/cli-options
+        db/cli-options
     ))
+
 
 (defn main-usage [options-summary & more]
   (->> ["Cider-ci"
         ""
-        "usage: cider-ci [<opts>] server [<server-opts>] SCOPE|COMMAND [<scope-opts>] ..."
-        ""
-        "score / commands: db, run"
+        "usage: cider-ci [<opts>] server [<server-opts>] run [<run-opts>]"
         ""
         "Options:"
         options-summary
@@ -36,6 +29,9 @@
            "-------------------------------------------------------------------"])]
        flatten (clojure.string/join \newline)))
 
+
+(defn run [options]
+  (info "run with " options))
 
 
 (defn main [gopts args]
@@ -49,9 +45,4 @@
     (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
     (cond
       (:help options) (print-summary)
-      :else (case cmd
-              :db (db-main/main options pass-on-args)
-              :run (run/main options pass-on-args)
-              (print-summary)))))
-
-
+      :else (run options))))

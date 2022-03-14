@@ -6,6 +6,7 @@
 /.sass-cache
 /.shadow-cljs
 /node_modules
+/resources/cider-ci/public/js/
 /resources/public/cider-ci/js/
 /target
 /tmp

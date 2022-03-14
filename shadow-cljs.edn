@@ -1,0 +1,8 @@
+{:deps {:aliases [:cljs]}
+ :builds {:cider-ci {:asset-path "/cider-ci/public/js"
+                     :devtools {:http-root "resources/" :http-port 8020}
+                     :modules {:main {:init-fn cider-ci.server.main/init}}
+                     :output-dir "resources/cider-ci/public/js"
+                     :module-hash-names true
+                     :release {:compiler-options {:optimizations :advanced}}
+                     :target :browser}}}

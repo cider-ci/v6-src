@@ -6,7 +6,7 @@
     [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
-
+    [taoensso.timbre :refer [debug info warn error]]
     ))
 
 (def cli-options

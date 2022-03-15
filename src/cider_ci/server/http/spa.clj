@@ -1,15 +1,14 @@
-(ns madek.cider-ci.resources.spa-back
+(ns cider-ci.server.http.spa
   (:refer-clojure :exclude [keyword str])
   (:require
     [hiccup.page :refer [html5 include-js include-css]]
     [clojure.tools.logging :as logging :refer [debug info warn error]]
-    [madek.cider-ci.utils.query-params :refer [encode-primitive]]
+    [cider-ci.utils.query-params :refer [encode-primitive]]
     [clojure.java.io :as io]
     [logbug.debug :refer [debug-ns]]
-    [madek.cider-ci.state :refer [state*]]
-    [madek.cider-ci.utils.json :as json]
-    [madek.cider-ci.utils.core :refer [keyword presence str]]
-    [madek.cider-ci.utils.cli-options :refer [long-opt-for-key]]))
+    [cider-ci.utils.json :as json]
+    [cider-ci.utils.core :refer [keyword presence str]]
+    [cider-ci.utils.cli :refer [long-opt-for-key]]))
 
 (defn head []
   [:head
@@ -35,11 +34,10 @@
    :headers {"Content-Type" "text/html"}
    :body (html5
            (head)
-           [:body {:data-user (-> user json/to-json encode-primitive)
-                   :data-server-state (-> @state* json/to-json encode-primitive)}
+           [:body {:data-user (-> user json/to-json encode-primitive)}
             [:div#app
              [:div.container
-              [:h1 "Madek Media-Service"]
+              [:h1 "Cider-CI"]
               [:p "Loading application ..."]]]]
            js-includes)})
 

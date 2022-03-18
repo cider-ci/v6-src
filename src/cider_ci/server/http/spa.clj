@@ -1,14 +1,15 @@
 (ns cider-ci.server.http.spa
   (:refer-clojure :exclude [keyword str])
   (:require
-    [hiccup.page :refer [html5 include-js include-css]]
-    [clojure.tools.logging :as logging :refer [debug info warn error]]
+    [cider-ci.utils.cli :refer [long-opt-for-key]]
+    [cider-ci.utils.core :refer [keyword presence str]]
+    [cider-ci.utils.json :as json]
     [cider-ci.utils.query-params :refer [encode-primitive]]
     [clojure.java.io :as io]
+    [hiccup.page :refer [html5 include-js include-css]]
     [logbug.debug :refer [debug-ns]]
-    [cider-ci.utils.json :as json]
-    [cider-ci.utils.core :refer [keyword presence str]]
-    [cider-ci.utils.cli :refer [long-opt-for-key]]))
+    [taoensso.timbre :refer [debug info warn error spy]]
+    ))
 
 (defn head []
   [:head
@@ -24,10 +25,14 @@
           read-string))
 
 (def js-includes
-  (->> js-manifest seq
+  (->> js-manifest spy seq
        (map :output-name)
        (map #(str "/cider-ci/public/js/" %))
-       (map hiccup.page/include-js)))
+       spy
+       (map hiccup.page/include-js)
+       spy
+       (into [])
+       spy))
 
 (defn html-handler [{user :authenticated-entity :as request}]
   {:status 200
@@ -50,3 +55,5 @@
 (defn wrap [handler]
   (fn [request]
     (dispatch handler request)))
+
+

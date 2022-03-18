@@ -6,6 +6,7 @@
         com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
         com.taoensso/timbre {:mvn/version "5.1.2"}
         com.zaxxer/HikariCP {:mvn/version "5.0.1"}
+        digest/digest {:mvn/version "1.4.10"}
         environ/environ {:mvn/version "1.2.0"}
         funcool/cuerdas {:mvn/version "2022.01.14-391"}
         hiccup/hiccup {:mvn/version "1.0.5"}
@@ -13,6 +14,7 @@
         logbug/logbug {:mvn/version "5.0.0"}
         metosin/reitit {:mvn/version "0.5.17"}
         nrepl/nrepl {:mvn/version "0.9.0"}
+        org.clojure/core.memoize {:mvn/version "1.0.257"}
         org.clojure/tools.cli {:mvn/version "1.0.206"}
         org.clojure/tools.namespace {:mvn/version "1.2.0"}
         pg-types/pg-types {:mvn/version  "3.0.0"}

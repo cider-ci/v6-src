@@ -14,7 +14,7 @@
     [taoensso.timbre :refer [debug info warn error]])
   (:gen-class))
 
-(thrown/reset-ns-filter-regex #"^(cider-ci)\..*")
+;(thrown/reset-ns-filter-regex #"^(cider-ci)\..*")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

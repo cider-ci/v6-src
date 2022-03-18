@@ -2,11 +2,12 @@
   (:require
     [clojure.core.memoize :as memoize]
     [digest]
+    [logbug.debug :as debug]
     [ring.middleware.resource :as resource]
     [ring.util.codec :as codec]
     [ring.util.request :as request]
     [ring.util.response :as response]
-    [taoensso.timbre :refer [debug info warn error]]
+    [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 (defn- path-matches? [path xp]
@@ -70,10 +71,12 @@
 
 
 (defn- resource [request root-path options]
+  (debug 'resource [request root-path options])
   (let [path (-> request request/path-info codec/url-decode)]
+    (debug {'path path})
     (cond
       (not (:cache-enabled? options)) (resource/resource-request
-                                         request root-path options)
+                                        request root-path options)
 
       (cache-busted-resource?
         path options) (cache-bust path request root-path options)
@@ -116,6 +119,8 @@
    (let [effectiv-options (merge default-options options)]
      (info " wrapped static-resources routing with " effectiv-options)
      (fn [request]
+       (debug 'wrap {'request request 'handler handler 'root-path root-path
+                     'effectiv-options effectiv-options})
        (or (resource request root-path effectiv-options)
            (handler request))))))
 
@@ -124,3 +129,4 @@
 ;#### debug ###################################################################
 ;(debug/debug-ns 'cider-ci.utils.shutdown)
 ;(debug/debug-ns *ns*)
+;(logbug.debug/wrap-with-log-debug #'resource)

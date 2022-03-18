@@ -7,7 +7,7 @@
     [cider-ci.utils.query-params :refer [encode-primitive]]
     [clojure.java.io :as io]
     [hiccup.page :refer [html5 include-js include-css]]
-    [logbug.debug :refer [debug-ns]]
+    [logbug.debug :as debug :refer [debug-ns]]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -28,11 +28,7 @@
   (->> js-manifest spy seq
        (map :output-name)
        (map #(str "/cider-ci/public/js/" %))
-       spy
-       (map hiccup.page/include-js)
-       spy
-       (into [])
-       spy))
+       (map hiccup.page/include-js)))
 
 (defn html-handler [{user :authenticated-entity :as request}]
   {:status 200
@@ -56,4 +52,7 @@
   (fn [request]
     (dispatch handler request)))
 
-
+;#### debug ###################################################################
+;(debug/debug-ns 'cider-ci.utils.shutdown)
+;(debug/debug-ns *ns*)
+;(logbug.debug/wrap-with-log-debug #'resource)

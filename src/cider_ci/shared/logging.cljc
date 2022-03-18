@@ -4,8 +4,8 @@
 
 (def LOGGING_CONFIG
   {:min-level [[#{
-                  "cider-ci.server.*"
-                  "cider-ci.server.http.spa"
+                  ;"cider-ci.server.*"
+                  ;"cider-ci.server.http.spa"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

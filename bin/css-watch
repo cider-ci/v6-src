@@ -6,4 +6,4 @@ npx node-sass --watch --recursive \
     --output-style compressed --source-map true --source-map-contents true --precision 6 \
     --output resources/cider-ci/public/css \
     --include-path node_modules \
-    src-css
+    css-src

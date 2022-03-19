@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euxo
+PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
+cd $PROJECT_DIR
+npx node-sass --watch --recursive \
+    --output-style compressed --source-map true --source-map-contents true --precision 6 \
+    --output resources/cider-ci/public/css \
+    --include-path node_modules \
+    src-css

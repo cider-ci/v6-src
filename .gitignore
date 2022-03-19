@@ -7,7 +7,7 @@
 /.shadow-cljs
 /node_modules
 /resources/cider-ci/public/js/
-/resources/public/cider-ci/js/
+/resources/cider-ci/public/css/
 /target
 /tmp
 resources/built-info.yml

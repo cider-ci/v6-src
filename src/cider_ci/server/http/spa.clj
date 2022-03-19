@@ -16,7 +16,7 @@
    [:meta {:charset "utf-8"}]
    [:meta {:name "viewport"
            :content "width=device-width, initial-scale=1, shrink-to-fit=no"}]
-   (include-css "/cider-ci/public/bootstrap-4.3.1.min.css")])
+   (include-css "/cider-ci/public/css/main.css")])
 
 (def js-manifest
   (some-> "cider-ci/public/js/manifest.edn"

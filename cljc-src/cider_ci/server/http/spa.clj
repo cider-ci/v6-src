@@ -25,7 +25,7 @@
           read-string))
 
 (def js-includes
-  (->> js-manifest spy seq
+  (->> js-manifest seq
        (map :output-name)
        (map #(str "/cider-ci/public/js/" %))
        (map hiccup.page/include-js)))

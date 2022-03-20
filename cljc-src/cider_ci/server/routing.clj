@@ -4,7 +4,7 @@
     [cider-ci.server.http.static-resources :as static-resources]
     [cider-ci.server.routes]
     [ring.middleware.accept]
-    [taoensso.timbre :refer [debug info warn error]]
+    [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 

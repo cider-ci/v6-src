@@ -1,6 +1,7 @@
 (ns cider-ci.server.main
   (:require
     [cider-ci.shared.logging :as logging]
+    [cider-ci.server.routing]
     [taoensso.timbre :refer [debug info warn error]]
     ))
 

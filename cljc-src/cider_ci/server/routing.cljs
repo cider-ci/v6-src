@@ -5,6 +5,7 @@
     [cider-ci.server.routes :as routes :refer [path]]
     [cider-ci.utils.core :refer [keyword str presence]]
     [cider-ci.utils.query-params :refer [decode] :rename {decode query-params-decode}]
+    [cider-ci.server.state :refer [routing-state*] :rename {routing-state* state*}]
     [clojure.pprint :refer [pprint]]
     [reagent.core :as reagent]
     [reitit.core :as reitit]
@@ -13,7 +14,6 @@
     [reagent.ratom :as ratom :refer [reaction]]
     ))
 
-(defonce state* (reagent/atom {}))
 
 (def resolve-table
   {; :home #'home/page
@@ -45,4 +45,4 @@
 (defn init []
   (info "initializing routing ...")
   (init-navigation)
-  (info "initialized routing"))
+  (info "initialized routing " @state*))

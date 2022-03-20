@@ -1,6 +1,7 @@
 (ns cider-ci.server.http.spa
   (:refer-clojure :exclude [keyword str])
   (:require
+    [cider-ci.server.http.spa-page :refer [header]]
     [cider-ci.server.state :refer [routing-state*]]
     [reagent.dom :as rdom]
     [taoensso.timbre :refer [debug info warn error spy]]
@@ -13,6 +14,7 @@
 
 (defn html []
   [:div.container
+   [header]
    (if-let [page (:page @routing-state*)]
      [page]
      [not-found-page])])

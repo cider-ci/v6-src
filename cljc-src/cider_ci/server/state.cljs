@@ -16,13 +16,13 @@
                    :debug @debug?*}
                   ))
 
-
 (defn debug-ui-component []
   [:div.debug.state-debug
    (when @debug?*
-     [:hr]
-     [:h4 "Debug global " [:code "@state*"]]
-     [:pre.bg-light
-      [:code
-       (with-out-str (pprint @state*))
-       ]])])
+     [:<>
+      [:hr]
+      [:h4 "Debug global " [:code "@state*"]]
+      [:pre.bg-light
+       [:code
+        (with-out-str (pprint @state*))
+        ]]])])

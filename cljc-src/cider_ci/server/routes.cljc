@@ -8,7 +8,7 @@
 
 (def routes
   [
-   ["/" [:name :root]]
+   ["/" {:name :root}]
    ["/initial-admin" {:name :initial-admin}]
    ])
 

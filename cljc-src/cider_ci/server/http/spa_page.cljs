@@ -13,10 +13,11 @@
   [:> bs/Navbar {:bg :light :expand :lg}
    [:> bs/Container {}
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]
-    [:text "Hallo Helena!!!!!"]
-    [:text "Velofahren jetzt !"]
-
     ]])
 
 
+(defn footer []
+  [:div]
 
+
+  )

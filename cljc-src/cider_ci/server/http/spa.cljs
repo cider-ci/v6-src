@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     [cider-ci.server.http.spa-page :refer [header]]
-    [cider-ci.server.state :refer [routing-state*]]
+    [cider-ci.server.state :as state]
     [reagent.dom :as rdom]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
@@ -15,9 +15,11 @@
 (defn html []
   [:div.container
    [header]
-   (if-let [page (:page @routing-state*)]
+   (if-let [page (:page @state/routing*)]
      [page]
-     [not-found-page])])
+     [not-found-page])
+   [state/debug-ui-component]
+   ])
 
 (defn mount []
   (info "mounting application")

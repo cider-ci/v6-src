@@ -42,7 +42,7 @@
   [[nil (long-opt-for-key db-name-key) "Database name, falls back to PGDATABASE | cider-ci"
     :default (or (some-> db-name-key env)
                  (some-> :pgdatabase env)
-                 "leihs")]
+                 "cider_ci_v6")]
    [nil (long-opt-for-key db-port-key) "Database port, falls back to PGPORT or 5432"
     :default (or (some-> db-port-key env Integer/parseInt)
                  (some-> :pgport env Integer/parseInt)
@@ -56,11 +56,11 @@
    [nil (long-opt-for-key db-user-key) "Database user, falls back to PGUSER | 'cider-ci'"
     :default (or (some-> db-user-key env)
                  (some-> :pguser env)
-                 "leihs")]
+                 "cider-ci")]
    [nil (long-opt-for-key db-password-key) "Database password, falls back to PGPASSWORD |'cider-ci'"
     :default (or (some-> db-password-key env)
                  (some-> :pgpassword env)
-                 "leihs")]
+                 "cider-ci")]
    [nil (long-opt-for-key db-min-pool-size-key)
     :default (or (some-> db-min-pool-size-key env Integer/parseInt)
                  2)

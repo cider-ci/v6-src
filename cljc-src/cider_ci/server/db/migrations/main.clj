@@ -48,7 +48,8 @@
   (apply (-> migrations/migrations (get 0) (get :up)) [@db/ds*])
   (->> ["SELECT * FROM migrations ORDER BY id;"]
        (jdbc/execute! @db/ds*)
-       (map :migrations/id)))
+       (map :migrations/id)
+       (apply sorted-set)))
 
 (defn migrate-downs! [ds downs]
   (doseq [down downs]
@@ -91,15 +92,18 @@
 
 (defn main [gopts args]
   (debug 'main {'gopts gopts 'args args})
-  (let [{:keys [options arguments errors summary]}
-        (cli/parse-opts args cli-options :in-order true)
-        cmd (some-> arguments first keyword)
-        pass-on-args (->> (rest arguments) flatten (into []))
-        options (merge gopts options)
-        print-summary #(println (main-usage summary {:args args :options options}))]
-    (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
-    (if
-      (:help options) (print-summary)
-      (migrate options))))
+  (try
+    (let [{:keys [options arguments errors summary]}
+          (cli/parse-opts args cli-options :in-order true)
+          cmd (some-> arguments first keyword)
+          pass-on-args (->> (rest arguments) flatten (into []))
+          options (merge gopts options)
+          print-summary #(println (main-usage summary {:args args :options options}))]
+      (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
+      (if
+        (:help options) (print-summary)
+        (migrate options)))
+    (catch Exception e
+      (warn e))))
 
 

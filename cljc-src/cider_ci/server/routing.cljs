@@ -6,6 +6,7 @@
     [cider-ci.utils.core :refer [keyword str presence]]
     [cider-ci.utils.query-params :refer [decode] :rename {decode query-params-decode}]
     [cider-ci.server.state :as state]
+    [cider-ci.server.resources.root :as root]
     [clojure.pprint :refer [pprint]]
     [cider-ci.utils.yaml :as yaml]
     [reagent.core :as reagent]
@@ -17,7 +18,7 @@
 
 
 (def resolve-table
-  {; :home #'home/page
+  {:root #'root/page
    })
 
 

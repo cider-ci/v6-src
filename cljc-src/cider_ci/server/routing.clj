@@ -2,6 +2,7 @@
   (:require
     [cider-ci.server.http.spa :as spa]
     [cider-ci.server.http.static-resources :as static-resources]
+    [cider-ci.server.db.core :refer [wrap-tx]]
     [cider-ci.server.routes]
     [ring.middleware.accept]
     [taoensso.timbre :refer [debug info warn error spy]]
@@ -34,13 +35,21 @@
          #".+\.[0-9a-fA-F]{32,}\..+"] ; match MD5, SHAx, ... in the filename
         :cache-enabled? (->  @options* :dev-mode not)}))
 
+(defn wrap-catch [hander]
+  (fn [request]
+    (try (hander request)
+         (catch Exception e
+           (error e)
+           {:status 500
+            :body "Internal Server Error"}))))
 
 (defn build-routes [options]
   (-> not-found-handler
       spa/wrap
+      wrap-tx
       wrap-accept
       static-resources-wrap
-      ))
+      wrap-catch))
 
 
 (defn init [options]

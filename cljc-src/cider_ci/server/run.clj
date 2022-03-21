@@ -35,6 +35,7 @@
 
 (defn run [options]
   (info "run with " options)
+  (db/init options)
   (let [routes (routing/init options)]
     (http-server/init routes options)
     ))

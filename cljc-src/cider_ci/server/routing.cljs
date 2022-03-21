@@ -7,6 +7,7 @@
     [cider-ci.utils.query-params :refer [decode] :rename {decode query-params-decode}]
     [cider-ci.server.state :as state]
     [clojure.pprint :refer [pprint]]
+    [cider-ci.utils.yaml :as yaml]
     [reagent.core :as reagent]
     [reitit.core :as reitit]
     [taoensso.timbre :refer [debug info warn error spy]])
@@ -26,9 +27,12 @@
     (assoc state :name (get-in state [:data :name]))
     (assoc state :page (get resolve-table (:name state)))
     (assoc state :query-params (some->> url :query query-params-decode))
+    (assoc state :query-params-parsed (some->> state :query-params
+                                               (map (fn [[k v]] [k (yaml/parse v)]))
+                                               (into {})))
     (assoc state :route (path (:name state)
-                                      (:path-params state)
-                                      (:query-params state)))
+                              (:path-params state)
+                              (:query-params state)))
     (reset! state/routing* state)))
 
 (defn navigate? [url]

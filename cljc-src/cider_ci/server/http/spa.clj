@@ -30,12 +30,16 @@
        (map #(str "/cider-ci/public/js/" %))
        (map hiccup.page/include-js)))
 
+(defn server-state [{tx :tx :as request}]
+  )
+
 (defn html-handler [{user :authenticated-entity :as request}]
   {:status 200
    :headers {"Content-Type" "text/html"}
    :body (html5
            (head)
-           [:body {:data-user (-> user json/to-json encode-primitive)}
+           [:body {:data-user (-> user json/to-json encode-primitive)
+                   :server-state (-> request server-state json/to-json encode-primitive)}
             [:div#app
              [:div.container
               [:h1 "Cider-CI"]

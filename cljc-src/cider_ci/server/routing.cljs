@@ -46,7 +46,12 @@
 (defn init-navigation []
   (navigation/init! on-navigate :navigate? navigate?))
 
+(defn init-query-param-debug-state []
+  (swap! state/debug?*
+         (fn [v] (or v (boolean (get-in @state/routing* [:query-params-parsed :debug]))))))
+
 (defn init []
   (info "initializing routing ...")
   (init-navigation)
+  (init-query-param-debug-state)
   (info "initialized routing " @state/routing*))

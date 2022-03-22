@@ -14,6 +14,7 @@
     [logbug.thrown :as thrown]
     [next.jdbc :as jdbc]
     [next.jdbc.connection :as connection]
+    [next.jdbc.result-set :as jdbc-rs]
     [pg-types.all]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:import
@@ -122,8 +123,10 @@
               })]
     ;; this code initializes the pool and performs a validation check:
     (.close (jdbc/get-connection ds))
-    (reset! ds* ds)
-    ds))
+    (reset! ds*
+            (jdbc/with-options
+              ds {:builder-fn jdbc-rs/as-unqualified-lower-maps}))
+    @ds*))
 
 (defn init
   ([options]

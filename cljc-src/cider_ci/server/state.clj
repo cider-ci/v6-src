@@ -3,26 +3,33 @@
   (:require
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
+    [cider-ci.utils.json :as json]
     [cider-ci.server.db.core :refer [ds*]]
     [next.jdbc :as jdbc]
+    [next.jdbc.result-set :as jdbc-rs]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 
+(def needs-init
+  [:case [:exists
+          (-> (sql/select true)
+              (sql/from :users)
+              (sql/where [:= true :is_admin]))] false
+   :else true])
+
+
+(comment (jdbc/execute! @ds*
+                        (sql-format (sql/select [needs-init :needs_init]))))
+
 (def state-query
-  (sql/select
-    [(-> (sql/select :true)
-         (sql/from :users)
-         (sql/where [:= true :is_admin]))
-     :admin_exists]))
+  (-> (sql/select :settings.external_base_url)
+      (sql/from :settings)
+      (sql/select [needs-init :needs_init])))
 
 
 (defn db-state [ds]
-  (jdbc/execute! ds (sql-format state-query)))
+  (jdbc/execute-one! ds (sql-format state-query)))
 
-
-(comment (jdbc/execute! @ds* ["SELECT true"]))
-
-(comment (jdbc/execute! @ds* ["SELECT (SELECT true FROM users WHERE TRUE = is_admin) AS admin_exists"]))
 
 (comment (db-state @ds*))

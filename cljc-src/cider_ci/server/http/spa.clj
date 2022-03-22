@@ -4,6 +4,7 @@
     [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [keyword presence str]]
     [cider-ci.utils.json :as json]
+    [cider-ci.server.state :as state]
     [cider-ci.utils.query-params :refer [encode-primitive]]
     [clojure.java.io :as io]
     [hiccup.page :refer [html5 include-js include-css]]
@@ -31,15 +32,15 @@
        (map hiccup.page/include-js)))
 
 (defn server-state [{tx :tx :as request}]
-  )
+  (state/db-state tx))
 
 (defn html-handler [{user :authenticated-entity :as request}]
   {:status 200
    :headers {"Content-Type" "text/html"}
    :body (html5
            (head)
-           [:body {:data-user (-> user json/to-json encode-primitive)
-                   :server-state (-> request server-state json/to-json encode-primitive)}
+           [:body {:data-user (-> user json/encode encode-primitive)
+                   :server-state (-> request server-state json/encode encode-primitive)}
             [:div#app
              [:div.container
               [:h1 "Cider-CI"]

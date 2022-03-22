@@ -4,3 +4,5 @@ CREATE TABLE settings (
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+INSERT INTO settings (id) VALUES (0);

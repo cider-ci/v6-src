@@ -6,6 +6,7 @@
   {:min-level [[#{
                   ;"cider-ci.server.*"
                   ;"cider-ci.server.http.spa"
+                  "cider-ci.server.http.utils.dom"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

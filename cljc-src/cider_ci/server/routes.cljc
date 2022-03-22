@@ -9,7 +9,7 @@
 (def routes
   [
    ["/" {:name :root}]
-   ["/initial-admin" {:name :initial-admin}]
+   ["/init" {:name :init}]
    ])
 
 (def router (reitit/router routes))

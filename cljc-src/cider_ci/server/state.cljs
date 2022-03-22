@@ -2,6 +2,7 @@
   (:require
     [reagent.core :as reagent]
     [cljs.pprint :refer [pprint]]
+    [cider-ci.server.http.utils.dom :as dom]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:require-macros
     [reagent.ratom :as ratom :refer [reaction]]))
@@ -11,10 +12,13 @@
 
 (def debug?* (reagent/atom false))
 
+(def server* (reagent/atom {}))
+
 (def state* (reaction
-                  {:routing @routing*
-                   :debug @debug?*}
-                  ))
+                  {:debug @debug?*
+                   :routing @routing*
+                   :server @server*
+                   }))
 
 (defn debug-ui-component []
   [:div.debug.state-debug
@@ -26,3 +30,11 @@
        [:code
         (with-out-str (pprint @state*))
         ]]])])
+
+
+(defn init []
+  (info "initializing state ...")
+  (info (dom/data-attribute "body" "server-state"))
+  (swap! server* merge (dom/data-attribute "body" "server-state"))
+  (info "initialized state")
+  )

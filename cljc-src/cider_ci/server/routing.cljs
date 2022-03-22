@@ -1,7 +1,7 @@
 (ns cider-ci.server.routing
   (:refer-clojure :exclude [keyword str])
   (:require
-    [cider-ci.server.http.history-navigation :as navigation]
+    [cider-ci.server.html.history-navigation :as navigation]
     [cider-ci.server.resources.init.main :as init]
     [cider-ci.server.resources.root :as root]
     [cider-ci.server.routes :as routes :refer [path]]

@@ -1,4 +1,4 @@
-(ns cider-ci.server.http.spa
+(ns cider-ci.server.html.spa
   (:refer-clojure :exclude [keyword str])
   (:require
     [cider-ci.utils.cli :refer [long-opt-for-key]]

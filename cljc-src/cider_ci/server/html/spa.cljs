@@ -1,7 +1,7 @@
-(ns cider-ci.server.http.spa
+(ns cider-ci.server.html.spa
   (:refer-clojure :exclude [keyword str])
   (:require
-    [cider-ci.server.http.spa-page :refer [header footer]]
+    [cider-ci.server.html.spa-page :refer [header footer]]
     [cider-ci.server.state :as state]
     [reagent.dom :as rdom]
     [taoensso.timbre :refer [debug info warn error spy]]

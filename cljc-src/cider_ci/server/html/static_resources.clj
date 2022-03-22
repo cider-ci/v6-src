@@ -1,4 +1,4 @@
-(ns cider-ci.server.http.static-resources
+(ns cider-ci.server.html.static-resources
   (:require
     [clojure.core.memoize :as memoize]
     [digest]

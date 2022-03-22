@@ -6,4 +6,5 @@
 
 (def save todo)
 (def cancel todo)
+(def reset todo)
 

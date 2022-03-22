@@ -1,6 +1,6 @@
 (ns cider-ci.server.run
   (:require
-    [cider-ci.server.http.server :as http-server]
+    [cider-ci.server.html.server :as http-server]
     [cider-ci.server.db.core :as db]
     [cider-ci.server.routing :as routing]
     [clojure.pprint :refer [pprint]]

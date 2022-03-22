@@ -1,4 +1,4 @@
-(ns cider-ci.server.http.spa-page
+(ns cider-ci.server.html.spa-page
   (:refer-clojure :exclude [keyword str])
   (:require
     ["react-bootstrap" :as bs]

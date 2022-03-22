@@ -2,7 +2,7 @@
   (:require
     [reagent.core :as reagent]
     [cljs.pprint :refer [pprint]]
-    [cider-ci.server.http.utils.dom :as dom]
+    [cider-ci.server.html.utils.dom :as dom]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:require-macros
     [reagent.ratom :as ratom :refer [reaction]]))

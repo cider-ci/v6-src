@@ -1,4 +1,4 @@
-(ns cider-ci.server.http.utils.dom
+(ns cider-ci.server.html.utils.dom
   (:require
     [cider-ci.utils.url :as url]
     [cider-ci.utils.json :as json]

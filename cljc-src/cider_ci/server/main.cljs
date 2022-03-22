@@ -1,6 +1,6 @@
 (ns cider-ci.server.main
   (:require
-    [cider-ci.server.http.spa :as spa]
+    [cider-ci.server.html.spa :as spa]
     [cider-ci.server.routing :as routing]
     [cider-ci.shared.logging :as logging]
     [cider-ci.server.state :as state]

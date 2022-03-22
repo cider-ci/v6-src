@@ -127,7 +127,7 @@
          :on-click (fn [e]
                      (.preventDefault e)
                      (swap! data* assoc-in ks reset-default))
-         :tab-index constants/TAB-INDEX }
+         :tab-index TAB-INDEX }
         [:span [icons/reset] " Reset to default"]]])]
 
    (when hint [:small.form-text hint])])

@@ -1,4 +1,4 @@
-(ns cider-ci.server.http.history-navigation
+(ns cider-ci.server.html.history-navigation
   "SPA History Navigation"
   (:require
     [goog.events :as gevents]

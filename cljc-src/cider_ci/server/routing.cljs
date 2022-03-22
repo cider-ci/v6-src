@@ -55,4 +55,6 @@
   (info "initializing routing ...")
   (init-navigation)
   (init-query-param-debug-state)
+  (when (-> @state/server* :needs_init)
+    (navigation/navigate! (path :init)))
   (info "initialized routing " @state/routing*))

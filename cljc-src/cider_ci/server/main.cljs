@@ -11,5 +11,7 @@
   (js/console.log "(re-)initializing application ...")
   (logging/init)
   (state/init)
+  (spa/mount)
   (routing/init)
-  (spa/mount))
+
+  )

@@ -2,13 +2,14 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     [cider-ci.server.http.history-navigation :as navigation]
+    [cider-ci.server.resources.init.main :as init]
+    [cider-ci.server.resources.root :as root]
     [cider-ci.server.routes :as routes :refer [path]]
+    [cider-ci.server.state :as state]
     [cider-ci.utils.core :refer [keyword str presence]]
     [cider-ci.utils.query-params :refer [decode] :rename {decode query-params-decode}]
-    [cider-ci.server.state :as state]
-    [cider-ci.server.resources.root :as root]
-    [clojure.pprint :refer [pprint]]
     [cider-ci.utils.yaml :as yaml]
+    [clojure.pprint :refer [pprint]]
     [reagent.core :as reagent]
     [reitit.core :as reitit]
     [taoensso.timbre :refer [debug info warn error spy]])
@@ -19,6 +20,7 @@
 
 (def resolve-table
   {:root #'root/page
+   :init #'init/page
    })
 
 

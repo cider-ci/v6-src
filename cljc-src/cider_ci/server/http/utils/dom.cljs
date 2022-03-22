@@ -14,11 +14,8 @@
   [element-name attribute-name]
   (debug 'data-attribute [element-name attribute-name])
   (try (-> (.getElementsByTagName js/document element-name)
-           spy
            (aget 0)
-           spy
            (dataset/get (->camelCase attribute-name))
-           spy
            url/decode
            json/decode
            cljs.core/js->clj

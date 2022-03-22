@@ -5,7 +5,7 @@
     [cider-ci.utils.core :refer [keyword presence str]]
     [cider-ci.utils.json :as json]
     [cider-ci.server.state :as state]
-    [cider-ci.utils.query-params :refer [encode-primitive]]
+    [cider-ci.utils.url :as url]
     [clojure.java.io :as io]
     [hiccup.page :refer [html5 include-js include-css]]
     [logbug.debug :as debug :refer [debug-ns]]
@@ -39,8 +39,8 @@
    :headers {"Content-Type" "text/html"}
    :body (html5
            (head)
-           [:body {:data-user (-> user json/encode encode-primitive)
-                   :server-state (-> request server-state json/encode encode-primitive)}
+           [:body {:data-user (-> user json/encode url/encode)
+                   :data-server-state (-> request server-state json/encode url/encode)}
             [:div#app
              [:div.container
               [:h1 "Cider-CI"]

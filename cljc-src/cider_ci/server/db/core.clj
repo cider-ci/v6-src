@@ -78,12 +78,13 @@
   (fn [request]
     (jdbc/with-transaction [tx @ds*]
       (try
-        (let [resp (handler (assoc request :tx tx))]
-          (when-let [status (:status resp)]
-            (when (>= status 400 )
-              (logging/warn "Rolling back transaction because error status " status)
-              (.rollback tx)))
-          resp)
+        (let [tx-with-opts  (jdbc/with-options tx {:builder-fn jdbc-rs/as-unqualified-lower-maps})]
+          (let [resp (handler (assoc request :tx tx-with-opts))]
+            (when-let [status (:status resp)]
+              (when (>= status 400 )
+                (logging/warn "Rolling back transaction because error status " status)
+                (.rollback tx)))
+            resp))
         (catch Throwable th
           (logging/warn "Rolling back transaction because of " (.getMessage th))
           (debug (.get-cause th))
@@ -123,9 +124,7 @@
               })]
     ;; this code initializes the pool and performs a validation check:
     (.close (jdbc/get-connection ds))
-    (reset! ds*
-            (jdbc/with-options
-              ds {:builder-fn jdbc-rs/as-unqualified-lower-maps}))
+    (reset! ds* ds)
     @ds*))
 
 (defn init

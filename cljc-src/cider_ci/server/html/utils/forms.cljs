@@ -38,7 +38,7 @@
            disabled false}}]
   [:div
    {:class (->> outer-classes (map str) (string/join " "))}
-   [:div.float-right
+   [:div.float-end
     [:button.btn.btn-warning
      {:class (->> btn-classes (map str) (string/join " "))
       :type :submit
@@ -98,7 +98,7 @@
                     prepend nil
                     append nil
                     reset-default nil}}]
-  [:div.form-group
+  [:div.mb-3
    [:label {:for (last ks)}
     (if (= label (last ks))
       [:strong label]

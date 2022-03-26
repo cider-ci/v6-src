@@ -1,20 +1,29 @@
 (ns cider-ci.server.resources.init.main
   (:refer-clojure :exclude [keyword str])
-  ([cider-ci.server.html.utils.forms :as forms]
-    :require
-    ;[cider-ci.server.http.client.main]
+  (:require
+    [cljs.core.async :refer [go]]
+    [cider-ci.server.html.utils.forms :as forms]
+    [cider-ci.server.http.client.main :as http-client]
     [reagent.core :as reagent]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 
+(defn put [data]
+  (go (let [req (-> {:body data}
+                    http-client/request
+                    )]
+        (info 'req req)
+        (when  (-> :chan <! http-client/filter-success)
+          (warn "todo redirect to sign in")
+          ))))
 
 (defn form []
   (let [data* (reagent/atom {})]
     [:form
      {:on-submit (fn [e]
                    (.preventDefault e)
-                   (warn "TODO submit"))}
+                   (put @data*))}
      [forms/input-component data* [:email]
       :label "Initial admin e-mail address:"
       :placeholder "admin@localhost"]

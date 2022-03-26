@@ -109,7 +109,7 @@
        [state/hidden-routing-state-component
         :did-mount (fn [& _]
                      (if (:chan req-opts)
-                       (logging/error ":chan may not be set for managed request-response-component")
+                       (error ":chan may not be set for managed request-response-component")
                        (let [chan (async/chan)]
                          (reset! req* (request (assoc req-opts
                                                       :chan chan

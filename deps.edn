@@ -2,16 +2,17 @@
  :deps {
         cheshire/cheshire {:mvn/version "5.10.2"}
         clj-commons/clj-yaml {:mvn/version "0.7.108"}
+        cljs-http/cljs-http {:mvn/version "0.1.46"}
         com.github.seancorfield/honeysql {:mvn/version "2.2.868"}
         com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
-        com.taoensso/timbre {:mvn/version "5.1.2"}
+        com.taoensso/timbre {:mvn/version "5.2.1"}
         com.zaxxer/HikariCP {:mvn/version "5.0.1"}
         digest/digest {:mvn/version "1.4.10"}
         environ/environ {:mvn/version "1.2.0"}
         funcool/cuerdas {:mvn/version "2022.01.14-391"}
         hiccup/hiccup {:mvn/version "1.0.5"}
         http-kit/http-kit {:mvn/version "2.5.3"}
-        lambdaisland/uri {:mvn/version "1.4.74"}
+        lambdaisland/uri {:mvn/version "1.13.95"}
         logbug/logbug {:mvn/version "5.0.0"}
         metosin/reitit {:mvn/version "0.5.17"}
         nrepl/nrepl {:mvn/version "0.9.0"}
@@ -21,6 +22,7 @@
         pg-types/pg-types {:mvn/version  "3.0.0"}
         reagent/reagent {:mvn/version "1.1.1"}
         ring-middleware-accept/ring-middleware-accept {:mvn/version "2.0.3"}
+        timothypratley/patchin {:mvn/version "0.3.5"}
 
         org.clojure/clojure {:mvn/version "1.10.3"}
         org.clojure/clojurescript {:mvn/version "1.11.4"}

@@ -1,7 +1,8 @@
 (ns cider-ci.server.resources.init.main
   (:refer-clojure :exclude [keyword str])
-  (:require
-    [cider-ci.server.html.utils.forms :as forms]
+  ([cider-ci.server.html.utils.forms :as forms]
+    :require
+    ;[cider-ci.server.http.client.main]
     [reagent.core :as reagent]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))

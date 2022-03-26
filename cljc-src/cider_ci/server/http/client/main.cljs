@@ -1,17 +1,16 @@
-(ns cider-ci.server.http.client.core
+(ns cider-ci.server.http.client.main
   (:refer-clojure :exclude [str keyword send-off])
   (:require-macros
     [reagent.ratom :as ratom :refer [reaction]]
     [cljs.core.async.macros :refer [go go-loop]])
   (:require
     [cider-ci.server.http.anti-csrf.main  :as anti-csrf]
-    [cider-ci.server.http.client.shared :refer [str keyword presence]]
     [cider-ci.server.http.client.shared :refer [wait-component]]
     [cider-ci.server.http.core :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_SAVE_METHODS]]
     [cider-ci.server.routes :refer [path]]
+    [cider-ci.utils.core :refer [str keyword presence]]
     [cider-ci.server.state :as state :refer [state* routing*] :rename {routing* routing-state*}]
-    [cljs-http.client :as http.client]
-    [cljs-uuid-utils.core :as uuid]
+    [cljs-http.client :as http-client]
     [cljs.core.async :as async :refer [timeout]]
     [clojure.pprint :refer [pprint]]
     [clojure.string :as str]
@@ -32,7 +31,7 @@
   (-> data
       (update :chan (fn [chan] (or chan (async/chan))))
       (update :delay #(+ (or % 0) @base-delay*))
-      (update :id #(uuid/uuid-string (uuid/make-random-uuid)))
+      (update :id #(random-uuid))
       (update :method #(or % :get))
       (update :timestamp #(js/Date.))
       (update :url (fn [url] (or url (-> @routing-state* :route))))
@@ -59,7 +58,7 @@
      (go (<! (timeout (:delay req)))
          (let [resp (<! (-> req
                             (select-keys [:url :method :headers :json-params :body])
-                            http/client/request))]
+                            http-client/request))]
            (when (:success resp)
              (if (:modal-on-response-success req)
                (go (<! (timeout 1000))

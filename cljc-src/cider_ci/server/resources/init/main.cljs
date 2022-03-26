@@ -10,12 +10,14 @@
 
 
 (defn put [data]
-  (go (let [req (-> {:body data}
+  (go (let [req (-> {:json-params data
+                     :method :put}
                     http-client/request
                     )]
         (info 'req req)
-        (when  (-> :chan <! http-client/filter-success)
+        (if (-> req :chan <! http-client/filter-success)
           (warn "todo redirect to sign in")
+          (error "request failed")
           ))))
 
 (defn form []

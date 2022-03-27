@@ -48,6 +48,7 @@
   (fn [request]
     (try (hander request)
          (catch java.lang.AssertionError a
+           (warn (.getMessage a))
            {:status 422
             :body (.getMessage a)})
          (catch Exception e

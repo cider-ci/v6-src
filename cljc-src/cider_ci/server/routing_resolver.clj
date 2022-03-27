@@ -1,0 +1,29 @@
+(ns cider-ci.server.routing-resolver
+  (:require
+    [cider-ci.server.routes :as routes]
+    [cider-ci.server.resources.init.main :as init]
+    [taoensso.timbre :refer [debug info warn error spy]]
+    ))
+
+
+(def route-resource-table
+  {:init #'init/handler})
+
+
+(defn route-resolve [handler {uri :uri :as request}]
+  (if-let [route (routes/route uri)]
+    (let [{{route-name :name} :data} route]
+      (debug "matched route " uri " -> " route)
+      (handler (-> request
+                   (assoc
+                     :route route
+                     :route-name route-name
+                     :route-handler (route-resource-table route-name))
+                   (update-in [:params] #(merge {} % (:path-params route))))))
+    (do (warn "unresolved route for " uri)
+        (handler request))))
+
+(defn wrap [handler]
+  (fn [request]
+    (route-resolve handler request)))
+

@@ -3,8 +3,9 @@
     [cider-ci.server.html.spa :as spa]
     [cider-ci.server.html.static-resources :as static-resources]
     [cider-ci.server.db.core :refer [wrap-tx]]
-    [cider-ci.server.routes]
+    [cider-ci.server.routing-resolver :as routing-resolver]
     [ring.middleware.accept]
+    [ring.middleware.content-type :refer [wrap-content-type]]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -14,6 +15,13 @@
 (defn not-found-handler [request]
   {:status 404
    :body "Not Found"})
+
+(defn wrap-resource-dispatch [handler]
+  (fn [request]
+    (if-let [route-handler (:route-handler request)]
+      (route-handler request)
+      (handler request))))
+
 
 (defn wrap-accept [handler]
   (ring.middleware.accept/wrap-accept
@@ -45,11 +53,14 @@
 
 (defn build-routes [options]
   (-> not-found-handler
+      wrap-resource-dispatch
       spa/wrap
+      routing-resolver/wrap
       wrap-tx
       wrap-accept
       static-resources-wrap
-      wrap-catch))
+      wrap-catch
+      wrap-content-type))
 
 
 (defn init [options]

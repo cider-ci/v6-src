@@ -47,6 +47,9 @@
 (defn wrap-catch [hander]
   (fn [request]
     (try (hander request)
+         (catch java.lang.AssertionError a
+           {:status 422
+            :body (.getMessage a)})
          (catch Exception e
            (error e)
            {:status 500

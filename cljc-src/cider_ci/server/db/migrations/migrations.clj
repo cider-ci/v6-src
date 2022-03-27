@@ -17,12 +17,14 @@
 (def migrations
   (sorted-map
     0 {:up (partial exec-resource-sql! "migrations/00000_up.sql")
-       :down(partial exec-resource-sql! "migrations/00000_down.sql") }
+       :down (partial exec-resource-sql! "migrations/00000_down.sql") }
     1 {:up (partial exec-resource-sql! "migrations/00001_users_up.sql")
-       :down(partial exec-resource-sql! "migrations/00001_users_down.sql")}
+       :down (partial exec-resource-sql! "migrations/00001_users_down.sql")}
     2 {:up (partial exec-resource-sql! "migrations/00002_settings_up.sql")
-       :down(partial exec-resource-sql! "migrations/00002_settings_down.sql")
-       }))
+       :down (partial exec-resource-sql! "migrations/00002_settings_down.sql")}
+    3 {:up (partial exec-resource-sql! "migrations/00003_passwords_up.sql")
+       :down (partial exec-resource-sql! "migrations/00003_passwords_down.sql")}
+    ))
 
 (defn available []
   (-> migrations keys

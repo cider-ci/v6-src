@@ -26,10 +26,10 @@
      {:on-submit (fn [e]
                    (.preventDefault e)
                    (put @data*))}
-     [forms/input-component data* [:email]
+     [forms/input-component data* [:initial_admin :email]
       :label "Initial admin e-mail address:"
       :placeholder "admin@localhost"]
-     [forms/input-component data* [:password]
+     [forms/input-component data* [:initial_admin :password]
       :type :password
       :label "Initial admin password"]
      [forms/submit-component :inner [:span "Submit"]]

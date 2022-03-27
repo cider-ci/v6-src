@@ -22,6 +22,7 @@
         pg-types/pg-types {:mvn/version  "3.0.0"}
         reagent/reagent {:mvn/version "1.1.1"}
         ring-middleware-accept/ring-middleware-accept {:mvn/version "2.0.3"}
+        ring/ring-json {:mvn/version "0.5.1"}
         timothypratley/patchin {:mvn/version "0.3.5"}
 
         org.clojure/clojure {:mvn/version "1.10.3"}

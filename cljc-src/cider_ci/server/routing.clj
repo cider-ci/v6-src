@@ -5,6 +5,7 @@
     [cider-ci.server.db.core :refer [wrap-tx]]
     [cider-ci.server.routing-resolver :as routing-resolver]
     [ring.middleware.accept]
+    [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
     [ring.middleware.content-type :refer [wrap-content-type]]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
@@ -54,6 +55,8 @@
 (defn build-routes [options]
   (-> not-found-handler
       wrap-resource-dispatch
+      (wrap-json-body {:keywords? true})
+      wrap-json-response
       spa/wrap
       routing-resolver/wrap
       wrap-tx

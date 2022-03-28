@@ -40,5 +40,12 @@
        p))))
 
 #?(:cljs
-   (defn navigate! [path]
-     (navigation/navigate! path)))
+   (defn navigate!
+     ([url]
+      (navigation/navigate! url nil))
+     ([url event &{:keys [reload]
+                   :or {reload false}}]
+      (if reload
+        (set! js/window.location url)
+        (navigation/navigate! url event)
+        ))))

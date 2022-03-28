@@ -1,5 +1,6 @@
 (ns cider-ci.server.routes
   (:require
+    #?(:cljs [cider-ci.server.html.history-navigation :as navigation :refer []])
     [reitit.core :as reitit]
     [taoensso.timbre :refer [debug info warn error]]
     [cider-ci.utils.query-params :as query-params]
@@ -38,3 +39,6 @@
        (str p "?" (query-params/encode query-params))
        p))))
 
+#?(:cljs
+   (defn navigate! [path]
+     (navigation/navigate! path)))

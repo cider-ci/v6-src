@@ -38,4 +38,4 @@
         pw (passwords/upsert tx password (:id admin))]
     (assert admin)
     (assert pw)
-    {:status 204}))
+    {:body admin}))

@@ -7,10 +7,9 @@
     ))
 
 (def routes
-  [
-   ["/" {:name :root}]
+  [["/" {:name :root}]
    ["/init" {:name :init}]
-   ])
+   ["/sign-in" {:name :sign-in}]])
 
 (def router (reitit/router routes))
 

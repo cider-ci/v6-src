@@ -1,7 +1,7 @@
 (ns cider-ci.server.routing-resolver
   (:require
     [cider-ci.server.routes :as routes]
-    [cider-ci.server.resources.init.main :as init]
+    [cider-ci.server.resources.init.http :as init]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 

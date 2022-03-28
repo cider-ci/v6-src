@@ -2,10 +2,9 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     [cider-ci.server.html.history-navigation :as navigation]
-    [cider-ci.server.resources.init.main :as init]
-    [cider-ci.server.resources.root :as root]
     [cider-ci.server.routes :as routes :refer [path]]
     [cider-ci.server.state :as state]
+    [cider-ci.server.routing-resolver :refer [route-page-table]]
     [cider-ci.utils.core :refer [keyword str presence]]
     [cider-ci.utils.query-params :refer [decode] :rename {decode query-params-decode}]
     [cider-ci.utils.yaml :as yaml]
@@ -18,17 +17,12 @@
     ))
 
 
-(def resolve-table
-  {:root #'root/page
-   :init #'init/page
-   })
-
 
 (defn on-navigate [url match]
   (info 'on-navigate2 match)
   (as-> match state
     (assoc state :name (get-in state [:data :name]))
-    (assoc state :page (get resolve-table (:name state)))
+    (assoc state :page (get route-page-table (:name state)))
     (assoc state :query-params (some->> url :query query-params-decode))
     (assoc state :query-params-parsed (some->> state :query-params
                                                (map (fn [[k v]] [k (yaml/parse v)]))

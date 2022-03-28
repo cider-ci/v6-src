@@ -1,4 +1,4 @@
-(ns cider-ci.server.resources.init.main
+(ns cider-ci.server.resources.init.page
   (:refer-clojure :exclude [keyword str])
   (:require
     [cljs.core.async :refer [go]]
@@ -15,8 +15,8 @@
                     http-client/request
                     )]
         (info 'req req)
-        (if (-> req :chan <! http-client/filter-success)
-          (warn "todo redirect to sign in")
+        (if-let [body (some-> req :chan <! http-client/filter-success :body)]
+          (warn "todo redirect to sign in" body)
           (error "request failed")
           ))))
 

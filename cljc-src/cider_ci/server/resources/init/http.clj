@@ -1,4 +1,4 @@
-(ns cider-ci.server.resources.init.main
+(ns cider-ci.server.resources.init.http
   (:require
     [cider-ci.utils.core :refer [presence]]
     [cider_ci.server.db.tables.passwords :as passwords]

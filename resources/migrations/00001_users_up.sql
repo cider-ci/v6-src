@@ -28,8 +28,12 @@ CREATE TABLE passwords (
 CREATE TABLE sessions (
   id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
+  digest text NOT NULL,
+  browser text,
+  ip text,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   valid_until timestamp with time zone DEFAULT (now() + INTERVAL '7 days') NOT NULL
 );
 
 CREATE INDEX user_id_sessions ON sessions (user_id);
+CREATE INDEX digest_sessions ON sessions (digest);

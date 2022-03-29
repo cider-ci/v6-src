@@ -4,7 +4,7 @@ windows:
     name: server-repl-run
     command: |
       export DB_NAME=cider_ci_v6
-      ./bin/dev-server-run
+      ./bin/server-run
   3:
     name: front-repl-run
     command: |
@@ -13,3 +13,8 @@ windows:
     name: psql
     command: |
       psql -d cider_ci_v6
+
+  6:
+    name: re-migrate
+    command: |
+

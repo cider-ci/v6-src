@@ -52,7 +52,7 @@
        (apply sorted-set)))
 
 (defn migrate-downs! [ds downs]
-  (doseq [down downs]
+  (doseq [down (reverse downs)]
     (info "migrating down " down " ... ")
     ((-> migrations/migrations (get down) (get :down)) ds)
     (jdbc-sql/delete! ds :migrations {:id down})

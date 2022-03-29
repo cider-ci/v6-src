@@ -9,8 +9,21 @@
     ))
 
 
+(defn password-sign-in []
+
+  )
+
 (defn page []
-  [:div
-   [:h2.mt-3 "Sign-in"]
-   ])
+  (let [data* (reagent/atom {})]
+    [:div
+     [:h2.mt-3 "Sign-in"]
+     [:form
+      {:on-submit (fn [e]
+                    (.preventDefault e)
+
+                    )}
+      [forms/input-component data* [:password]
+       :type :password
+       :label "Password"]]
+     ]))
 

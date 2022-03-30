@@ -18,6 +18,7 @@
         (info 'req req)
         (if-let [body (some-> req :chan <! http-client/filter-success :body)]
           (let [p (path :sign-in {} {:email (:email body)})]
+            (warn 'p p)
             (navigate! p nil :reload true))
           (error "request failed")))))
 

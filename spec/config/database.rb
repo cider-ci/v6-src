@@ -36,8 +36,7 @@ def clean_db
   ].map{|r| r[:table_name]}.reject { |tn| tn == 'migrations' } \
     .join(', ').tap do |tables|
     database.run" TRUNCATE TABLE #{tables} CASCADE; "
-
-  database["INSERT INTO SETTINGS (id) VALUES (0);"]
+    database.run "INSERT INTO SETTINGS (id) VALUES (0);"
   end
 end
 

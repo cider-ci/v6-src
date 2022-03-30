@@ -10,7 +10,8 @@
 (def routes
   [["/" {:name :root}]
    ["/init" {:name :init}]
-   ["/sign-in" {:name :sign-in}
+   ["/sign-in"
+    ["" {:name :sign-in}]
     ["/password/authenticate" {:name :sign-in-password-authentication}]]])
 
 (def router (reitit/router routes))

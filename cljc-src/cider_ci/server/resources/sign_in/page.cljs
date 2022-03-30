@@ -23,9 +23,10 @@
 (defn form []
   (let [data* (reagent/atom {})]
     (reagent/create-class
-      {:component-did-mount #(when-let [email (some-> @routing-state* :query-params :email)]
-                               (info 'email email)
-                               (reset! data* {:email email}))
+      {:component-did-mount #(if-let [email (some-> @routing-state* :query-params :email)]
+                               (do (reset! data* {:email email})
+                                   (.focus (.getElementById js/document "password")))
+                               (.focus (.getElementById js/document "email")))
        :reagent-render
        (fn []
          [:form

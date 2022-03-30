@@ -7,33 +7,56 @@
     [taoensso.timbre :refer [debug info warn error]]
     ))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn crypt-expr [password]
+(defn gen-crypt-expr [password]
   [:crypt
    [:cast password :text]
    [:raw " GEN_SALT('bf', 10) "]])
 
 (defn select-password-hash
   [password]
-  (-> (sql/select [ (crypt-expr password) :pw_hash])
+  (-> (sql/select [(gen-crypt-expr password) :pw_hash])
       (sql-format {:inline true})
       ))
 
-(comment
-  (select-password-hash "foo")
-  (jdbc/execute-one! @db/ds* (select-password-hash "foo")))
-
 (defn upsert-statement [password user-id]
   (-> (sql/insert-into :passwords)
-      (sql/values [{:user_id user-id :password_hash (crypt-expr password)}])
+      (sql/values [{:user_id user-id :password_hash (gen-crypt-expr password)}])
       (sql/on-conflict :user_id)
       (sql/do-update-set :password_hash)
       (sql/returning :*)))
-
-(comment (-> (upsert-statement "foo" "123")
-             (sql-format)))
 
 (defn upsert [tx password user-id]
   (let [sql (upsert-statement password user-id)
         res (jdbc/execute-one! tx (sql-format sql) {:return-keys true})]
     res))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn pw-check-exp [password]
+  [:= :passwords.password_hash
+   [:crypt password :passwords.password_hash]])
+
+
+(comment (sql-format (sql/select [(pw-check-exp "secret") :pw_ok])))
+
+(defn password-authenticated-user-statement [email password]
+  (-> (sql/select :users.*)
+      (sql/from :users)
+      (sql/join :passwords [:= :passwords.user_id :users.id])
+      (sql/where [:= :users.email [:lower [:trim email]]])
+      (sql/where (pw-check-exp password))))
+
+(comment (-> (password-user-check-statement
+               "admin@localhost" "secret")
+             (sql-format {:inline true})))
+
+(defn password-authenticated-user [tx email password]
+  (jdbc/execute-one!
+    tx (-> (password-authenticated-user-statement email password)
+           sql-format)))
+
+(comment (password-authenticated-user @db/ds* "admin@localhost" "secret" ))

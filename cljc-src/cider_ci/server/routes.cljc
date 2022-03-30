@@ -12,7 +12,7 @@
    ["/init" {:name :init}]
    ["/sign-in"
     ["" {:name :sign-in}]
-    ["/password/authenticate" {:name :sign-in-password-authentication}]]])
+    ["/authenticate/password" {:name :sign-in-authenticate-password}]]])
 
 (def router (reitit/router routes))
 

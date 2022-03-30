@@ -12,7 +12,7 @@
 
 (defn password-sign-in [data]
   (go (let [req (-> {:json-params data
-                     :url (path :sign-in-password-authentication)
+                     :url (path :sign-in-authenticate-password)
                      :method :post}
                     http-client/request
                     )]

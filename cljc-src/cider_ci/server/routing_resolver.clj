@@ -2,12 +2,14 @@
   (:require
     [cider-ci.server.routes :as routes]
     [cider-ci.server.resources.init.http :as init]
+    [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 
 (def route-resource-table
-  {:init #'init/handler})
+  {:init #'init/handler
+   :sign-in-authenticate-password #'password-authentication/handler})
 
 
 (defn route-resolve [handler {uri :uri :as request}]

@@ -3,7 +3,6 @@ CREATE TABLE users (
   name text,
   email text NOT NULL,
   is_admin boolean DEFAULT false NOT NULL,
-  is_system_admin boolean DEFAULT false NOT NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -28,7 +27,7 @@ CREATE TABLE passwords (
 CREATE TABLE sessions (
   id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
-  digest text NOT NULL,
+  token_digest text NOT NULL,
   browser text,
   ip text,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -36,4 +35,4 @@ CREATE TABLE sessions (
 );
 
 CREATE INDEX user_id_sessions ON sessions (user_id);
-CREATE INDEX digest_sessions ON sessions (digest);
+CREATE INDEX digest_sessions ON sessions (token_digest);

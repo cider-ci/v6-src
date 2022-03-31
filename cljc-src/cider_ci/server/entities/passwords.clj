@@ -1,4 +1,4 @@
-(ns cider_ci.server.db.tables.passwords
+(ns cider_ci.server.entities.passwords
   (:require
     [cider-ci.server.db.core :as db]
     [honey.sql :refer [format] :rename {format sql-format}]

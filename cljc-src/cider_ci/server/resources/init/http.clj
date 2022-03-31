@@ -1,7 +1,7 @@
 (ns cider-ci.server.resources.init.http
   (:require
     [cider-ci.utils.core :refer [presence]]
-    [cider_ci.server.db.tables.passwords :as passwords]
+    [cider_ci.server.entities.passwords :as passwords]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]

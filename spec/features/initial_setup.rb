@@ -10,9 +10,7 @@ feature 'Initial Setup'  do
     click_on 'Submit'
     expect(page).to have_content 'Sign-in'
     fill_in 'password', with: 'secret'
-    click_on 'Submit'
-
-
     binding.pry
+    click_on 'Submit'
   end
 end

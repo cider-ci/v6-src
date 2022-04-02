@@ -19,6 +19,6 @@
   (assert (presence email) "Expected non empty email")
   (assert (presence password) "Expected non empty password")
   (if-let [user (password-authenticated-user tx email password)]
-    (let [session-token (sessions/create tx user)]
+    (let [session-token (sessions/create user request)]
       {:body {:session-token session-token}})
     {:status 403}))

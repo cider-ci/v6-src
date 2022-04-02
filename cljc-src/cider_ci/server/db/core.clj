@@ -1,7 +1,7 @@
 (ns cider-ci.server.db.core
   (:refer-clojure :exclude [str keyword])
   (:require
-    ;[ring.util.codec]
+    [cider-ci.server.db.type-conversion]
     [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [str keyword]]
     [clojure.tools.logging :as logging]

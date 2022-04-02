@@ -28,8 +28,7 @@ CREATE TABLE sessions (
   id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
   token_digest text NOT NULL,
-  browser text,
-  ip text,
+  data jsonb,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   valid_until timestamp with time zone DEFAULT (now() + INTERVAL '7 days') NOT NULL
 );

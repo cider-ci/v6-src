@@ -41,7 +41,10 @@ Capybara.register_driver :firefox do |app|
     acceptInsecureCerts: true
   )
 
-  profile = Selenium::WebDriver::Firefox::Profile.new
+
+  profile = Selenium::WebDriver::Firefox::Profile.new(ENV['FIREFOX_TEST_PROFILE'].presence)
+
+
   # TODO: configure language for locale testing
   # profile["intl.accept_languages"] = "en"
   #

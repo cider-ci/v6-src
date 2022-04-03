@@ -1,8 +1,9 @@
 (ns cider-ci.server.routing
   (:require
+    [cider-ci.server.db.core :refer [wrap-tx]]
     [cider-ci.server.html.spa :as spa]
     [cider-ci.server.html.static-resources :as static-resources]
-    [cider-ci.server.db.core :refer [wrap-tx]]
+    [cider-ci.server.http.authentication :as authentication]
     [cider-ci.server.routing-resolver :as routing-resolver]
     [ring.middleware.accept]
     [ring.middleware.content-type :refer [wrap-content-type]]
@@ -64,6 +65,7 @@
       wrap-json-response
       spa/wrap
       routing-resolver/wrap
+      authentication/wrap
       ring.middleware.cookies/wrap-cookies
       wrap-tx
       wrap-accept

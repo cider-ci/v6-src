@@ -43,3 +43,25 @@
         session (insert-session token (:id user) request)]
     (info {'token token 'session session})
     token))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn valid-session-user-query [token]
+  (-> (sql/select :users.*)
+      (sql/from :users)
+      (sql/join :sessions [:= :sessions.user_id :users.id])
+      (sql/select [:sessions.id :session_id]
+                  [:sessions.valid_until :session_valid_until])
+      (sql/where [:= :sessions.token_digest (digest-statement token)])
+      (sql/where [:<= [:now] :sessions.valid_until])
+      ))
+
+(comment (jdbc/execute-one!
+           @db/ds*
+           (-> (valid-session-user-query "13fc5e13-ce32-4575-b711-7b57b2b8e0e2")
+               (sql-format :inline true))))
+
+
+(defn valid-session-user [tx token]
+  (jdbc/execute-one! tx (-> token valid-session-user-query sql-format)))

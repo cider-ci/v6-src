@@ -34,7 +34,7 @@
 (defn server-state [{tx :tx :as request}]
   (state/db-state tx))
 
-(defn html-handler [{user :authenticated-entity :as request}]
+(defn html-handler [{user :user :as request}]
   {:status 200
    :headers {"Content-Type" "text/html"}
    :body (html5

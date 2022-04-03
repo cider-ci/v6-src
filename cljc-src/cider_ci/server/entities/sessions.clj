@@ -10,6 +10,9 @@
     ))
 
 
+(def COOKIE-NAME "cider-ci-session")
+
+
 (defn digest-statement [o]
   [:encode [:digest (str o) "sha256"] "base64"])
 

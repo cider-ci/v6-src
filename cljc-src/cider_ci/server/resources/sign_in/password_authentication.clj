@@ -20,5 +20,10 @@
   (assert (presence password) "Expected non empty password")
   (if-let [user (password-authenticated-user tx email password)]
     (let [session-token (sessions/create user request)]
-      {:body {:session-token session-token}})
+      {:cookies {sessions/COOKIE-NAME
+                 {:value session-token
+                  :http-only true
+                  :max-age (* 10 356 24 60 60)
+                  :path "/"}}
+       :body {:session-token session-token}})
     {:status 403}))

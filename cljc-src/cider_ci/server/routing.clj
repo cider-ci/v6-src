@@ -5,8 +5,9 @@
     [cider-ci.server.db.core :refer [wrap-tx]]
     [cider-ci.server.routing-resolver :as routing-resolver]
     [ring.middleware.accept]
-    [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
     [ring.middleware.content-type :refer [wrap-content-type]]
+    [ring.middleware.cookies]
+    [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -63,6 +64,7 @@
       wrap-json-response
       spa/wrap
       routing-resolver/wrap
+      ring.middleware.cookies/wrap-cookies
       wrap-tx
       wrap-accept
       static-resources-wrap

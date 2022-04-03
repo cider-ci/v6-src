@@ -15,10 +15,13 @@
 
 (def server* (reagent/atom {}))
 
+(def user* (reagent/atom {}))
+
 (def state* (reaction
                   {:debug @debug?*
                    :routing @routing*
                    :server @server*
+                   :user @user*
                    }))
 
 
@@ -72,7 +75,6 @@
 
 (defn init []
   (info "initializing state ...")
-  (info (dom/data-attribute "body" "server-state"))
   (swap! server* merge (dom/data-attribute "body" "server-state"))
-  (info "initialized state")
-  )
+  (swap! user* merge (dom/data-attribute "body" "user"))
+  (info "initialized state"))

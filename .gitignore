@@ -5,9 +5,10 @@
 /.cpcache
 /.sass-cache
 /.shadow-cljs
+/log
 /node_modules
-/resources/cider-ci/public/js/
 /resources/cider-ci/public/css/
+/resources/cider-ci/public/js/
 /target
 /tmp
 resources/built-info.yml

@@ -5,6 +5,8 @@
     [cider-ci.server.html.static-resources :as static-resources]
     [cider-ci.server.http.authentication :as authentication]
     [cider-ci.server.routing-resolver :as routing-resolver]
+    [logbug.debug :as debug :refer [I>]]
+    [logbug.ring :refer [wrap-handler-with-logging]]
     [ring.middleware.accept]
     [ring.middleware.content-type :refer [wrap-content-type]]
     [ring.middleware.cookies]
@@ -58,6 +60,14 @@
            {:status 500
             :body "Internal Server Error"}))))
 
+(defn wrap-debug [hander]
+  (fn [request]
+    (debug 'wraped-handler hander)
+    (debug 'request request)
+    (let [res (hander request)]
+      (debug 'res res)
+      res)))
+
 (defn build-routes [options]
   (-> not-found-handler
       wrap-resource-dispatch
@@ -65,7 +75,9 @@
       wrap-json-response
       spa/wrap
       routing-resolver/wrap
+      ; wrap-debug
       authentication/wrap
+      ; wrap-debug
       ring.middleware.cookies/wrap-cookies
       wrap-tx
       wrap-accept

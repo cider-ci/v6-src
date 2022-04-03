@@ -15,5 +15,5 @@
     (if-let [user (some->> [:cookies sessions/COOKIE-NAME :value]
                            (get-in request)
                            (sessions/valid-session-user tx))]
-      (handler (assoc request :user user)))
-    (handler request)))
+      (handler (assoc request :user user))
+      (handler request))))

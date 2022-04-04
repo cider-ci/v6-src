@@ -12,16 +12,9 @@
 
 (def COOKIE-NAME "cider-ci-session")
 
-
 (defn digest-statement [o]
   [:encode [:digest (str o) "sha256"] "base64"])
 
-(comment
-  (jdbc/execute-one!
-    @db/ds*
-    (sql-format
-      (sql/select [(digest-statement "foo") :token_digest])
-      )))
 
 (defn insert-session-statement [token user-id request]
   (-> (sql/insert-into :sessions)
@@ -31,9 +24,6 @@
                                   :remote_addr (get-in request [:remote-addr])}]}])
       (sql/returning :*)))
 
-
-(comment (-> (insert-session-statement "token" "id" {})
-             (sql-format )))
 
 (defn insert-session [token user-id {tx :tx :as request}]
   (jdbc/execute-one! tx (sql-format (insert-session-statement token user-id request))))
@@ -55,11 +45,6 @@
       (sql/where [:= :sessions.token_digest (digest-statement token)])
       (sql/where [:<= [:now] :sessions.valid_until])))
 
-(comment (jdbc/execute-one!
-           @db/ds*
-           (-> (valid-session-user-query "13fc5e13-ce32-4575-b711-7b57b2b8e0e2")
-               (sql-format :inline true))))
-
-
 (defn valid-session-user [tx token]
+  (assert (uuid? (UUID/fromString token)) "A tokens must always be a UUID")
   (jdbc/execute-one! tx (-> token valid-session-user-query sql-format)))

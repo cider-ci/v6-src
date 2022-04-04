@@ -5,6 +5,7 @@
     [cider-ci.server.routes :refer [path]]
     [cider-ci.server.state :as state :refer []]
     [reagent.dom :as rdom]
+    [reagent.core :as reagent]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -13,8 +14,14 @@
   [:> bs/Navbar {:bg :light}
    [:> bs/Container {}
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]
-    ]])
-
+    [:> bs/Navbar.Collapse {:class "justify-content-end"}
+     (when-let [user (-> @state/user*)]
+       [:> bs/NavDropdown {:title
+                           (reagent/as-element
+                             [:<>
+                              [:span (:email user)]])}
+        [:> bs/NavDropdown.Item {:href (path :sign-out)}
+         [:span "Sign out"]]])]]])
 
 (defn footer []
   [:> bs/Navbar {:bg :light}

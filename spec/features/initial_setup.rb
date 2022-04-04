@@ -12,6 +12,8 @@ feature 'Initial Setup'  do
     fill_in 'password', with: 'secret'
     click_on 'Submit'
     expect(page).to have_content 'admin@localhost'
-    binding.pry
+    click_on 'admin@localhost'
+    click_on 'Sign out'
+    expect(page).not_to have_content 'admin@localhost'
   end
 end

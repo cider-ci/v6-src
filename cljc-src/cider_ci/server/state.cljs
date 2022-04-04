@@ -15,7 +15,7 @@
 
 (def server* (reagent/atom {}))
 
-(def user* (reagent/atom {}))
+(def user* (reagent/atom nil))
 
 (def state* (reaction
                   {:debug @debug?*

@@ -4,7 +4,7 @@
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
-    [taoensso.timbre :refer [debug info warn error]])
+    [taoensso.timbre :refer [debug info warn error spy]])
   (:import
     [java.util UUID]
     ))
@@ -55,11 +55,11 @@
 ;;; delete ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+(defn delete-statement [session-id]
+  (-> (sql/delete-from :sessions)
+      (sql/where [:= :id session-id])))
+
 (defn delete [tx session-id]
-  (jdbc/execute-one!
-    tx (-> (sql/delete)
-           (sql/from :sessions)
-           (sql/where [:= :id session-id])
-           sql-format)))
+  (jdbc/execute-one! tx (sql-format (delete-statement session-id))))
 
 

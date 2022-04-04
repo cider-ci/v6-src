@@ -41,8 +41,7 @@
 (defn create [user {:as request}]
   (let [token (java.util.UUID/randomUUID)
         session (insert-session token (:id user) request)]
-    (info {'token token 'session session})
-    token))
+    (assoc session :token token)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -54,8 +53,7 @@
       (sql/select [:sessions.id :session_id]
                   [:sessions.valid_until :session_valid_until])
       (sql/where [:= :sessions.token_digest (digest-statement token)])
-      (sql/where [:<= [:now] :sessions.valid_until])
-      ))
+      (sql/where [:<= [:now] :sessions.valid_until])))
 
 (comment (jdbc/execute-one!
            @db/ds*

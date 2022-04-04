@@ -7,8 +7,8 @@
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [debug info warn error]]
-    ))
-
+    )
+  (:import [java.time Instant Duration]))
 
 (defn handler [{{email :email password :password} :body
                 {{route-name :name} :data} :route
@@ -18,11 +18,18 @@
   (assert (presence email) "Expected non empty email")
   (assert (presence password) "Expected non empty password")
   (if-let [user (password-authenticated-user tx email password)]
-    (let [session-token (sessions/create user request)]
+    (let [session (sessions/create user request)]
+      (def valid-until (:valid_until session))
       {:cookies {sessions/COOKIE-NAME
-                 {:value session-token
+                 {:value (:token session)
                   :http-only true
-                  :max-age (* 10 356 24 60 60)
+                  :max-age (.getSeconds
+                             (Duration/between
+                               (Instant/now)
+                               (.toInstant (:valid_until session))))
                   :path "/"}}
-       :body {:session-token session-token}})
+       :body (dissoc session :token :token_digest)})
     {:status 403}))
+
+
+

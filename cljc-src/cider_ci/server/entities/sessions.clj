@@ -16,6 +16,8 @@
   [:encode [:digest (str o) "sha256"] "base64"])
 
 
+;;; create ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn insert-session-statement [token user-id request]
   (-> (sql/insert-into :sessions)
       (sql/values [{:user_id user-id
@@ -34,7 +36,7 @@
     (assoc session :token token)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; get ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn valid-session-user-query [token]
   (-> (sql/select :users.*)
@@ -48,3 +50,16 @@
 (defn valid-session-user [tx token]
   (assert (uuid? (UUID/fromString token)) "A tokens must always be a UUID")
   (jdbc/execute-one! tx (-> token valid-session-user-query sql-format)))
+
+
+;;; delete ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn delete [tx session-id]
+  (jdbc/execute-one!
+    tx (-> (sql/delete)
+           (sql/from :sessions)
+           (sql/where [:= :id session-id])
+           sql-format)))
+
+

@@ -85,7 +85,6 @@
       wrap-catch
       wrap-content-type))
 
-
 (defn init [options]
   (info "initializing routing " options)
   (reset! options* options)

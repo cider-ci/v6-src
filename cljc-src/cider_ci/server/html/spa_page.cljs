@@ -2,13 +2,21 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     ["react-bootstrap" :as bs]
-    [cider-ci.server.routes :refer [path]]
+    [cider-ci.server.http.client.main :as http-client]
+    [cider-ci.server.routes :refer [path navigate!]]
     [cider-ci.server.state :as state :refer []]
-    [reagent.dom :as rdom]
+    [cljs.core.async :refer [go]]
     [reagent.core :as reagent]
+    [reagent.dom :as rdom]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
+(defn sign-out [& args]
+  (go (let [resp (-> {:url (path :sign-out {} {:foo :bar})
+                      :method :post}
+                     http-client/request
+                     :chan <!)]
+        (navigate! (path :root) nil :reload true))))
 
 (defn header []
   [:> bs/Navbar {:bg :light}
@@ -20,7 +28,8 @@
                            (reagent/as-element
                              [:<>
                               [:span (:email user)]])}
-        [:> bs/NavDropdown.Item {:href (path :sign-out)}
+        [:> bs/NavDropdown.Item {:class "btn btn-warning"
+                                 :on-click sign-out}
          [:span "Sign out"]]])]]])
 
 (defn footer []

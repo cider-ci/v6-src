@@ -13,9 +13,7 @@
    ["/sign-in"
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]
-   ["/sign-out" {:name :sign-out}]
-
-   ])
+   ["/sign-out" {:name :sign-out}]])
 
 (def router (reitit/router routes))
 

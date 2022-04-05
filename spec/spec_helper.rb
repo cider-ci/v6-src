@@ -7,12 +7,12 @@ require 'config/database'
 require 'config/browser'
 # require 'config/http_client'
 
-# require 'helpers/global'
+require 'helpers/global'
 # require 'helpers/user'
 
 RSpec.configure do |config|
 
-  # config.include Helpers::Global
+  config.include Helpers::Global
   # config.include Helpers::User
 
   config.before :each do

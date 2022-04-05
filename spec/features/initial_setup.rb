@@ -12,8 +12,10 @@ feature 'Initial Setup'  do
     fill_in 'password', with: 'secret'
     click_on 'Submit'
     expect(page).to have_content 'admin@localhost'
+    # wait_until{ page.has_content? 'admin@localhost'}
     click_on 'admin@localhost'
     click_on 'Sign out'
+    # wait_until{not page.has_content?('admin@localhost')}
     expect(page).not_to have_content 'admin@localhost'
   end
 end

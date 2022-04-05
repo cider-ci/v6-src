@@ -2,8 +2,7 @@ require 'active_support/all'
 require 'pry'
 
 require 'config/database'
-# require 'config/factories'
-
+require 'config/factories'
 require 'config/browser'
 # require 'config/http_client'
 

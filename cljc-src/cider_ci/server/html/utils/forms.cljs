@@ -32,14 +32,14 @@
 (defn submit-component
   [& {:keys [outer-classes btn-classes icon inner disabled]
       :or {outer-classes [:mb-3]
-           btn-classes []
+           btn-classes [:btn-warning]
            inner [:span "Just Do It"]
-           icon [:i.fas.fa-question]
+           icon [:<>]
            disabled false}}]
   [:div
    {:class (->> outer-classes (map str) (string/join " "))}
    [:div.float-end
-    [:button.btn.btn-warning
+    [:button.btn
      {:class (->> btn-classes (map str) (string/join " "))
       :type :submit
       :disabled disabled
@@ -84,7 +84,7 @@
    (when hint [:p [:small hint]]) ])
 
 (defn input-component
-  [data* ks & {:keys [label hint type element placeholder disabled rows
+  [data* ks & {:keys [outer-classes label hint type element placeholder disabled rows
                       on-change post-change
                       prepend append reset-default]
                :or {label (last ks)
@@ -94,16 +94,19 @@
                     rows 10
                     element :input
                     on-change identity
+                    outer-classes [:mb-3]
                     post-change identity
                     prepend nil
                     append nil
                     reset-default nil}}]
-  [:div.mb-3
-   [:label {:for (last ks)}
-    (if (= label (last ks))
-      [:strong label]
-      [:span [:strong  label] [:small " ("
-                               [:span.text-monospace (last ks)] ")"]])]
+  [:div
+   {:class (->> outer-classes (map str) (string/join " "))}
+   [:<> (when-not (= label :none)
+          [:label {:for (last ks)}
+           (if (= label (last ks))
+             [:strong label]
+             [:span [:strong  label] [:small " ("
+                                      [:span.text-monospace (last ks)] ")"]])])]
    [:div.input-group
     (when prepend [prepend])
     [element

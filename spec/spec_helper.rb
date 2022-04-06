@@ -16,6 +16,7 @@ RSpec.configure do |config|
 
   config.before :each do
     srand 1
+    Faker::Config.random = Random.new(1)
   end
 
   config.after(:each) do |example|

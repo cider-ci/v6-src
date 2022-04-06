@@ -14,8 +14,6 @@
     ))
 
 
-
-
 (defn append []
   [:button.btn.btn-primary
    {:type :submit}

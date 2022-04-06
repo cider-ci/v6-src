@@ -1,14 +1,28 @@
 CREATE TABLE users (
   id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
+  login text CHECK (login ~ '^[A-Za-z]+[A-Za-z0-9]+$'::text),
   name text,
-  email text NOT NULL,
   is_admin boolean DEFAULT false NOT NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
-CREATE UNIQUE INDEX email_users ON users USING btree (lower(email::text));
+CREATE UNIQUE INDEX login_users ON users USING btree (lower(login::text));
+
+
+
+-- emails ---------------------------------------------------------------------
+
+CREATE TABLE emails (
+  id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
+  email text NOT NULL CHECK (email::text ~~* '%@%'::text),
+  primary boolean NOT NULL default false,
+  created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE UNIQUE INDEX email_emails ON emails USING btree (lower(email::text));
 
 
 

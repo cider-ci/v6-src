@@ -16,10 +16,10 @@
   (sorted-map
     0 {:up (partial exec-resource-sql! "migrations/00000_up.sql")
        :down (partial exec-resource-sql! "migrations/00000_down.sql") }
-    1 {:up (partial exec-resource-sql! "migrations/00001_users_up.sql")
-       :down (partial exec-resource-sql! "migrations/00001_users_down.sql")}
-    2 {:up (partial exec-resource-sql! "migrations/00002_settings_up.sql")
-       :down (partial exec-resource-sql! "migrations/00002_settings_down.sql")}
+    1 {:up (partial exec-resource-sql! "migrations/00001_settings_up.sql")
+       :down (partial exec-resource-sql! "migrations/00001_settings_down.sql")}
+    2 {:up (partial exec-resource-sql! "migrations/00002_users_up.sql")
+       :down (partial exec-resource-sql! "migrations/00002_users_down.sql")}
     ))
 
 (defn available []

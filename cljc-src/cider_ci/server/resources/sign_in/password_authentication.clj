@@ -10,14 +10,14 @@
     )
   (:import [java.time Instant Duration]))
 
-(defn handler [{{email-or-login :email_or_login password :password} :body
+(defn handler [{{login :login password :password} :body
                 {{route-name :name} :data} :route
                 method :request-method
                 tx :tx :as request}]
   (assert (= route-name :sign-in-authenticate-password) "Expected password-authentication route")
-  (assert (presence email-or-login) "Expected non empty email-or-login")
+  (assert (presence login) "Expected non empty login")
   (assert (presence password) "Expected non empty password")
-  (if-let [user (password-authenticated-user tx email-or-login password)]
+  (if-let [user (password-authenticated-user tx login password)]
     (let [session (sessions/create user request)]
       (def valid-until (:valid_until session))
       {:cookies {sessions/COOKIE-NAME

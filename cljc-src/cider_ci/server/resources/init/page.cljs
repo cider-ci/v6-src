@@ -17,8 +17,8 @@
         (info 'req req)
         (if-let [user (some-> req :chan <! http-client/filter-success :body)]
           (navigate! (path :sign-in {}
-                           {:email_or_login (or (:login user)
-                                                (-> user :email_addresses first))})
+                           {:login (or (:login user)
+                                       (-> user :email_addresses first))})
                      nil :reload true)
           (error "request failed")))))
 
@@ -28,8 +28,8 @@
      {:on-submit (fn [e]
                    (.preventDefault e)
                    (put @data*))}
-     [forms/input-component data* [:initial_admin :email_or_login]
-      :label "Initial admin e-mail address:"
+     [forms/input-component data* [:initial_admin :login]
+      :label "Initial admin login or email address:"
       :placeholder "admin@localhost"]
      [forms/input-component data* [:initial_admin :password]
       :type :password
@@ -39,6 +39,5 @@
 (defn page []
   [:div
    [:h2.mt-3 "Initial Setup"]
-   [form]
-   ])
+   [form]])
 

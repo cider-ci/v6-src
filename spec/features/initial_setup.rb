@@ -2,20 +2,47 @@ require 'spec_helper'
 
 
 feature 'Initial Setup'  do
-  scenario 'creating the initial admin' do
-    visit '/'
-    expect(page).to have_content 'Initial Setup'
-    fill_in 'email', with: 'admin@localhost'
-    fill_in 'password', with: 'secret'
-    click_on 'Submit'
-    expect(page).to have_content 'Sign-in'
-    fill_in 'password', with: 'secret'
-    click_on 'Submit'
-    expect(page).to have_content 'admin@localhost'
-    # wait_until{ page.has_content? 'admin@localhost'}
-    click_on 'admin@localhost'
-    click_on 'Sign out'
-    # wait_until{not page.has_content?('admin@localhost')}
-    expect(page).not_to have_content 'admin@localhost'
+
+  context 'creating the initial admin' do
+
+    scenario 'with email' do
+      visit '/'
+      expect(page).to have_content 'Initial Setup'
+      fill_in 'login', with: 'admin@localhost'
+      fill_in 'password', with: 'secret'
+      click_on 'Submit'
+      expect(page).to have_content 'Sign-in'
+      fill_in 'password', with: 'secret'
+      click_on 'Submit'
+      expect(page).to have_content 'admin@localhost'
+      click_on 'admin@localhost'
+      click_on 'Sign out'
+      expect(page).not_to have_content 'admin@localhost'
+    end
+
+
+    scenario 'with login' do
+      visit '/'
+      expect(page).to have_content 'Initial Setup'
+      fill_in 'login', with: 'admin'
+      fill_in 'password', with: 'secret'
+      click_on 'Submit'
+      expect(page).to have_content 'Sign-in'
+      fill_in 'password', with: 'secret'
+      click_on 'Submit'
+      expect(page).to have_content 'admin'
+      # the only admin has the login 'admin'
+      expect(database[:users].first[:login]).to eq 'admin'
+      # there is a session
+      expect(database[:sessions].first).to be
+      # there is a password
+      expect(database[:passwords].first).to be
+      click_on 'admin'
+      click_on 'Sign out'
+      expect(page).not_to have_content 'admin'
+      # there is no (more) session
+      expect(database[:sessions].first).to be_nil
+    end
+
   end
 end

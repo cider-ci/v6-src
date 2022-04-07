@@ -5,8 +5,7 @@
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :as state :refer []]
-    [cider-ci.server.state :refer [routing*] :rename {routing* routing-state*}]
+    [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
     [cljs.core.async :refer [go]]
     [cuerdas.core :as string]
     [reagent.core :as reagent]
@@ -21,17 +20,26 @@
    "Sign in"])
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn sign-in-form []
   (let [data* (reagent/atom {})]
-    [:form.d-flex
-     {:on-submit (fn [e]
-                   (.preventDefault e)
-                   (navigate! (path :sign-in {} {:login (:login @data*)})))}
-     [forms/input-component data* [:login]
-      :label :none
-      :outer-classes ""
-      :placeholder "email or login"
-      :append append]]))
+    (reagent/create-class
+      {:component-did-mount
+       (fn []
+         (swap! data* assoc :login
+                (some-> @routing-state* :query-params :login)))
+       :render
+       (fn []
+         [:form.d-flex
+          {:on-submit (fn [e]
+                        (.preventDefault e)
+                        (navigate! (path :sign-in {} {:login (:login @data*)})))}
+          [forms/input-component data* [:login]
+           :label :none
+           :outer-classes ""
+           :placeholder "email or login"
+           :append append]])})))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,9 +74,10 @@
    [:> bs/Container {}
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]
     [:> bs/Navbar.Collapse {:class "justify-content-end"}
-     (if-let [user (-> @state/user*)]
-       [navbar-user user]
-       [sign-in-form])]]])
+     (when-not (-> @state/state* :server :needs_init)
+       (if-let [user (-> @state/user*)]
+         [navbar-user user]
+         [sign-in-form]))]]])
 
 
 (defn footer []

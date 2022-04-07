@@ -40,15 +40,15 @@
                               (sql/where [:= :users.id (:id admin)])
                               sql-format))))
 
-(defn handler [{{{email-or-login :email_or_login password :password} :initial_admin} :body
+(defn handler [{{{login :login password :password} :initial_admin} :body
                 {{route-name :name} :data} :route
                 method :request-method
                 tx :tx :as request}]
   (assert (= method :put) "Expected put request")
   (assert (= route-name :init) "Expected init route")
-  (assert (presence email-or-login) "Expected non empty email-or-login")
+  (assert (presence login) "Expected non empty login")
   (assert (presence password) "Expected non empty password")
   (assert-no-admin tx)
-  (let [admin (create-admin tx email-or-login password)]
+  (let [admin (create-admin tx login password)]
     (assert admin)
     {:body admin}))

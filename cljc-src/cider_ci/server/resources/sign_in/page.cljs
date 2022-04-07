@@ -24,18 +24,19 @@
   (let [data* (reagent/atom {})]
     (reagent/create-class
       {:component-did-mount
-       #(if-let [email (some-> @routing-state* :query-params :email_or_login)]
-          (do (reset! data* {:email_or_login email})
+       #(if-let [email (some-> @routing-state* :query-params :login)]
+          (do (reset! data* {:login email})
               (.focus (.getElementById js/document "password")))
-          (.focus (.getElementById js/document "email_or_login")))
+          (.focus (.getElementById js/document "login")))
        :reagent-render
        (fn []
          [:form
           {:on-submit (fn [e]
                         (.preventDefault e)
                         (password-sign-in @data*))}
-          [forms/input-component data* [:email_or_login]
-           :label "E-mail address:"]
+          [forms/input-component data* [:login]
+           :label "Login or email address:"
+           :disabled true]
           [forms/input-component data* [:password]
            :type :password
            :label "Password"]

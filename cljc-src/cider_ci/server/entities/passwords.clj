@@ -43,7 +43,7 @@
 
 (comment (sql-format (sql/select [(pw-check-exp "secret") :pw_ok])))
 
-(defn password-authenticated-user-statement [email password]
+(defn password-authenticated-user-statement [email-or-login password]
   (-> (sql/select :users.*)
       (sql/from :users)
       (sql/join :passwords [:= :passwords.user_id :users.id])

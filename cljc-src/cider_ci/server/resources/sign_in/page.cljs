@@ -23,17 +23,18 @@
 (defn form []
   (let [data* (reagent/atom {})]
     (reagent/create-class
-      {:component-did-mount #(if-let [email (some-> @routing-state* :query-params :email)]
-                               (do (reset! data* {:email email})
-                                   (.focus (.getElementById js/document "password")))
-                               (.focus (.getElementById js/document "email")))
+      {:component-did-mount
+       #(if-let [email (some-> @routing-state* :query-params :email_or_login)]
+          (do (reset! data* {:email_or_login email})
+              (.focus (.getElementById js/document "password")))
+          (.focus (.getElementById js/document "email_or_login")))
        :reagent-render
        (fn []
          [:form
           {:on-submit (fn [e]
                         (.preventDefault e)
                         (password-sign-in @data*))}
-          [forms/input-component data* [:email]
+          [forms/input-component data* [:email_or_login]
            :label "E-mail address:"]
           [forms/input-component data* [:password]
            :type :password

@@ -3,10 +3,11 @@
     [cider-ci.server.html.utils.dom :as dom]
     [cljs.pprint :refer [pprint]]
     [reagent.core :as reagent]
+    [reagent.ratom :as ratom :refer [reaction]]
     [timothypratley.patchin :as patchin]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:require-macros
-    [reagent.ratom :as ratom :refer [reaction]]))
+    ))
 
 
 (def routing* (reagent/atom {}))

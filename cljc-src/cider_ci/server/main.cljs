@@ -12,6 +12,4 @@
   (logging/init)
   (state/init)
   (spa/mount)
-  (routing/init)
-
-  )
+  (routing/init))

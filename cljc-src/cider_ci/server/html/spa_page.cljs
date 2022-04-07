@@ -3,11 +3,12 @@
   (:require
     ["react-bootstrap" :as bs]
     [cider-ci.server.html.utils.forms :as forms]
-    [cider-ci.server.state :refer [routing*] :rename {routing* routing-state*}]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
     [cider-ci.server.state :as state :refer []]
+    [cider-ci.server.state :refer [routing*] :rename {routing* routing-state*}]
     [cljs.core.async :refer [go]]
+    [cuerdas.core :as string]
     [reagent.core :as reagent]
     [reagent.dom :as rdom]
     [taoensso.timbre :refer [debug info warn error spy]]
@@ -35,6 +36,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn user-uid-component [user]
+  [:span
+   (or (some-> user :login)
+       (some-> user :email_addresses first)
+       (some-> user :id (string/split "-") first))])
+
 (defn sign-out [& args]
   (go (let [resp (-> {:url (path :sign-out {} {:foo :bar})
                       :method :post}
@@ -45,8 +52,7 @@
 (defn navbar-user [user]
   [:> bs/NavDropdown {:title
                       (reagent/as-element
-                        [:<>
-                         [:span (:email user)]])}
+                        [user-uid-component user])}
    [:> bs/NavDropdown.Item {:class "btn btn-warning"
                             :on-click sign-out}
     [:span "Sign out"]]])

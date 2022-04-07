@@ -1,11 +1,11 @@
 (ns cider_ci.server.entities.passwords
   (:require
     [cider-ci.server.db.core :as db]
+    [cider_ci.server.entities.users :as users]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
-    [taoensso.timbre :refer [debug info warn error]]
-    ))
+    [taoensso.timbre :refer [debug info warn error spy]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -44,19 +44,27 @@
 (comment (sql-format (sql/select [(pw-check-exp "secret") :pw_ok])))
 
 (defn password-authenticated-user-statement [email-or-login password]
-  (-> (sql/select :users.*)
-      (sql/from :users)
-      (sql/join :passwords [:= :passwords.user_id :users.id])
-      (sql/where [:= :users.email [:lower [:trim email]]])
-      (sql/where (pw-check-exp password))))
+  (-> users/base-query
+      (sql/where [:or
+                  [:= :users.login [:lower [:trim email-or-login]]]
+                  [:exists (-> (sql/select true)
+                               (sql/from :email_addresses)
+                               (sql/where [:= [:lower [:trim email-or-login]]
+                                           [:lower :email_addresses.email]])
+                               (sql/where [:= :users.id :email_addresses.user_id]))]])
+      (sql/where [:exists (-> (sql/select true)
+                              (sql/from :passwords)
+                              (sql/where [:= :users.id :passwords.user_id])
+                              (sql/where (pw-check-exp password)))])))
 
-(comment (-> (password-user-check-statement
+(comment (-> (password-authenticated-user-statement
                "admin@localhost" "secret")
              (sql-format {:inline true})))
 
-(defn password-authenticated-user [tx email password]
+(defn password-authenticated-user [tx uid password]
   (jdbc/execute-one!
-    tx (-> (password-authenticated-user-statement email password)
-           sql-format)))
+    tx (-> (password-authenticated-user-statement uid password)
+           (->> (spy :warn))
+           (sql-format {:inline true}) (->> (spy :warn)))))
 
 (comment (password-authenticated-user @db/ds* "admin@localhost" "secret" ))

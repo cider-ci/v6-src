@@ -1,6 +1,7 @@
 (ns cider_ci.server.entities.sessions
   (:require
     [cider-ci.server.db.core :as db]
+    [cider_ci.server.entities.users :as users]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
@@ -39,8 +40,7 @@
 ;;; get ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn valid-session-user-query [token]
-  (-> (sql/select :users.*)
-      (sql/from :users)
+  (-> users/base-query
       (sql/join :sessions [:= :sessions.user_id :users.id])
       (sql/select [:sessions.id :session_id]
                   [:sessions.valid_until :session_valid_until])

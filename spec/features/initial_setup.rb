@@ -44,5 +44,20 @@ feature 'Initial Setup'  do
       expect(database[:sessions].first).to be_nil
     end
 
+    context 'with and existing admin' do
+
+      before :each do
+        @admin = FactoryBot.create :admin
+      end
+
+      scenario '(re-)initialization fails' do
+        visit '/init'
+        fill_in 'login', with: 'admin'
+        fill_in 'password', with: 'secret'
+        click_on 'Submit'
+        expect(page).to have_content 'failed'
+        expect(page).to have_content 'Expected no existing admin'
+      end
+    end
   end
 end

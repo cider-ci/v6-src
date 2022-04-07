@@ -74,10 +74,11 @@
    [:> bs/Container {}
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]
     [:> bs/Navbar.Collapse {:class "justify-content-end"}
-     (when-not (-> @state/state* :server :needs_init)
-       (if-let [user (-> @state/user*)]
-         [navbar-user user]
-         [sign-in-form]))]]])
+     (if-let [user (-> @state/user*)]
+       [navbar-user user]
+       [:<>
+        (when-not  (-> @routing-state* :data :no-sign-in-page)
+          [sign-in-form])])]]])
 
 
 (defn footer []

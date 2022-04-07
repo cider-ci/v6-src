@@ -9,7 +9,8 @@
 
 (def routes
   [["/" {:name :root}]
-   ["/init" {:name :init}]
+   ["/init" {:name :init
+             :no-sign-in-page true}]
    ["/sign-in"
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]

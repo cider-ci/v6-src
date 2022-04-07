@@ -13,13 +13,13 @@
 (defn put [data]
   (go (let [req (-> {:json-params data
                      :method :put}
-                    http-client/request
-                    )]
+                    http-client/request)]
         (info 'req req)
-        (if-let [body (some-> req :chan <! http-client/filter-success :body)]
-          (let [p (path :sign-in {} {:email (:email body)})]
-            (warn 'p p)
-            (navigate! p nil :reload true))
+        (if-let [user (some-> req :chan <! http-client/filter-success :body)]
+          (navigate! (path :sign-in {}
+                           {:email_or_login (or (:login user)
+                                                (-> user :email_addresses first))})
+                     nil :reload true)
           (error "request failed")))))
 
 (defn form []
@@ -28,14 +28,13 @@
      {:on-submit (fn [e]
                    (.preventDefault e)
                    (put @data*))}
-     [forms/input-component data* [:initial_admin :email]
+     [forms/input-component data* [:initial_admin :email_or_login]
       :label "Initial admin e-mail address:"
       :placeholder "admin@localhost"]
      [forms/input-component data* [:initial_admin :password]
       :type :password
       :label "Initial admin password"]
-     [forms/submit-component :inner [:span "Submit"]]
-     ]))
+     [forms/submit-component :inner [:span "Submit"]]]))
 
 (defn page []
   [:div

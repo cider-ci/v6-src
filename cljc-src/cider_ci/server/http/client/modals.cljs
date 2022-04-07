@@ -4,21 +4,19 @@
     [reagent.ratom :as ratom :refer [reaction]]
     [cljs.core.async.macros :refer [go]])
   (:require
+    [cider-ci.server.html.clipboard :as clipboard]
+    [cider-ci.server.http.client.main :refer [requests* dismiss]]
+    [cider-ci.server.http.client.shared :refer [wait-component]]
+    [cider-ci.server.http.core :refer [HTTP_UNSAVE_METHODS]]
+    [cider-ci.utils.core :refer [keyword presence str]]
     [cljs-http.client :as http.client]
-    [cljs-uuid-utils.core :as uuid]
     [cljs.core.async :as async :refer [timeout]]
     [clojure.pprint :refer [pprint]]
     [clojure.string :as string]
     [goog.string :as gstring]
     [goog.string.format]
-    [cider-ci.server.http.client.core :refer [requests* dismiss]]
-    [cider-ci.server..http.client.shared :refer [wait-component]]
-    [madek.media-service.utils.clipboard :as clipboard]
-    [cider-ci.utils.utils.core :refer [keyword presence str]]
-    [madek.media-service.utils.http.shared :refer [HTTP_UNSAVE_METHODS]]
     [reagent.core :as reagent]
-    [taoensso.timbre :as logging]
-    ))
+    [taoensso.timbre :as logging]))
 
 (defn status [request]
   (cond (empty? (-> request :response)) :pending

@@ -1,6 +1,7 @@
 (ns cider-ci.server.html.spa
   (:refer-clojure :exclude [keyword str])
   (:require
+    [cider-ci.server.http.client.modals :as http-client-modals]
     [cider-ci.server.html.spa-page :refer [header footer]]
     [cider-ci.server.state :as state]
     [reagent.dom :as rdom]
@@ -15,6 +16,7 @@
 (defn html []
   [:div.container
    [header]
+   [http-client-modals/modal-component]
    (if-let [page (:page @state/routing*)]
      [page]
      [not-found-page])

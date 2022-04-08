@@ -30,21 +30,23 @@
   "Navigate to the given url. Also used internally via anchor click events.
   Ignores query-param changes via replaceState; pushes state if and only if
   the path changes."
-  ([target-url] (navigate! (uri/uri target-url) nil))
-  ([target-url event]
-   (info 'navigate! {:target-url target-url :event event})
-   (let [current-url (location-url)]
-     ; let event bubble up if it is not for this service
-     (when (same-scheme-host-port? target-url current-url)
-       ; let event bubble up if the SPA is not meant to handle it
-       (when-let [res (navigate? target-url)]
-         ; at this time we knwo we handle the event
-         ; and we stop event from bubbling up
-         (when event (.preventDefault event))
-         (if (= (:path target-url) (:path current-url))
-           (.replaceState js/window.history nil "" (str target-url))
-           (.pushState js/window.history nil "" (str target-url)))
-         (on-navigate target-url res))))))
+  ([uri] (navigate! uri nil))
+  ([uri event]
+   (let [target-url (if (uri/uri? uri) uri (uri/uri uri))]
+     (debug 'navigate! {:target-url target-url :event event})
+     (let [current-url (location-url)]
+       (debug 'current-url current-url)
+       ; let event bubble up if it is not for this service
+       (when (spy (same-scheme-host-port? target-url current-url))
+         ; let event bubble up if the SPA is not meant to handle it
+         (when-let [res (spy (navigate? target-url))]
+           ; at this time we knwo we handle the event
+           ; and we stop event from bubbling up
+           (when event (.preventDefault event))
+           (if (spy (= (:path target-url) (:path current-url)))
+             (.replaceState js/window.history nil "" (str target-url))
+             (.pushState js/window.history nil "" (str target-url)))
+           (on-navigate target-url res)))))))
 
 (defn deinit! []
   "For hot reloading in development. Not really necessary in prod since

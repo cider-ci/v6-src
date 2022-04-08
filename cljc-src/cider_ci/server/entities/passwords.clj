@@ -46,7 +46,7 @@
 (defn password-authenticated-user-statement [email-or-login password]
   (-> users/base-query
       (sql/where [:or
-                  [:= :users.login [:lower [:trim email-or-login]]]
+                  [:= [:lower :users.login] [:lower [:trim email-or-login]]]
                   [:exists (-> (sql/select true)
                                (sql/from :email_addresses)
                                (sql/where [:= [:lower [:trim email-or-login]]

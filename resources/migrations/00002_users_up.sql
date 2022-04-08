@@ -17,7 +17,7 @@ CREATE UNIQUE INDEX login_users ON users USING btree (lower(login::text));
 CREATE TABLE email_addresses (
   id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
-  email text NOT NULL CHECK (email::text ~~* '%@%'::text),
+  email text NOT NULL CHECK (email::text ~* '\S+.*@.*\S+'::text),
   is_primary boolean DEFAULT false NOT NULL ,
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );

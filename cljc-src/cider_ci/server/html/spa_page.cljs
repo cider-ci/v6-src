@@ -76,9 +76,8 @@
     [:> bs/Navbar.Collapse {:class "justify-content-end"}
      (if-let [user (-> @state/user*)]
        [navbar-user user]
-       [:<>
-        (when-not  (-> @routing-state* :data :no-sign-in-page)
-          [sign-in-form])])]]])
+       [:<> (when-not  (-> @routing-state* :data :no-sign-in-page)
+              [sign-in-form])])]]])
 
 
 (defn footer []

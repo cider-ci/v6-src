@@ -33,6 +33,12 @@ FactoryBot.define do
       database[:email_addresses].insert(
         user_id: user.id, email: user.email, is_primary: true)
 
+      (1..3).each do |i|
+        database[:email_addresses].insert(
+          user_id: user.id,
+          email: "#{user.firstname}_#{i}@#{user.lastname}.example",
+          is_primary: false)
+      end
     end
 
     factory :admin do

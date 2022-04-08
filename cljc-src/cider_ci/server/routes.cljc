@@ -51,5 +51,4 @@
                    :or {reload false}}]
       (if reload
         (set! js/window.location url)
-        (navigation/navigate! url event)
-        ))))
+        (navigation/navigate! url event)))))

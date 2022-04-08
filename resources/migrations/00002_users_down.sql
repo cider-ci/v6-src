@@ -1,4 +1,4 @@
 DROP TABLE sessions;
 DROP TABLE passwords;
-DROP TABLE emails;
+DROP TABLE email_addresses;
 DROP TABLE users;

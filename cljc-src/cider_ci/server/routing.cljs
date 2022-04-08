@@ -17,9 +17,7 @@
     ))
 
 
-
 (defn on-navigate [url match]
-  (info 'on-navigate2 match)
   (as-> match state
     (assoc state :name (get-in state [:data :name]))
     (assoc state :page (get route-page-table (:name state)))
@@ -33,8 +31,8 @@
     (reset! state/routing* state)))
 
 (defn navigate? [url]
-  (debug 'navigate? {:url url})
-  (when-let [match (reitit/match-by-path routes/router (:path url))]
+  (debug 'navigate? url)
+  (when-let [match (spy (reitit/match-by-path routes/router (:path url)))]
     (debug 'navigate? {:url url :match match})
     (when (not (or (get-in match [:data :bypass-spa])
                    (get-in match [:data :external])))

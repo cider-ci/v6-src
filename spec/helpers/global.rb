@@ -17,5 +17,13 @@ module Helpers
       wait_until(3) { first(:link_or_button, locator, options) }
       first(:link_or_button, locator, options).click
     end
+
+    def set_session_cookie user
+      visit '/' unless current_path.presence
+      Capybara.current_session.driver.browser.manage.add_cookie(
+        name: "cider-ci-session",
+        value: user.session_token)
+    end
+
   end
 end

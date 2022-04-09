@@ -14,7 +14,25 @@
    ["/sign-in"
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]
-   ["/sign-out" {:name :sign-out}]])
+   ["/sign-out" {:name :sign-out}]
+   ["/users"
+    ["/" {:name :users
+          :auth-read #{:admin}
+          :auth-write #{:admin}}
+     [":user-id"
+      ["" {:name :user
+           :auth-read #{:admin :self}
+           :auth-write #{:admin}}]
+      ["/password" {:name :user-password
+                    :auth-write #{:self}}]
+      ["/email-addresses/" {:name :user-email-addresses
+                            :auth-read #{:self}
+                            :auth-write #{:admin}}]]]]])
+
+(comment (path :user {:user-id "123"})
+         (path :user-password {:user-id "123"})
+         )
+
 
 (def router (reitit/router routes))
 

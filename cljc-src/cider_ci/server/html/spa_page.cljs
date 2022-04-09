@@ -61,8 +61,14 @@
   [:> bs/NavDropdown {:title
                       (reagent/as-element
                         [user-uid-component user])}
-   [:> bs/NavDropdown.Item {:class "btn btn-warning"
-                            :on-click sign-out}
+   [:> bs/NavDropdown.Item
+    {:href
+     (path :user {:user-id (-> @state/user* :id)})
+     }
+    "My Account"]
+   [:> bs/NavDropdown.Item
+    {:class "btn btn-warning"
+     :on-click sign-out}
     [:span "Sign out"]]])
 
 

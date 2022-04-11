@@ -9,9 +9,7 @@
     ))
 
 (def route-page-table
-  {:root #'root/page
-   :init #'init/page
-   :sign-in #'sign-in/page
-   :user [user/page user/nav-items]})
-
-
+  {:root root/components
+   :init init/components
+   :sign-in sign-in/components
+   :user user/components})

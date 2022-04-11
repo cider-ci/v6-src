@@ -19,14 +19,11 @@
 
 (defn on-navigate [url match]
   (let [name (get-in match[:data :name])
-        [page center-nav] (when-let [p (get route-page-table name)]
-                            (debug 'p p)
-                            (if-not (vector? p) [p nil] p))]
-    (debug 'page page 'center-nav center-nav)
+        component (get route-page-table name)]
     (as-> match state
       (assoc state :name name)
-      (assoc state :page page)
-      (assoc state :page-nav-items center-nav)
+      (assoc state :page (-> component :page))
+      (assoc state :page-nav-items (-> component :nav-items))
       (assoc state :query-params (some->> url :query query-params-decode))
       (assoc state :query-params-parsed (some->> state :query-params
                                                  (map (fn [[k v]] [k (yaml/parse v)]))

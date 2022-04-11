@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.users.user.html
   (:refer-clojure :exclude [keyword str])
   (:require
+    ["react-bootstrap" :as bs]
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
@@ -24,8 +25,9 @@
     [:code
      (with-out-str (pprint @user-data*))]]])
 
-(defn nav-items []
-  [:<>])
+(def nav-items
+  [[:> bs/Nav.Item
+    [:> bs/Nav.Link {:href (path :root)} "Bar"]]])
 
 (defn page []
   [:div.page
@@ -34,5 +36,8 @@
    [:h2.mt-3 "User"]
    [user-data-component]])
 
+
+(def components {:page page
+                 :nav-items nav-items})
 
 

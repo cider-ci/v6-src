@@ -41,3 +41,6 @@
    [:h2.mt-3 "Initial Setup"]
    [form]])
 
+
+(def components
+  {:page page})

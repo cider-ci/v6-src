@@ -44,3 +44,6 @@
    [:h2.mt-3 "Sign-in"]
    [form]
    ])
+
+(def components
+  {:page page})

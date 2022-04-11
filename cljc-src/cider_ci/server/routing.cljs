@@ -18,17 +18,23 @@
 
 
 (defn on-navigate [url match]
-  (as-> match state
-    (assoc state :name (get-in state [:data :name]))
-    (assoc state :page (get route-page-table (:name state)))
-    (assoc state :query-params (some->> url :query query-params-decode))
-    (assoc state :query-params-parsed (some->> state :query-params
-                                               (map (fn [[k v]] [k (yaml/parse v)]))
-                                               (into {})))
-    (assoc state :route (path (:name state)
-                              (:path-params state)
-                              (:query-params state)))
-    (reset! state/routing* state)))
+  (let [name (get-in match[:data :name])
+        [page center-nav] (when-let [p (get route-page-table name)]
+                            (debug 'p p)
+                            (if-not (vector? p) [p nil] p))]
+    (debug 'page page 'center-nav center-nav)
+    (as-> match state
+      (assoc state :name name)
+      (assoc state :page page)
+      (assoc state :page-nav-items center-nav)
+      (assoc state :query-params (some->> url :query query-params-decode))
+      (assoc state :query-params-parsed (some->> state :query-params
+                                                 (map (fn [[k v]] [k (yaml/parse v)]))
+                                                 (into {})))
+      (assoc state :route (path (:name state)
+                                (:path-params state)
+                                (:query-params state)))
+      (reset! state/routing* state))))
 
 (defn navigate? [url]
   (debug 'navigate? url)

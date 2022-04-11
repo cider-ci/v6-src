@@ -35,10 +35,13 @@
 
 (defn run [options]
   (info "run with " options)
+  (when (:dev-mode options)
+    (warn 're-require)
+    (require '[cider-ci.server.routing]
+             '[cider-ci.server.routing-resolver]))
   (db/init options)
   (let [routes (routing/init options)]
-    (http-server/init routes options)
-    ))
+    (http-server/init routes options)))
 
 
 (defn main [gopts args]

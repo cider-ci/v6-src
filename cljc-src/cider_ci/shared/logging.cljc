@@ -4,12 +4,9 @@
 
 (def LOGGING_CONFIG
   {:min-level [[#{
-                  ;"cider-ci.server.*"
-                  ;"cider-ci.server.html.spa"
-                  ;"cider-ci.server.html.utils.dom"
-                  ;"cider-ci.server.routing"
+                  ;"cider-ci.server.resources.users.user.http"
                   "cider-ci.server.routing"
-                  "cider-ci.server.html.history-navigation"
+                  ;"cider-ci.server.html.history-navigation"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

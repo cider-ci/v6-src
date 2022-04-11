@@ -3,11 +3,7 @@
     [cider-ci.server.html.utils.dom :as dom]
     [cljs.pprint :refer [pprint]]
     [reagent.core :as reagent]
-    [reagent.ratom :as ratom :refer [reaction]]
-    [timothypratley.patchin :as patchin]
-    [taoensso.timbre :refer [debug info warn error spy]])
-  (:require-macros
-    ))
+    [taoensso.timbre :refer [debug info warn error spy]]))
 
 
 (def routing* (reagent/atom {}))
@@ -18,13 +14,11 @@
 
 (def user* (reagent/atom nil))
 
-(def state* (reaction
-                  {:debug @debug?*
-                   :routing @routing*
-                   :server @server*
-                   :user @user*
-                   }))
-
+(def state* (reagent/reaction
+              {:debug @debug?*
+               :routing @routing*
+               :server @server*
+               :user @user* }))
 
 (defn hidden-routing-state-component
   [& {:keys [did-mount did-change did-update will-unmount]
@@ -43,10 +37,11 @@
         eval-did-change (fn [handler args]
                           (let [old-state @old-state*
                                 new-state @routing*]
+                            (debug 'old-state old-state 'new-state new-state)
                             (when (not= old-state new-state)
                               (reset! old-state* new-state)
                               (apply handler (concat
-                                               [old-state (patchin/diff old-state new-state) new-state]
+                                               [old-state new-state]
                                                args)))))]
     (reagent/create-class
       {:component-will-unmount (fn [& args] (apply will-unmount args))
@@ -57,7 +52,8 @@
                                (apply did-update args)
                                (eval-did-change did-change args))
        :reagent-render
-       (fn [_]
+       (fn [& {:keys []
+               :or {}}]
          [:div.hidden-routing-state-component
           {:style {:display :none}}
           [:pre (with-out-str (pprint @routing*))]])})))

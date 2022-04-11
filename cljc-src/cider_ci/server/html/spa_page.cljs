@@ -62,9 +62,7 @@
                       (reagent/as-element
                         [user-uid-component user])}
    [:> bs/NavDropdown.Item
-    {:href
-     (path :user {:user-id (-> @state/user* :id)})
-     }
+    {:href (path :user {:user-id (-> @state/user* :id)})}
     "My Account"]
    [:> bs/NavDropdown.Item
     {:class "btn btn-warning"
@@ -78,7 +76,12 @@
 (defn header []
   [:> bs/Navbar {:bg :light}
    [:> bs/Container {}
-    [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]
+    [:> bs/Navbar.Collapse {:class "justify-content-left"}
+     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
+    [:<> (when-let [nav-items (:page-nav-items @state/routing*)]
+           [:> bs/Navbar.Collapse  {:class "justify-content-center"}
+            [:> bs/Nav.Item
+             [:> bs/Nav.Link {:href (path :root)} "Foo"]]])]
     [:> bs/Navbar.Collapse {:class "justify-content-end"}
      (if-let [user (-> @state/user*)]
        [navbar-user user]
@@ -89,7 +92,7 @@
 (defn footer []
   [:> bs/Navbar {:bg :light}
    [:> bs/Navbar.Collapse {:class_name "justify-content-end"}]
-   [:> bs/Form {:inline true :class "px-2"}
+   [:> bs/Form {:inline "true" :class "px-2"}
     [:> bs/Form.Group {:control-id "debug"}
      [:> bs/Form.Check {:type "checkbox" :label "Debug"
                         :checked @state/debug?*

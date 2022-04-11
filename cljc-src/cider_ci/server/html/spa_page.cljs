@@ -80,8 +80,8 @@
      [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
     [:<> (when-let [nav-items (:page-nav-items @state/routing*)]
            [:> bs/Navbar.Collapse  {:class "justify-content-center"}
-            [:> bs/Nav.Item
-             [:> bs/Nav.Link {:href (path :root)} "Foo"]]])]
+            (for [item nav-items]
+              [:<> item])])]
     [:> bs/Navbar.Collapse {:class "justify-content-end"}
      (if-let [user (-> @state/user*)]
        [navbar-user user]

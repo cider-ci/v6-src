@@ -25,9 +25,17 @@
     [:code
      (with-out-str (pprint @user-data*))]]])
 
-(def nav-items
-  [[:> bs/Nav.Item
-    [:> bs/Nav.Link {:href (path :root)} "Bar"]]])
+(defn center-nav []
+  [:<>
+   [:> bs/Navbar.Collapse  {:class "justify-content-center"}
+    [:> bs/Nav.Item
+     [:> bs/Nav.Link {:href (path :user
+                                  {:user-id (:id @user-data*)})}
+      "Me"]]
+    [:> bs/Nav.Item
+     [:> bs/Nav.Link {:href (path :user-password
+                                  {:user-id (:id @user-data*)})}
+      "Reset Password"]]]])
 
 (defn page []
   [:div.page
@@ -38,6 +46,6 @@
 
 
 (def components {:page page
-                 :nav-items nav-items})
+                 :center-nav center-nav})
 
 

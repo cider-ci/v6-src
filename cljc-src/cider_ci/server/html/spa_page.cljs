@@ -63,7 +63,7 @@
                         [user-uid-component user])}
    [:> bs/NavDropdown.Item
     {:href (path :user {:user-id (-> @state/user* :id)})}
-    "My Account"]
+    "My account"]
    [:> bs/NavDropdown.Item
     {:class "btn btn-warning"
      :on-click sign-out}
@@ -78,10 +78,8 @@
    [:> bs/Container {}
     [:> bs/Navbar.Collapse {:class "justify-content-left"}
      [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
-    [:<> (when-let [nav-items (:page-nav-items @state/routing*)]
-           [:> bs/Navbar.Collapse  {:class "justify-content-center"}
-            (for [item nav-items]
-              [:<> item])])]
+    [:<> (when-let [center-nav (:center-nav @state/routing*)]
+           [center-nav])]
     [:> bs/Navbar.Collapse {:class "justify-content-end"}
      (if-let [user (-> @state/user*)]
        [navbar-user user]

@@ -4,11 +4,12 @@ windows:
     name: server-repl-run
     command: |
       export DB_NAME=cider_ci_v6
+      sleep 30
       ./bin/server-run
   3:
     name: front-repl-run
     command: |
-      ./bin/cljs-watch-app
+      ./bin/cljs-watch
   5:
     name: psql
     command: |
@@ -17,5 +18,9 @@ windows:
   6:
     name: re-migrate
     command: |
+      ./bin/server-db-migrate -s 0
 
-
+  7:
+    name: test
+    command: |
+      bundle

@@ -23,7 +23,7 @@
     (as-> match state
       (assoc state :name name)
       (assoc state :page (-> component :page))
-      (assoc state :page-nav-items (-> component :nav-items))
+      (assoc state :center-nav (-> component :center-nav))
       (assoc state :query-params (some->> url :query query-params-decode))
       (assoc state :query-params-parsed (some->> state :query-params
                                                  (map (fn [[k v]] [k (yaml/parse v)]))

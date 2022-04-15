@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     ["react-bootstrap" :as bs]
+    [cider-ci.server.html.icons :as icons]
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
@@ -21,6 +22,7 @@
 
 (defn user-data-component []
   [:div.page-debug
+   [icons/password]
    [:pre.bg-light
     [:code
      (with-out-str (pprint @user-data*))]]])
@@ -33,9 +35,10 @@
                                   {:user-id (:id @user-data*)})}
       "Me"]]
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :user-password
+     [:> bs/Nav.Link {:class "btn btn-outline-secondary btn-sm"
+                      :href (path :user-password
                                   {:user-id (:id @user-data*)})}
-      "Reset Password"]]]])
+      "Reset password"]]]])
 
 (defn page []
   [:div.page

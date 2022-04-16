@@ -22,7 +22,8 @@
 
 (defn upsert-statement [password user-id]
   (-> (sql/insert-into :passwords)
-      (sql/values [{:user_id user-id :password_hash (gen-crypt-expr password)}])
+      (sql/values [{:user_id [:cast user-id :uuid]
+                    :password_hash (gen-crypt-expr password)}])
       (sql/on-conflict :user_id)
       (sql/do-update-set :password_hash)
       (sql/returning :*)))

@@ -27,6 +27,7 @@
     [:code
      (with-out-str (pprint @user-data*))]]])
 
+
 (defn center-nav []
   [:<>
    [:> bs/Navbar.Collapse  {:class "justify-content-center"}
@@ -38,7 +39,8 @@
      [:> bs/Nav.Link {:class "btn btn-outline-secondary btn-sm"
                       :href (path :user-password
                                   {:user-id (:id @user-data*)})}
-      "Reset password"]]]])
+
+      [:span [icons/password] " " "Reset password"]]]]])
 
 (defn page []
   [:div.page

@@ -21,10 +21,22 @@ feature 'User Account'  do
       expect(current_path).to be== "/users/#{@user.id}"
     end
 
-    scenario 'resets the password' do
+    scenario 'resets the password and signs in again' do
       click_on @user.login
       click_on "My account"
-      binding.pry
+      click_on "Reset password"
+      fill_in 'password', with: 'New Secret'
+      click_on 'Submit'
+      expect(page).to have_content 'Request SUCCESS'
+      click_on @user.login
+      click_on 'Sign out'
+      expect(page).not_to have_content @user.login
+      fill_in 'login', with: @user.login
+      click_on 'Sign in'
+      expect(page).to have_content 'Sign-in'
+      fill_in 'password', with: 'New Secret'
+      click_on 'Submit'
+      expect(page).to have_content @user.login
     end
   end
 end

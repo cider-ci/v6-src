@@ -4,6 +4,7 @@
     [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
     [cider-ci.server.resources.sign-out :as sign-out]
     [cider-ci.server.resources.users.user.http :as user]
+    [cider-ci.server.resources.users.user.password :as user-password]
     [cider-ci.server.routes :as routes]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
@@ -12,7 +13,8 @@
   {:init #'init/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler
-   :user #'user/handler})
+   :user #'user/handler
+   :user-password user-password/handler })
 
 (defn route-resolve [handler {uri :uri :as request}]
   (if-let [route (routes/route uri)]

@@ -37,8 +37,8 @@
   (info "run with " options)
   (when (:dev-mode options)
     (warn 're-require)
-    (require '[cider-ci.server.routing]
-             '[cider-ci.server.routing-resolver]))
+    (require '[cider-ci.server.routing-resolver]
+             '[cider-ci.server.routing]))
   (db/init options)
   (let [routes (routing/init options)]
     (http-server/init routes options)))

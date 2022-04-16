@@ -89,7 +89,7 @@
       (if false
         [:<>]
         [:div {:style {:opacity (case status :pending "1.0" "1.0") :z-index 10000}}
-         [:div.modal {:style {:display "block" :z-index 10000}}
+         [:div.modal.request {:style {:display "block" :z-index 10000}}
           [:div.modal-dialog.modal-lg
            [:div.modal-content
             [:div.modal-header {:class (str "text-" bootstrap-status)}
@@ -98,7 +98,7 @@
                          (str " \"" title "\" "))
                        (case status
                          :error " ERROR "
-                         :success " OK "
+                         :success " SUCCESS "
                          :pending " PENDING "
                          nil))
               (when-not (= status :success)

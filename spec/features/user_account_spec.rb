@@ -38,6 +38,18 @@ feature 'User Account'  do
       click_on 'Submit'
       expect(page).to have_content @user.login
     end
+
+    scenario 'a user can not set the passwort of some other user' do
+      @other_user = FactoryBot.create :user
+      database[:passwords].where(user_id: @other_user.id).delete()
+      expect(database[:passwords].where(user_id: @other_user.id).first).not_to be
+      visit "/users/#{@other_user.id}/password"
+      fill_in 'password', with: 'New Secret'
+      click_on 'Submit'
+      expect(page).to have_content 'Request ERROR'
+      expect(database[:passwords].where(user_id: @other_userid.id).first).not_to be
+    end
+
   end
 
   context "an admin" do

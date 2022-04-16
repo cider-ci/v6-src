@@ -56,6 +56,12 @@
            (warn (.getMessage a))
            {:status 422
             :body (.getMessage a)})
+         (catch clojure.lang.ExceptionInfo exi
+           (if-let [status (-> exi ex-data :status)]
+             {:status status
+              :body (ex-message exi)}
+             {:status 500
+              :body "Internal Server Error"}))
          (catch Exception e
            (error e)
            {:status 500

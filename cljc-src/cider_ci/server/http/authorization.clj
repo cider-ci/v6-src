@@ -25,7 +25,7 @@
 
 (defn check! [auths request]
   (or (some (partial check request) auths)
-      (throw (ex-info "None authorization satisfied" {:status 403}))))
+      (throw (ex-info "Authorization not satisfied" {:status 403}))))
 
 (defn wrap [handler]
   (fn [{request-method :request-method

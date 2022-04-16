@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     ["react-bootstrap" :as bs]
+    [cider-ci.server.html.icons :as icons]
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
@@ -45,7 +46,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn user-uid-component [user]
-  [:span
+  [:span.user-uid
    (or (some-> user :login)
        (some-> user :email_addresses first)
        (some-> user :id (string/split "-") first))])
@@ -60,7 +61,13 @@
 (defn navbar-user [user]
   [:> bs/NavDropdown {:title
                       (reagent/as-element
-                        [user-uid-component user])}
+                        [:<>
+                         [:span.user-icon
+                          (if (:is_admin user)
+                            [icons/user-admin]
+                            [icons/user])
+                          " "]
+                         [user-uid-component user]])}
    [:> bs/NavDropdown.Item
     {:href (path :user {:user-id (-> @state/user* :id)})}
     "My account"]

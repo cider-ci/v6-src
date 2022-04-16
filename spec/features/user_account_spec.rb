@@ -39,4 +39,20 @@ feature 'User Account'  do
       expect(page).to have_content @user.login
     end
   end
+
+  context "an admin" do
+    before :each do
+      set_session_cookie @admin
+      visit '/'
+    end
+    scenario 'resets the password of an other user' do
+      database[:passwords].where(user_id: @user.id).delete()
+      expect(database[:passwords].where(user_id: @user.id).first).not_to be
+      visit "/users/#{@user.id}/password"
+      fill_in 'password', with: 'New Secret'
+      click_on 'Submit'
+      expect(page).to have_content 'Request SUCCESS'
+      expect(database[:passwords].where(user_id: @user.id).first).to be
+    end
+  end
 end

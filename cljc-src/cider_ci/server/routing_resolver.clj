@@ -14,7 +14,7 @@
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler
    :user #'user/handler
-   :user-password user-password/handler })
+   :user-password #'user-password/handler })
 
 (defn route-resolve [handler {uri :uri :as request}]
   (if-let [route (routes/route uri)]

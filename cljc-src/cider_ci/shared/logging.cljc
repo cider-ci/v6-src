@@ -5,7 +5,8 @@
 (def LOGGING_CONFIG
   {:min-level [[#{
                   ;"cider-ci.server.resources.users.user.http"
-                  "cider-ci.server.routing"
+                  "cider-ci.server.http.authorization"
+                  ;"cider-ci.server.routing"
                   ;"cider-ci.server.html.history-navigation"
                   } :debug]
                [#{

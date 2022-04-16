@@ -24,7 +24,7 @@
            :auth-read #{:admin :self}
            :auth-write #{:admin}}]
       ["/password" {:name :user-password
-                    :auth-write #{:self}}]
+                    :auth-write #{:self :admin}}]
       ["/email-addresses/" {:name :user-email-addresses
                             :auth-read #{:self}
                             :auth-write #{:admin}}]]]]])

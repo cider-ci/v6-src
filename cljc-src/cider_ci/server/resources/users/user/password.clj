@@ -13,6 +13,5 @@
 (defn handler [{{password :password} :body
                 {{user-id :user-id} :path-params} :route
                 tx :tx :as request}]
-  (warn request)
   (assert (passwords/upsert tx password user-id))
   {:status 204})

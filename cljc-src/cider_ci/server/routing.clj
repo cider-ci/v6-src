@@ -4,6 +4,7 @@
     [cider-ci.server.html.spa :as spa]
     [cider-ci.server.html.static-resources :as static-resources]
     [cider-ci.server.http.authentication :as authentication]
+    [cider-ci.server.http.authorization :as authorization]
     [cider-ci.server.routing-resolver :as routing-resolver]
     [logbug.debug :as debug :refer [I>]]
     [logbug.ring :refer [wrap-handler-with-logging]]
@@ -71,13 +72,12 @@
 (defn build-routes [options]
   (-> not-found-handler
       wrap-resource-dispatch
+      authorization/wrap
       (wrap-json-body {:keywords? true})
       wrap-json-response
       spa/wrap
       routing-resolver/wrap
-      ; wrap-debug
       authentication/wrap
-      ; wrap-debug
       ring.middleware.cookies/wrap-cookies
       wrap-tx
       wrap-accept

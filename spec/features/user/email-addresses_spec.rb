@@ -12,7 +12,7 @@ feature 'User email addresses' do
 
     before :each do
       set_session_cookie @admin
-      visit "/user/#{@user.id}/email-addresses/"
+      visit "/users/#{@user.id}/email-addresses/"
     end
 
     example 'can remove a email-address' do

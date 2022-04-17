@@ -5,6 +5,7 @@
     [taoensso.timbre :refer [debug info warn error]]
     [cider-ci.utils.query-params :as query-params]
     [cuerdas.core :as string :refer []]
+    [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 (def routes
@@ -81,9 +82,12 @@
 
 
 (comment
-  (->> [:user {:user-id "123"} {:foo true}]
+  (->> [:user-email-addresses {:user-id "123"} ]
+       spy
        (apply path)
-       (reitit/match-by-path router))
+       spy
+       (reitit/match-by-path router)
+       spy)
 
 
 

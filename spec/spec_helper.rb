@@ -21,7 +21,8 @@ RSpec.configure do |config|
 
   config.after(:each) do |example|
     # auto-pry after failures, except in CI!
-    unless (ENV['CIDER_CI_TRIAL_ID'].present? or ENV['NOPRY_ON_EXCEPTION'].present?)
+    unless (ENV['CIDER_CI_TRIAL_ID'].present? ||
+        ENV['NOPRY_ON_EXCEPTION'].presence.try{ YAML.load(self) })
       unless example.exception.nil?
         binding.pry if example.exception
       end

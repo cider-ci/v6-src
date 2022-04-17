@@ -52,10 +52,10 @@
        (some-> user :id (string/split "-") first))])
 
 (defn sign-out [& args]
-  (go (let [resp (-> {:url (path :sign-out {} {:foo :bar})
-                      :method :post}
-                     http-client/request
-                     :chan <!)]
+  (go (when (-> {:url (path :sign-out {} {:foo :bar})
+                 :method :post}
+                http-client/request
+                :chan <! http-client/filter-success)
         (navigate! (path :root) nil :reload true))))
 
 (defn navbar-user [user]

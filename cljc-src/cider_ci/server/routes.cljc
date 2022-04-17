@@ -8,26 +8,32 @@
     ))
 
 (def routes
-  [["/" {:name :root}]
+  [["/" {:name :root
+         :auth-http-unsave #{}
+         :auth-http-save #{:public}}]
    ["/init" {:name :init
-             :no-sign-in-page true}]
-   ["/sign-in"
+             :no-sign-in-page true
+             :auth-http-save #{:public}
+             :auth-http-unsave #{:public}}]
+   ["/sign-in" {:auth-http-unsave #{:public}}
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]
-   ["/sign-out" {:name :sign-out}]
+   ["/sign-out" {:name :sign-out
+                 :auth-http-unsave #{:public}
+                 :auth-http-save #{:public}}]
    ["/users"
     ["/" {:name :users
-          :auth-read #{:admin}
-          :auth-write #{:admin}}
+          :auth-http-save #{:admin}
+          :auth-http-unsave #{:admin}}
      [":user-id"
       ["" {:name :user
-           :auth-read #{:admin :self}
-           :auth-write #{:admin}}]
+           :auth-http-save #{:admin :self}
+           :auth-http-unsave #{:admin}}]
       ["/password" {:name :user-password
-                    :auth-write #{:self :admin}}]
+                    :auth-http-unsave #{:self :admin}}]
       ["/email-addresses/" {:name :user-email-addresses
-                            :auth-read #{:self}
-                            :auth-write #{:admin}}]]]]])
+                            :auth-http-save #{:self}
+                            :auth-http-unsave #{:admin}}]]]]])
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"})

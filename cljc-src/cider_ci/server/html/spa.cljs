@@ -1,9 +1,11 @@
 (ns cider-ci.server.html.spa
   (:refer-clojure :exclude [keyword str])
   (:require
-    [cider-ci.server.http.client.modals :as http-client-modals]
     [cider-ci.server.html.spa-page :refer [header footer]]
+    [cider-ci.server.http.client.modals :as http-client-modals]
+    [cider-ci.server.routes :as routes :refer [path navigate!]]
     [cider-ci.server.state :as state]
+    [cljs.pprint :refer [pprint]]
     [reagent.dom :as rdom]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
@@ -21,6 +23,15 @@
      [page]
      [not-found-page])
    [state/debug-ui-component]
+   [:div.debug.router-debug
+    (when @state/debug?*
+      [:<>
+       [:hr]
+       [:h4 "Routes " ]
+       [:pre.bg-light
+        [:code
+         (with-out-str (pprint routes/routes-flattened))
+         ]]])]
    [footer]])
 
 (defn mount []

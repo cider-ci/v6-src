@@ -40,7 +40,14 @@
                       :href (path :user-password
                                   {:user-id (:id @user-data*)})}
 
-      [:span [icons/password] " " "Reset password"]]]]])
+      [:span [icons/password] " " "Reset password"]]]
+    [:> bs/Nav.Item
+     [:> bs/Nav.Link {:class "btn btn-outline-secondary btn-sm"
+                      :href (path :user-email-addresses
+                                  {:user-id (:id @user-data*)})}
+      [:span [icons/password] " " "Manage email-addresses"]]]]])
+
+
 
 (defn page []
   [:div.page

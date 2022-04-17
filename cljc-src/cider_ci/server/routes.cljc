@@ -27,24 +27,26 @@
           :auth-http-unsave #{:admin}}
      [":user-id"
       ["" {:name :user
-           :auth-http-save #{:admin :self}
-           :auth-http-unsave #{:admin}}]
+           :auth-http-save #{:self}}]
       ["/password" {:name :user-password
-                    :auth-http-unsave #{:self :admin}}]
-      ["/email-addresses/" {:name :user-email-addresses
-                            :auth-http-save #{:self}
-                            :auth-http-unsave #{:admin}}]]]]])
+                    :auth-http-unsave #{:self}}]
+      ["/email-addresses"
+       ["/" {:name :user-email-addresses
+             :auth-http-save #{:self}
+             :auth-http-unsave #{:admin}}]
+       ["/:email-address" {:name :user-email-address}
+        ["/primary" {:name :user-email-address-primary
+                     :auth-http-unsave #{:self}}]]]]]]])
 
 (comment (path :user {:user-id "123"})
-         (path :user-password {:user-id "123"})
-         )
+         (path :user-password {:user-id "123"}))
 
 
 (def router (reitit/router routes))
 
 (def routes-flattened (reitit/routes router))
 
-;(reitit/match-by-name router :admin-stores)
+
 ;(reitit/match->path (reitit/match-by-name router :upload {:upload-id 5}))
 ;(reitit/match-by-path router "/media-service/")
 
@@ -76,3 +78,13 @@
       (if reload
         (set! js/window.location url)
         (navigation/navigate! url event)))))
+
+
+(comment
+  (->> [:user {:user-id "123"} {:foo true}]
+       (apply path)
+       (reitit/match-by-path router))
+
+
+
+  (reitit/match-by-name router :users {:user-id "123"}))

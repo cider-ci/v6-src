@@ -3,7 +3,7 @@ class User < Sequel::Model
   attr_accessor :firstname
   attr_accessor :lastname
   attr_accessor :session_token
-  attr_accessor :email
+  attr_accessor :email_address
 end
 
 FactoryBot.define do
@@ -12,7 +12,7 @@ FactoryBot.define do
     lastname { Faker::Name.unique.last_name }
     name { firstname + ' ' + lastname }
     login { firstname }
-    email  {firstname + '.' + lastname + '@' + Faker::Internet.domain_name }
+    email_address  {firstname + '.' + lastname + '@' + Faker::Internet.domain_name }
     password { "secret" }
     session_token { SecureRandom.uuid }
 
@@ -31,12 +31,12 @@ FactoryBot.define do
         user_id: user.id, token_digest: token_digest)
 
       database[:email_addresses].insert(
-        user_id: user.id, email: user.email, is_primary: true)
+        user_id: user.id, email_address: user.email_address, is_primary: true)
 
       (1..3).each do |i|
         database[:email_addresses].insert(
           user_id: user.id,
-          email: "#{user.firstname}_#{i}@#{user.lastname}.example",
+          email_address: "#{user.firstname}_#{i}@#{user.lastname}.example",
           is_primary: false)
       end
     end

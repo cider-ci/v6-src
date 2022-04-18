@@ -37,10 +37,10 @@
            icon [:<>]
            disabled false}}]
   [:div
-   {:class (->> outer-classes (map str) (string/join " "))}
+   {:class outer-classes}
    [:div.float-end
     [:button.btn
-     {:class (->> btn-classes (map str) (string/join " "))
+     {:class btn-classes
       :type :submit
       :disabled disabled
       :tab-index TAB-INDEX}

@@ -12,10 +12,8 @@
 
 (defn handler [{{{user-id :user-id} :path-params} :route
                 tx :tx :as request}]
-  (if-let [user (jdbc/execute-one!
-                  tx (-> users/base-query
-                         (sql/where [:= :users.id [:cast user-id :uuid]])
-                         (sql-format {:inline false})))]
-    {:body (:email_addresses user)}
-    {:status 404
-     :body "user not found"}))
+  {:body (jdbc/execute!
+           tx (-> (sql/from :email_addresses)
+                  (sql/select :*)
+                  (sql/where [:= :user_id [:cast user-id :uuid]])
+                  (sql-format {:inline false})))})

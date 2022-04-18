@@ -25,6 +25,9 @@
    [icons/password]
    [:pre.bg-light
     [:code
+     (with-out-str (pprint @data*))]]
+   [:pre.bg-light
+    [:code
      (with-out-str (pprint @user-data*))]]])
 
 

@@ -8,6 +8,8 @@
     ))
 
 
-(defn user-admin [] (FontAwesomeIcon #js{:icon solids/faUserGear :className ""}))
-(defn user [] (FontAwesomeIcon #js{:icon solids/faUser :className ""}))
+(defn delete [] (FontAwesomeIcon #js{:icon solids/faTimes :className ""}))
+(defn email [] (FontAwesomeIcon #js{:icon solids/faEnvelope :className ""}))
 (defn password [] (FontAwesomeIcon #js{:icon solids/faKey :className ""}))
+(defn user [] (FontAwesomeIcon #js{:icon solids/faUser :className ""}))
+(defn user-admin [] (FontAwesomeIcon #js{:icon solids/faUserGear :className ""}))

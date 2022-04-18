@@ -24,8 +24,12 @@
 
 (defn delete [row]
   (warn "TODO delete " row)
-
   )
+
+(defn set-as-primary [row]
+  (warn "TODO set-as-primary" row)
+  )
+
 
 (defn debug-component []
   (if @state/debug?*
@@ -41,15 +45,16 @@
 (defn email-addresses-component []
   [:ol.list-group
    (for [row @data*]
-     (let [email (:email row)]
-       ^{:key (:email row)}
+     (let [email-address (:email_address row)]
+       ^{:key email-address}
        [:li.list-group-item.flex-column
         [:div.d-flex.justify-content-between
-         [:div [:a {:href (str "mailto:" email)}
-                [:span [icons/email] " " email]]]
+         [:div [:a {:href (str "mailto:" email-address)}
+                [:span [icons/email] " " email-address]]]
          [:div
           [:div.btn-group
            [:form
+            {:on-submit (fn [e] (.preventDefault e) (set-as-primary row))}
             [:button.btn.btn-sm.btn-secondary
              {:type :submit
               :disabled (:is_primary row)}

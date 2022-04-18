@@ -19,19 +19,19 @@
           "Expected no existing admin"))
 
 
-(defn email? [s] (string/includes? s "@"))
+(defn email_address? [s] (string/includes? s "@"))
 
 (defn create-admin [tx uid password]
   (let [admin (jdbc/execute-one!
                 tx (-> (sql/insert-into :users)
-                       (sql/values [{:login (when-not (email? uid) uid)
+                       (sql/values [{:login (when-not (email_address? uid) uid)
                                      :is_admin true}])
                        sql-format)
                 {:return-keys true})]
-    (when (email? uid)
+    (when (email_address? uid)
       (jdbc/execute-one!
         tx (-> (sql/insert-into :email_addresses)
-               (sql/values [{:email uid
+               (sql/values [{:email_address uid
                              :is_primary true
                              :user_id (:id admin)}])
                sql-format)))

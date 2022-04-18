@@ -32,7 +32,7 @@ feature 'Sign-in and sign-out'  do
 
     scenario 'sign-in with non primary email' do
       visit '/'
-      fill_in 'login', with: database[:email_addresses].where(user_id: @user.id, is_primary: false).all.sample[:email]
+      fill_in 'login', with: database[:email_addresses].where(user_id: @user.id, is_primary: false).all.sample[:email_address]
       click_on 'Sign in'
       expect(page).to have_content 'Sign-in'
       fill_in 'password', with: @user.password

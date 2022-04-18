@@ -9,11 +9,10 @@
 
 (def email-sub
   (-> (sql/select
-        [[:raw " json_agg(email_addresses.email ORDER BY is_primary DESC, email DESC) "]])
+        [[:raw " json_agg(email_addresses.email_address ORDER BY is_primary DESC, lower(email_address) DESC) "]])
       (sql/from :email_addresses)
       (sql/where [:= :email_addresses.user_id :users.id])
-      (sql/group-by :email_addresses.user_id)
-      ))
+      (sql/group-by :email_addresses.user_id)))
 
 
 (def has-password-sub

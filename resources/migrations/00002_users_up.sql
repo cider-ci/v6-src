@@ -22,7 +22,8 @@ CREATE TABLE email_addresses (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-CREATE UNIQUE INDEX email_address_idx ON email_addresses USING btree (lower(email_address::text));
+CREATE UNIQUE INDEX email_addresses_email_address_idx ON email_addresses USING btree (lower(email_address::text));
+CREATE INDEX email_addresses_user_id_idx ON email_addresses USING btree (user_id);
 
 
 

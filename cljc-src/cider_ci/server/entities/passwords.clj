@@ -51,7 +51,7 @@
                   [:exists (-> (sql/select true)
                                (sql/from :email_addresses)
                                (sql/where [:= [:lower [:trim email-or-login]]
-                                           [:lower :email_addresses.email]])
+                                           [:lower :email_addresses.email_address]])
                                (sql/where [:= :users.id :email_addresses.user_id]))]])
       (sql/where [:exists (-> (sql/select true)
                               (sql/from :passwords)

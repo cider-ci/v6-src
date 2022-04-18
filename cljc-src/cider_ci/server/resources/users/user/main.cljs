@@ -1,4 +1,4 @@
-(ns cider-ci.server.resources.users.user.html
+(ns cider-ci.server.resources.users.user.main
   (:refer-clojure :exclude [keyword str])
   (:require
     ["react-bootstrap" :as bs]
@@ -15,7 +15,7 @@
 
 (def data* (reagent/atom nil))
 
-(def user-data* (reagent/reaction (get @data* (:path @state/routing*))))
+(def user-data* (reagent/reaction (get @data* (:route @state/routing*))))
 
 (defn fetch-data [& _]
   (http-client/route-cached-fetch data*))

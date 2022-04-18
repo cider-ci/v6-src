@@ -13,11 +13,30 @@
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
+(defonce _data* (reagent/atom {}))
+
+(def data* (reagent/reaction (get @_data* (:path @state/routing*))))
+
+(defn fetch-data [& _]
+  (http-client/route-cached-fetch data*))
 
 (defn page []
   [:div.page
+   [state/hidden-routing-state-component
+    :did-change #(fetch-data)]
    [:h2 "Email addresses"]
-   ])
+   [:ol
+    (for [email-address @data*]
+      ;^:key email-address
+      [:li [:span email-address]]
+      )]
+   [:pre.bg-light
+    [:code
+     (with-out-str (pprint @_data*))
+     ]]
+   [:pre.bg-light
+    [:code
+     (with-out-str (pprint @data*))]]])
 
 (def components
   {:page page})

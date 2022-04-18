@@ -1,4 +1,4 @@
-(ns cider-ci.server.resources.users.user.http
+(ns cider-ci.server.resources.users.user.main
   (:require
     [cider-ci.utils.core :refer [presence]]
     [cider_ci.server.entities.users :as users]

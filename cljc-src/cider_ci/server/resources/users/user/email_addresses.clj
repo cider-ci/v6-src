@@ -37,6 +37,8 @@
       (sql/on-conflict :email_address)
       (sql/do-update-set :is_primary)))
 
+(defn update-sql [user-id email-address data])
+
 (defn handler [{{{user-id :user-id
                   email-address :email-address} :path-params
                  {route-name :name} :data} :route
@@ -55,19 +57,22 @@
       :delete (do (->> [user-id email-address]
                        (apply delete-email-address-sql)
                        sql-format (jdbc/execute! tx))
-                  {:body (->> [user-id] (apply  email-addresses-sql)
+                  {:body (->> [user-id] (apply email-addresses-sql)
                               sql-format (jdbc/execute! tx))})
 
-      :put (do (when (:is_primary data)
+      :patch (do (when (:is_primary data)
+                   (->> (-> (sql/update :email_addresses)
+                            (sql/set {:is_primary false})
+                            (email-addresses-where-sql user-id)
+                            sql-format)
+                        (jdbc/execute! tx)))
                  (->> (-> (sql/update :email_addresses)
-                          (sql/set {:is_primary false})
-                          (email-addresses-where-sql user-id)
+                          (sql/set (select-keys data [:is_primary]))
+                          (email-address-where-sql user-id email-address)
                           sql-format)
                       (jdbc/execute! tx))
-                 (->> [user-id data] (apply upsert-sql)
-                      sql-format (jdbc/execute! tx))
                  {:body (->> [user-id] (apply  email-addresses-sql)
-                             sql-format (jdbc/execute! tx))})))))
+                             sql-format (jdbc/execute! tx))}))))
 
 
 

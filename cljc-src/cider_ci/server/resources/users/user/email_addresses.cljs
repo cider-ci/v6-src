@@ -36,7 +36,7 @@
 (defn set-as-primary [row]
   (go (when-let
         [res (-> {:json-params (assoc row :is_primary true)
-                  :method :put
+                  :method :patch
                   :url (->> [:user-email-address
                              {:user-id (-> @state/routing* :path-params :user-id)
                               :email-address (:email_address row)}]

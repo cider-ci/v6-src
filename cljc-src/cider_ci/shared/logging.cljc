@@ -4,11 +4,7 @@
 
 (def LOGGING_CONFIG
   {:min-level [[#{
-                  ;"cider-ci.server.resources.users.user.http"
-                  "cider-ci.server.http.authorization"
-                  "cider-ci.server.routes"
-                  ;"cider-ci.server.routing"
-                  ;"cider-ci.server.html.history-navigation"
+                  "cider-ci.server.resources.users.user.email-addresses"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

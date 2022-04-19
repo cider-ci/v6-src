@@ -23,6 +23,9 @@
 
 
 (defn delete [row]
+  (go (when (-> {:method :delete
+                 :url (path :user-email-address {:user-id (-> @state/routing*)})
+                 })))
   (warn "TODO delete " row)
   )
 

@@ -10,10 +10,18 @@
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
+
+(defn email-addresses-sql [user-id]
+  (-> (sql/from :email_addresses)
+      (sql/select :*)
+      (sql/where [:= :user_id [:cast user-id :uuid]])
+      (sql/order-by [:is_primary :desc] [[:lower :email_address] :asc])))
+
 (defn handler [{{{user-id :user-id} :path-params} :route
                 tx :tx :as request}]
   {:body (jdbc/execute!
-           tx (-> (sql/from :email_addresses)
-                  (sql/select :*)
-                  (sql/where [:= :user_id [:cast user-id :uuid]])
+           tx (-> user-id email-addresses-sql
                   (sql-format {:inline false})))})
+
+
+

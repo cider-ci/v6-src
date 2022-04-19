@@ -23,20 +23,27 @@
 
 
 (defn delete [row]
-  (go (when (-> {:method :delete
-                 :url (->> [:user-email-address
-                            {:user-id (-> @state/routing* :path-params :user-id)
-                             :email-address (:email_address row)}]
-                           (apply path))}
-                http-client/request
-                :chan <! spy http-client/filter-success
-                )))
-  (warn "TODO delete " row)
-  )
+  (go (when-let
+        [res (-> {:method :delete
+                  :url (->> [:user-email-address
+                             {:user-id (-> @state/routing* :path-params :user-id)
+                              :email-address (:email_address row)}]
+                            (apply path))}
+                 http-client/request
+                 :chan <! spy http-client/filter-success :body)]
+        (swap! _data* assoc (-> @state/routing* :path) res))))
 
 (defn set-as-primary [row]
-  (warn "TODO set-as-primary" row)
-  )
+  (go (when-let
+        [res (-> {:json-params (assoc row :is_primary true)
+                  :method :put
+                  :url (->> [:user-email-address
+                             {:user-id (-> @state/routing* :path-params :user-id)
+                              :email-address (:email_address row)}]
+                            (apply path))}
+                 http-client/request
+                 :chan <! spy http-client/filter-success :body)]
+        (swap! _data* assoc (-> @state/routing* :path) res))))
 
 
 (defn debug-component []

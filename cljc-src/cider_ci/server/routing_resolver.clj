@@ -15,6 +15,7 @@
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler
    :user #'user/handler
+   :user-email-address #'user-email-addresses/handler
    :user-email-addresses #'user-email-addresses/handler
    :user-password #'user-password/handler })
 

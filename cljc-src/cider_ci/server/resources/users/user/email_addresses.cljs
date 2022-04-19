@@ -24,8 +24,13 @@
 
 (defn delete [row]
   (go (when (-> {:method :delete
-                 :url (path :user-email-address {:user-id (-> @state/routing*)})
-                 })))
+                 :url (->> [:user-email-address
+                            {:user-id (-> @state/routing* :path-params :user-id)
+                             :email-address (:email_address row)}]
+                           (apply path))}
+                http-client/request
+                :chan <! spy http-client/filter-success
+                )))
   (warn "TODO delete " row)
   )
 

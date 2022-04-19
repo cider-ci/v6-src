@@ -35,7 +35,8 @@
        ["/" {:name :user-email-addresses
              :auth-http-save #{:self}
              :auth-http-unsave #{:admin}}]
-       ["/:email-address" {:name :user-email-address}
+       ["/:email-address"
+        ["" {:name :user-email-address}]
         ["/primary" {:name :user-email-address-primary
                      :auth-http-unsave #{:self}}]]]]]]])
 
@@ -89,6 +90,14 @@
        (reitit/match-by-path router)
        spy)
 
+  (->> [:user-email-address {:user-id "123"
+                             :email-address "12@abc"}]
+       spy
+       (apply path)
+       spy
+       ;(reitit/match-by-path router)
+       spy
+       )
 
 
   (reitit/match-by-name router :users {:user-id "123"}))

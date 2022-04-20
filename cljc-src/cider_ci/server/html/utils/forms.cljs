@@ -84,7 +84,8 @@
    (when hint [:p [:small hint]]) ])
 
 (defn input-component
-  [data* ks & {:keys [outer-classes label hint type element placeholder disabled rows
+  [data* ks & {:keys [outer-classes input-classes
+                      label hint type element placeholder disabled rows
                       on-change post-change
                       prepend append reset-default]
                :or {label (last ks)
@@ -95,6 +96,7 @@
                     element :input
                     on-change identity
                     outer-classes [:mb-3]
+                    input-classes []
                     post-change identity
                     prepend nil
                     append nil
@@ -111,7 +113,7 @@
     (when prepend [prepend])
     [element
      {:id (last ks)
-      :class :form-control
+      :class (concat [:form-control] input-classes)
       :placeholder placeholder
       :type type
       :value (get-in @data* ks)

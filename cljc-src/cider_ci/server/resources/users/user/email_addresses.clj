@@ -28,16 +28,17 @@
   (-> (sql/delete-from :email_addresses)
       (email-address-where-sql user-id email-address)))
 
-(defn upsert-sql [user-id data]
+(defn insert [user-id data]
   (-> (sql/insert-into :email_addresses)
       (sql/values [(-> data
-                       (select-keys [:is_primary
-                                     :email_address])
-                       (assoc :user_id [:cast user-id :uuid]))])
-      (sql/on-conflict :email_address)
-      (sql/do-update-set :is_primary)))
+                       (select-keys [:email_address])
+                       (assoc :user_id [:cast user-id :uuid]))])))
 
 (defn update-sql [user-id email-address data])
+
+(defn resp [user-id tx]
+  {:body (->> [user-id] (apply email-addresses-sql)
+              sql-format (jdbc/execute! tx))})
 
 (defn handler [{{{user-id :user-id
                   email-address :email-address} :path-params
@@ -57,8 +58,7 @@
       :delete (do (->> [user-id email-address]
                        (apply delete-email-address-sql)
                        sql-format (jdbc/execute! tx))
-                  {:body (->> [user-id] (apply email-addresses-sql)
-                              sql-format (jdbc/execute! tx))})
+                  (resp user-id tx))
 
       :patch (do (when (:is_primary data)
                    (->> (-> (sql/update :email_addresses)
@@ -71,8 +71,12 @@
                           (email-address-where-sql user-id email-address)
                           sql-format)
                       (jdbc/execute! tx))
-                 {:body (->> [user-id] (apply  email-addresses-sql)
-                             sql-format (jdbc/execute! tx))}))))
+                 (resp user-id tx))
+
+      :put (do (->> [user-id {:email_address email-address}]
+                    (apply insert)
+                    sql-format (jdbc/execute-one! tx))
+               (resp user-id tx)))))
 
 
 

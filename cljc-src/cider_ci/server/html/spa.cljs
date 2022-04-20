@@ -19,9 +19,10 @@
   [:div.container
    [header]
    [http-client-modals/modal-component]
-   (if-let [page (:page @state/routing*)]
-     [page]
-     [not-found-page])
+   [:div.mt-3
+    (if-let [page (:page @state/routing*)]
+      [page]
+      [not-found-page])]
    [state/debug-ui-component]
    [:div.debug.router-debug
     (when @state/debug?*

@@ -77,15 +77,16 @@
 
 ;;; add ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn put [email-address]
+(defn put [data*]
   (go (when-let
         [res (-> {:json-params {}
                   :method :put
                   :url (->> [:user-email-address
                              {:user-id (-> @state/routing* :path-params :user-id)
-                              :email-address email-address}]
+                              :email-address (:email_address @data*)}]
                             (apply path))}
                  http-client/request :chan <! http-client/filter-success :body)]
+        (swap! data* assoc :email_address nil)
         (swap! _data* assoc (-> @state/routing* :path) res))))
 
 (defn add-component []
@@ -97,8 +98,7 @@
        [:form
         {:on-submit (fn [e]
                       (.preventDefault e)
-                      (put (:email_address @add-data*))
-                      (warn "TODO " @add-data*))}
+                      (put add-data*))}
         [forms/input-component add-data* [:email_address]
          :type :text
          :post-change (fn [v]

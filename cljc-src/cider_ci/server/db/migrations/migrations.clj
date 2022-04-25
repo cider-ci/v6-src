@@ -20,6 +20,8 @@
        :down (partial exec-resource-sql! "migrations/00001_settings_down.sql")}
     2 {:up (partial exec-resource-sql! "migrations/00002_users_up.sql")
        :down (partial exec-resource-sql! "migrations/00002_users_down.sql")}
+    10 {:up (partial exec-resource-sql! "migrations/00010_git_up.sql")
+        :down (partial exec-resource-sql! "migrations/00010_git_down.sql")}
     ))
 
 (defn available []

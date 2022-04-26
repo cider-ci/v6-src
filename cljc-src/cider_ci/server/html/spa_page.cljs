@@ -58,16 +58,17 @@
                 :chan <! http-client/filter-success)
         (navigate! (path :root) nil :reload true))))
 
+(defn user-component[user]
+  [:<>
+   [:span.user-icon
+    (if (:is_admin user)
+      [icons/user-admin]
+      [icons/user])
+    " "]
+   [user-uid-component user]])
+
 (defn navbar-user [user]
-  [:> bs/NavDropdown {:title
-                      (reagent/as-element
-                        [:<>
-                         [:span.user-icon
-                          (if (:is_admin user)
-                            [icons/user-admin]
-                            [icons/user])
-                          " "]
-                         [user-uid-component user]])}
+  [:> bs/NavDropdown {:title (reagent/as-element [user-component user])}
    [:> bs/NavDropdown.Item
     {:href (path :user {:user-id (-> @state/user* :id)})}
     "My account"]
@@ -82,16 +83,15 @@
 
 (defn header []
   [:> bs/Navbar {:bg :light}
-   [:> bs/Container {}
-    [:> bs/Navbar.Collapse {:class "justify-content-left"}
-     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
-    [:<> (when-let [center-nav (:center-nav @state/routing*)]
-           [center-nav])]
-    [:> bs/Navbar.Collapse {:class "justify-content-end"}
-     (if-let [user (-> @state/user*)]
-       [navbar-user user]
-       [:<> (when-not  (-> @routing-state* :data :no-sign-in-page)
-              [sign-in-form])])]]])
+   [:> bs/Container {:class "justify-content-start"}
+    [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
+   [:<> (when-let [center-nav (:center-nav @state/routing*)]
+          [center-nav])]
+   [:> bs/Container {:class "justify-content-end"}
+    (if-let [user (-> @state/user*)]
+      [navbar-user user]
+      [:<> (when-not  (-> @routing-state* :data :no-sign-in-page)
+             [sign-in-form])])]])
 
 
 (defn footer []

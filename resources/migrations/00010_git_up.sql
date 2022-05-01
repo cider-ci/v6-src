@@ -201,6 +201,25 @@ CREATE TABLE branches_commits (
     commit_id character varying(40) NOT NULL
 );
 
+ALTER TABLE ONLY branches_commits
+    ADD CONSTRAINT branches_commits_pkey PRIMARY KEY (commit_id, branch_id);
+
+
+
+CREATE TABLE commit_arcs (
+    parent_id character varying(40) NOT NULL,
+    child_id character varying(40) NOT NULL
+);
+
+CREATE INDEX index_commit_arcs_on_child_id_and_parent_id ON commit_arcs USING btree (child_id, parent_id);
+
+CREATE UNIQUE INDEX index_commit_arcs_on_parent_id_and_child_id ON commit_arcs USING btree (parent_id, child_id);
+
+ALTER TABLE ONLY commit_arcs
+    ADD CONSTRAINT commit_arc_commit_fkey FOREIGN KEY (parent_id) REFERENCES commits(id) ON DELETE CASCADE;
+
+
+
 
 CREATE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS TABLE(branch_id uuid, commit_id character varying)
     LANGUAGE sql

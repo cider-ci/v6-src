@@ -207,18 +207,24 @@ ALTER TABLE ONLY submodules ADD CONSTRAINT submodules_commit_id_commits_id FOREI
 
 
 
--------------------------------------------------------------------------------
-
+--- branches_commits ----------------------------------------------------------
 
 CREATE TABLE branches_commits (
     branch_id uuid NOT NULL,
     commit_id character varying(40) NOT NULL
 );
 
-ALTER TABLE ONLY branches_commits
-    ADD CONSTRAINT branches_commits_pkey PRIMARY KEY (commit_id, branch_id);
+ALTER TABLE ONLY branches_commits ADD CONSTRAINT branches_commits_pkey PRIMARY KEY (commit_id, branch_id);
+
+ALTER TABLE ONLY branches_commits ADD CONSTRAINT branches_commits_commit_id_commits_id FOREIGN KEY (commit_id) REFERENCES commits(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY branches_commits ADD CONSTRAINT branches_commits_branch_id_branches_id FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE;
 
 
+
+
+
+--- commit_arcs ---------------------------------------------------------------
 
 CREATE TABLE commit_arcs (
     parent_id character varying(40) NOT NULL,
@@ -236,7 +242,7 @@ ALTER TABLE ONLY commit_arcs
     ADD CONSTRAINT commit_arcs_commits_child_id_fkey FOREIGN KEY (child_id) REFERENCES commits(id) ON DELETE CASCADE;
 
 
-
+--- FUN -----------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS TABLE(branch_id uuid, commit_id character varying)
     LANGUAGE sql
@@ -251,7 +257,6 @@ CREATE OR REPLACE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commit
         SELECT DISTINCT $1, parent_id FROM arcs
         WHERE NOT EXISTS (SELECT * FROM branches_commits WHERE commit_id = parent_id AND branch_id = $1)
       $_$;
-
 
 
 CREATE OR REPLACE FUNCTION add_fast_forward_ancestors_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS void

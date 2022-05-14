@@ -164,33 +164,26 @@ CREATE TABLE commits (
     committer_date timestamp with time zone,
     subject text,
     body text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 ALTER TABLE ONLY commits ADD CONSTRAINT commits_pkey PRIMARY KEY (id);
 
-
-CREATE INDEX commits_created_at ON commits USING btree (created_at);
-
 CREATE INDEX commits_author_date_idx ON commits USING btree (author_date);
-
+CREATE INDEX commits_author_email_ts_idx ON commits USING gin (to_tsvector('english'::regconfig, (author_email)::text));
+CREATE INDEX commits_author_name_ts_idx ON commits USING gin (to_tsvector('english'::regconfig, (author_name)::text));
+CREATE INDEX commits_body_ts_idx ON commits USING gin (to_tsvector('english'::regconfig, body));
+CREATE INDEX commits_commiter_email_ts_idx ON commits USING gin (to_tsvector('english'::regconfig, (committer_email)::text));
+CREATE INDEX commits_commiter_name_ts_idx ON commits USING gin (to_tsvector('english'::regconfig, (committer_name)::text));
 CREATE INDEX commits_committer_date_idx ON commits USING btree (committer_date);
-
+CREATE INDEX commits_created_at ON commits USING btree (created_at);
 CREATE INDEX commits_depth_idx ON commits USING btree (depth);
-
+CREATE INDEX commits_subject_ts_idx ON commits USING gin (to_tsvector('english'::regconfig, subject));
 CREATE INDEX commits_tree_id_idx ON commits USING btree (tree_id);
+CREATE INDEX commits_updated_at_idx ON commits USING btree (updated_at);
 
-CREATE INDEX commits_body_idx ON commits USING gin (to_tsvector('english'::regconfig, body));
-
-CREATE INDEX commits_author_name_idx ON commits USING gin (to_tsvector('english'::regconfig, (author_name)::text));
-
-CREATE INDEX commits_author_email_idx ON commits USING gin (to_tsvector('english'::regconfig, (author_email)::text));
-
-CREATE INDEX commits_commiter_nane_idx ON commits USING gin (to_tsvector('english'::regconfig, (committer_name)::text));
-
-CREATE INDEX commits_commiter_email_idx ON commits USING gin (to_tsvector('english'::regconfig, (committer_email)::text));
-
-CREATE INDEX commits_subjects_idx ON commits USING gin (to_tsvector('english'::regconfig, subject));
+CREATE TRIGGER update_updated_at_column_of_commits BEFORE UPDATE ON commits FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE PROCEDURE update_updated_at_column();
 
 
 --- submodules ----------------------------------------------------------------
@@ -214,6 +207,8 @@ CREATE TABLE branches_commits (
     branch_id uuid NOT NULL,
     commit_id character varying(40) NOT NULL
 );
+
+
 
 ALTER TABLE ONLY branches_commits ADD CONSTRAINT branches_commits_pkey PRIMARY KEY (commit_id, branch_id);
 

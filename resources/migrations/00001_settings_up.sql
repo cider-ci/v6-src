@@ -7,13 +7,14 @@ CREATE TABLE settings (
 
 INSERT INTO settings (id) VALUES (0);
 
-CREATE FUNCTION update_updated_at_column() RETURNS trigger
+
+CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-BEGIN
-   NEW.updated_at = now();
-   RETURN NEW;
-END;
-$$;
+  BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+  END;
+  $$;
 
 

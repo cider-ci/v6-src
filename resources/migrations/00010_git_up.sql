@@ -193,6 +193,20 @@ CREATE INDEX commits_commiter_email_idx ON commits USING gin (to_tsvector('engli
 CREATE INDEX commits_subjects_idx ON commits USING gin (to_tsvector('english'::regconfig, subject));
 
 
+--- submodules ----------------------------------------------------------------
+
+CREATE TABLE submodules (
+    submodule_commit_id character varying(40) NOT NULL,
+    path text NOT NULL,
+    commit_id character varying(40) NOT NULL
+);
+
+CREATE INDEX index_submodules_on_commit_id ON submodules USING btree (commit_id);
+CREATE INDEX index_submodules_on_submodule_commit_id ON submodules USING btree (submodule_commit_id);
+ALTER TABLE ONLY submodules ADD CONSTRAINT submodules_commit_id_commits_id FOREIGN KEY (commit_id) REFERENCES commits(id) ON DELETE CASCADE;
+
+
+
 -------------------------------------------------------------------------------
 
 
@@ -216,7 +230,12 @@ CREATE INDEX index_commit_arcs_on_child_id_and_parent_id ON commit_arcs USING bt
 CREATE UNIQUE INDEX index_commit_arcs_on_parent_id_and_child_id ON commit_arcs USING btree (parent_id, child_id);
 
 ALTER TABLE ONLY commit_arcs
-    ADD CONSTRAINT commit_arc_commit_fkey FOREIGN KEY (parent_id) REFERENCES commits(id) ON DELETE CASCADE;
+    ADD CONSTRAINT commit_arcs_commits_parend_id_fkey FOREIGN KEY (parent_id) REFERENCES commits(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY commit_arcs
+    ADD CONSTRAINT commit_arcs_commits_child_id_fkey FOREIGN KEY (child_id) REFERENCES commits(id) ON DELETE CASCADE;
+
+
 
 
 CREATE OR REPLACE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS TABLE(branch_id uuid, commit_id character varying)

@@ -135,7 +135,7 @@ ALTER TABLE ONLY branch_update_events
 CREATE INDEX index_branch_update_events_on_created_at ON branch_update_events USING btree (created_at);
 
 
-CREATE FUNCTION clean_branch_update_events() RETURNS trigger
+CREATE OR REPLACE FUNCTION clean_branch_update_events() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -219,9 +219,7 @@ ALTER TABLE ONLY commit_arcs
     ADD CONSTRAINT commit_arc_commit_fkey FOREIGN KEY (parent_id) REFERENCES commits(id) ON DELETE CASCADE;
 
 
-
-
-CREATE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS TABLE(branch_id uuid, commit_id character varying)
+CREATE OR REPLACE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS TABLE(branch_id uuid, commit_id character varying)
     LANGUAGE sql
     AS $_$
         WITH RECURSIVE arcs(parent_id,child_id) AS
@@ -237,7 +235,7 @@ CREATE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id
 
 
 
-CREATE FUNCTION add_fast_forward_ancestors_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS void
+CREATE OR REPLACE FUNCTION add_fast_forward_ancestors_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS void
     LANGUAGE sql
     AS $$
       INSERT INTO branches_commits (branch_id,commit_id)
@@ -245,7 +243,7 @@ CREATE FUNCTION add_fast_forward_ancestors_to_branches_commits(branch_id uuid, c
       $$;
 
 
-CREATE FUNCTION update_branches_commits(branch_id uuid, new_commit_id character varying, old_commit_id character varying) RETURNS character varying
+CREATE OR REPLACE FUNCTION update_branches_commits(branch_id uuid, new_commit_id character varying, old_commit_id character varying) RETURNS character varying
     LANGUAGE plpgsql
     AS $_$
       BEGIN

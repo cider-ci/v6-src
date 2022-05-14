@@ -201,6 +201,7 @@ CREATE TABLE submodules (
     commit_id character varying(40) NOT NULL
 );
 
+ALTER TABLE ONLY submodules ADD CONSTRAINT submodules_pkey PRIMARY KEY (commit_id, path);
 CREATE INDEX index_submodules_on_commit_id ON submodules USING btree (commit_id);
 CREATE INDEX index_submodules_on_submodule_commit_id ON submodules USING btree (submodule_commit_id);
 ALTER TABLE ONLY submodules ADD CONSTRAINT submodules_commit_id_commits_id FOREIGN KEY (commit_id) REFERENCES commits(id) ON DELETE CASCADE;

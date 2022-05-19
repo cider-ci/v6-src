@@ -40,8 +40,7 @@ CREATE UNIQUE INDEX repositories_git_url_idx ON repositories USING btree (git_ur
 CREATE INDEX repositories_update_notification_token_idx ON repositories USING btree (update_notification_token);
 CREATE INDEX repositories_updated_at_idx ON repositories USING btree (updated_at);
 
-
-
+CREATE TRIGGER update_updated_at_column_of_repositories BEFORE UPDATE ON repositories FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE PROCEDURE update_updated_at_column();
 
 
 -------------------------------------------------------------------------------

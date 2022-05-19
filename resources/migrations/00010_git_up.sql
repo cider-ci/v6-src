@@ -33,6 +33,16 @@ CREATE TABLE repositories (
     CONSTRAINT foreign_api_token_bearer_not_empty CHECK (((remote_api_token_bearer)::text <> ''::text))
 );
 
+ALTER TABLE ONLY repositories ADD CONSTRAINT repositories_pkey PRIMARY KEY (id);
+
+CREATE INDEX repositories_created_at_idx ON repositories USING btree (created_at);
+CREATE UNIQUE INDEX repositories_git_url_idx ON repositories USING btree (git_url);
+CREATE INDEX repositories_update_notification_token_idx ON repositories USING btree (update_notification_token);
+CREATE INDEX repositories_updated_at_idx ON repositories USING btree (updated_at);
+
+
+
+
 
 -------------------------------------------------------------------------------
 
@@ -53,14 +63,14 @@ CREATE INDEX index_repository_events_on_repository_id
 -------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION clean_repository_events() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  DELETE FROM repository_events
-    WHERE created_at < NOW() - INTERVAL '3 days';
-  RETURN NULL;
-END;
-$$;
+  LANGUAGE plpgsql
+  AS $$
+  BEGIN
+    DELETE FROM repository_events
+      WHERE created_at < NOW() - INTERVAL '3 days';
+    RETURN NULL;
+  END;
+  $$;
 
 CREATE TRIGGER clean_repository_events AFTER INSERT
   ON repository_events FOR EACH STATEMENT
@@ -152,7 +162,29 @@ CREATE INDEX branches_lower_name_idx ON branches USING btree (lower((name)::text
 CREATE UNIQUE INDEX index_branches_on_repository_id_and_name ON branches USING btree (repository_id, name);
 
 ALTER TABLE ONLY branches ADD CONSTRAINT branches_pkey PRIMARY KEY (id);
-ALTER TABLE ONLY branches ADD CONSTRAINT branches_current_commit_id_commits_id FOREIGN KEY (current_commit_id) REFERENCES commits(id) ON DELETE CASCADE;
+ALTER TABLE ONLY branches ADD CONSTRAINT branches_current_commit_id_fkey FOREIGN KEY (current_commit_id) REFERENCES commits(id) ON DELETE CASCADE;
+ALTER TABLE ONLY branches ADD CONSTRAINT branches_repository_id_fkey FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE;
+
+
+CREATE OR REPLACE FUNCTION create_tree_id_notification_on_branch_change() RETURNS trigger
+  LANGUAGE plpgsql
+  AS $$
+  DECLARE
+    tree_id TEXT;
+  BEGIN
+     SELECT commits.tree_id INTO tree_id
+        FROM commits
+        WHERE id = NEW.current_commit_id;
+     INSERT INTO tree_id_notifications
+      (tree_id, branch_id,description)
+      VALUES (tree_id, NEW.id,TG_OP);
+     RETURN NEW;
+  END;
+  $$;
+
+CREATE TRIGGER create_tree_id_notification_on_branch_change AFTER INSERT OR UPDATE ON branches FOR EACH ROW EXECUTE PROCEDURE create_tree_id_notification_on_branch_change();
+
+CREATE TRIGGER update_updated_at_column_of_branches BEFORE UPDATE ON branches FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE PROCEDURE update_updated_at_column();
 
 
 --- branch_update_events ------------------------------------------------------
@@ -174,16 +206,52 @@ CREATE INDEX index_branch_update_events_on_created_at ON branch_update_events US
 
 
 CREATE OR REPLACE FUNCTION clean_branch_update_events() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  DELETE FROM branch_update_events
-    WHERE created_at < NOW() - INTERVAL '3 days';
-  RETURN NULL;
-END;
-$$;
+  LANGUAGE plpgsql
+  AS $$
+  BEGIN
+    DELETE FROM branch_update_events
+      WHERE created_at < NOW() - INTERVAL '3 days';
+    RETURN NULL;
+  END;
+  $$;
 
 CREATE TRIGGER clean_branch_update_events AFTER INSERT ON branch_update_events FOR EACH STATEMENT EXECUTE PROCEDURE clean_branch_update_events();
+
+
+CREATE OR REPLACE FUNCTION create_branch_update_event() RETURNS trigger
+  LANGUAGE plpgsql
+  AS $$
+  DECLARE
+    tree_id TEXT;
+  BEGIN
+     SELECT commits.tree_id INTO tree_id
+        FROM commits
+        WHERE id = NEW.current_commit_id;
+     INSERT INTO branch_update_events
+      (tree_id, branch_id)
+      VALUES (tree_id, NEW.id);
+     RETURN NEW;
+  END;
+  $$;
+
+
+CREATE TRIGGER create_branch_update_event AFTER INSERT OR UPDATE ON branches FOR EACH ROW EXECUTE PROCEDURE create_branch_update_event();
+
+
+--- tree_id things ------------------------------------------------------------
+
+CREATE TABLE tree_id_notifications (
+    id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    tree_id character varying(40) NOT NULL,
+    branch_id uuid,
+    job_id uuid,
+    description text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL);
+
+ALTER TABLE ONLY tree_id_notifications ADD CONSTRAINT tree_id_notifications_pkey PRIMARY KEY (id);
+
+CREATE TRIGGER update_updated_at_column_of_tree_id_notifications BEFORE UPDATE ON tree_id_notifications FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE PROCEDURE update_updated_at_column();
 
 
 
@@ -193,8 +261,7 @@ CREATE TRIGGER clean_branch_update_events AFTER INSERT ON branch_update_events F
 CREATE TABLE submodules (
     submodule_commit_id character varying(40) NOT NULL,
     path text NOT NULL,
-    commit_id character varying(40) NOT NULL
-);
+    commit_id character varying(40) NOT NULL);
 
 ALTER TABLE ONLY submodules ADD CONSTRAINT submodules_pkey PRIMARY KEY (commit_id, path);
 CREATE INDEX index_submodules_on_commit_id ON submodules USING btree (commit_id);

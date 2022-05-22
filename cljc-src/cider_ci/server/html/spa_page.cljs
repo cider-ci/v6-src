@@ -96,6 +96,14 @@
       [:<> (when-not  (-> @routing-state* :data :no-sign-in-page)
              [sign-in-form])])]])
 
+(defn page-nav []
+  [:> bs/Navbar {:bg :light}
+   [:> bs/Container {:class "justify-content-start"}
+    [:> bs/Navbar.Text  "Tree-Nav-Here"]]
+   [:> bs/Container {:class "justify-content-end"}
+    [:> bs/Navbar.Text  "Page-Nav-Here"]
+    ]])
+
 
 (defn footer []
   [:> bs/Navbar {:bg :light}

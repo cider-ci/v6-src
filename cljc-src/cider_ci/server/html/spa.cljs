@@ -1,7 +1,7 @@
 (ns cider-ci.server.html.spa
   (:refer-clojure :exclude [keyword str])
   (:require
-    [cider-ci.server.html.spa-page :refer [header footer]]
+    [cider-ci.server.html.spa-page :refer [header page-nav footer]]
     [cider-ci.server.http.client.modals :as http-client-modals]
     [cider-ci.server.routes :as routes :refer [path navigate!]]
     [cider-ci.server.state :as state]
@@ -21,7 +21,9 @@
    [http-client-modals/modal-component]
    [:div.mt-3
     (if-let [page (:page @state/routing*)]
-      [page]
+      [:<>
+       [page-nav]
+       [page]]
       [not-found-page])]
    [state/debug-ui-component]
    [:div.debug.router-debug

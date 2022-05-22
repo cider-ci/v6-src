@@ -18,7 +18,6 @@
 (defn page []
   [:div.page
    [:h2 [icons/projects] " Projects"]
-
    ])
 
 

@@ -16,6 +16,9 @@
              :no-sign-in-page true
              :auth-http-save #{:public}
              :auth-http-unsave #{:public}}]
+   ["/projects/" {:name :projects
+                 :auth-http-save #{:user}
+                 :auth-http-unsave #{:admin}}]
    ["/sign-in" {:auth-http-unsave #{:public}}
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]

@@ -15,3 +15,4 @@
 (def projects project)
 (defn user [] (FontAwesomeIcon #js{:icon solids/faUser :className ""}))
 (defn user-admin [] (FontAwesomeIcon #js{:icon solids/faUserGear :className ""}))
+(defn create [] (FontAwesomeIcon #js{:icon solids/faCirclePlus :className ""}) )

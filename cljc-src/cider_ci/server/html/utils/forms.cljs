@@ -47,13 +47,33 @@
      icon " " inner]]
    [:div.clearfix]])
 
-
 (defn save-submit-component [& args]
   [apply submit-component
    (concat [:btn-classes [:btn-warning]
-            :icon icons/save
+            :icon [icons/save]
             :inner "Save"]
            args)])
+
+
+(defn cancel-component
+  [& {:keys [outer-classes btn-classes icon inner disabled]
+      :or {outer-classes [:mb-3]
+           btn-classes [:btn-warning]
+           inner [:span "Cancel"]
+           icon [:<>]
+           disabled false}}]
+  [:div
+   {:class outer-classes}
+   [:div.float-start
+    [:button.btn
+     {:class btn-classes
+      :type :submit
+      :disabled disabled
+      :tab-index TAB-INDEX}
+     icon " " inner]]])
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

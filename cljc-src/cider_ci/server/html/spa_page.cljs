@@ -101,7 +101,9 @@
    [:> bs/Container {:class "justify-content-start"}
     [:> bs/Navbar.Text  "Tree-Nav-Here"]]
    [:> bs/Container {:class "justify-content-end"}
-    [:> bs/Navbar.Text  "Page-Nav-Here"]
+    (when-let [page-nav (:page-nav @state/routing*)]
+      [page-nav])
+    ;[:> bs/Navbar.Text  "Page-Nav-Here"]
     ]])
 
 

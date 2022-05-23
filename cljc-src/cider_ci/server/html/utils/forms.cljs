@@ -56,8 +56,9 @@
 
 
 (defn cancel-component
-  [& {:keys [outer-classes btn-classes icon inner disabled]
-      :or {outer-classes [:mb-3]
+  [& {:keys [on-click outer-classes btn-classes icon inner disabled]
+      :or {on-click #()
+           outer-classes [:mb-3]
            btn-classes [:btn-warning]
            inner [:span "Cancel"]
            icon [:<>]
@@ -67,6 +68,7 @@
    [:div.float-start
     [:button.btn
      {:class btn-classes
+      :on-click on-click
       :type :submit
       :disabled disabled
       :tab-index TAB-INDEX}

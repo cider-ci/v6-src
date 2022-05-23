@@ -23,7 +23,8 @@
   [:<>
    [:> bs/Nav.Item
     [:button.btn.btn-outline-primary.btn-sm
-     {:on-click #(reset! create-mode* true)}
+     {:on-click #(reset! create-mode* true)
+      :disabled @create-mode*}
      [icons/create] " Create project"]]])
 
 (defn create-project []
@@ -34,7 +35,7 @@
     [forms/input-component form-data* [:id]]
     [forms/input-component form-data* [:name]]
     [forms/input-component form-data* [:url]]
-    [forms/cancel-component]
+    [forms/cancel-component :on-click #(reset! create-mode* false)]
     [forms/submit-component
      :inner [:span [icons/create] " Create"]
      :btn-classes [:btn-primary]]]])

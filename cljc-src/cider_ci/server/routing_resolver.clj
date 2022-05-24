@@ -1,6 +1,7 @@
 (ns cider-ci.server.routing-resolver
   (:require
     [cider-ci.server.resources.init.http :as init]
+    [cider-ci.server.resources.projects.main :as projects]
     [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
     [cider-ci.server.resources.sign-out :as sign-out]
     [cider-ci.server.resources.users.user.email-addresses :as user-email-addresses]
@@ -12,6 +13,7 @@
 
 (def route-resource-table
   {:init #'init/handler
+   :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler
    :user #'user/handler

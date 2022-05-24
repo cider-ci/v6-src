@@ -7,7 +7,7 @@
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
-    [taoensso.timbre :refer [debug info warn error]]
+    [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 (defn check-admin [request]
@@ -18,10 +18,10 @@
   (= (str user-id) (str id)))
 
 (defn check [request auth]
-  (info 'check auth request)
+  (debug 'check auth request)
   (case auth
     :public true
-    :admin (check-admin request)
+    :admin (spy (check-admin request))
     :self (check-self request)))
 
 (defn check! [auths request]

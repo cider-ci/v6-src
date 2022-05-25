@@ -1,7 +1,7 @@
 
 
 CREATE TABLE repositories (
-    id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    id text NOT NULL,
     git_url text NOT NULL,
     name character varying,
     public_view_permission boolean DEFAULT false,
@@ -34,6 +34,8 @@ CREATE TABLE repositories (
 );
 
 ALTER TABLE ONLY repositories ADD CONSTRAINT repositories_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY repositories ADD CONSTRAINT id_is_simple CHECK (id ~ '[a-z]+[a-z_-]+');
+
 
 CREATE INDEX repositories_created_at_idx ON repositories USING btree (created_at);
 CREATE UNIQUE INDEX repositories_git_url_idx ON repositories USING btree (git_url);
@@ -47,7 +49,7 @@ CREATE TRIGGER update_updated_at_column_of_repositories BEFORE UPDATE ON reposit
 
 CREATE TABLE repository_events (
     id uuid DEFAULT uuid_generate_v4() NOT NULL,
-    repository_id uuid,
+    repository_id text,
     event text,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -150,7 +152,7 @@ CREATE TRIGGER update_updated_at_column_of_commits BEFORE UPDATE ON commits FOR 
 
 CREATE TABLE branches (
     id uuid DEFAULT uuid_generate_v4() NOT NULL,
-    repository_id uuid NOT NULL,
+    repository_id text NOT NULL,
     name character varying NOT NULL,
     current_commit_id character varying(40) NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,

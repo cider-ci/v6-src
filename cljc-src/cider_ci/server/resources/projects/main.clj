@@ -10,14 +10,32 @@
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
-(defn handler [{{{user-id :user-id} :path-params
-                 {route-name :name} :data} :route
-                request-method :request-method
-                tx :tx :as request}]
 
+
+(defn create-project [tx data]
+  (let [res (-> (sql/insert-into :repositories)
+                (sql/values [data])
+                (sql/returning :*)
+                (sql-format)
+                (#(jdbc/execute-one! tx % {:return-keys true})))]
+    (when-not (:id res)
+      (throw (ex-info "Project creation failed" {:status 422})))
+    res))
+
+
+(defn get-projects [tx]
+  {:body (-> (sql/select :id :name)
+             (sql/from :repositories)
+             (sql-format)
+             (#(jdbc/execute! tx %)))})
+
+(defn handler
+  [{{{user-id :user-id} :path-params
+     {route-name :name} :data} :route
+    request-method :request-method
+    data :body tx :tx :as request}]
   (warn request)
   (case route-name
     :projects (case request-method
-                :post (warn "CREATE PROJECT")
-
-                )))
+                :post (create-project tx data)
+                :get (get-projects tx))))

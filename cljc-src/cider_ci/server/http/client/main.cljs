@@ -124,11 +124,16 @@
            [inner (:body resp)])
          [wait-component @req*])])))
 
+(def route-cached-fetch-ids* (reagent/atom {}))
+
 (defn route-cached-fetch
-  [data* & {:keys [reload]
-            :or {reload false}}]
+  [data* & {:keys [reload timeout]
+            :or {reload false
+                 timeout (* 3 60 1000)}}]
   (let [route (:route @routing-state*)
-        chan (async/chan)]
+        chan (async/chan)
+        id (random-uuid)]
+    (swap! route-cached-fetch-ids* assoc route id)
     (go-loop [do-fetch true]
              ;(logging/info 'route-cached-fetch 'go-loop {:route route})
              (when do-fetch
@@ -137,7 +142,8 @@
                      resp (<! chan)]
                  (when (< (:status resp) 300)
                    (swap! data* assoc route (-> resp :body)))))
-             (<! (timeout (* 3 60 1000)))
+             (<! (timeout timeout))
              (if (= (:route @routing-state*) route)
-               (recur reload)
+               (when (= id (get @route-cached-fetch-ids* route))
+                 (recur reload))
                (swap! data* dissoc route)))))

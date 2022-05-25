@@ -17,11 +17,16 @@
                    {id :id} :user :as request}]
   (= (str user-id) (str id)))
 
+(defn check-user[request]
+  (-> request :user empty? not))
+
+
 (defn check [request auth]
   (debug 'check auth request)
   (case auth
     :public true
-    :admin (spy (check-admin request))
+    :user (check-user request)
+    :admin (check-admin request)
     :self (check-self request)))
 
 (defn check! [auths request]

@@ -14,7 +14,28 @@
     ))
 
 
+;;; PROJECTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defonce data* (reagent/atom {}))
+
+(def fetch-id* (atom nil))
+
+
+(defn projects []
+  [:div.projects
+   [:h2 [icons/projects] " Projects"]
+   [state/hidden-routing-state-component
+    :did-change #(http-client/route-cached-fetch
+                   data* :reload true :timeout 500)]])
+
+
+
+;;; CREATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defonce create-mode* (reagent/atom false))
+(defonce create-data* (reagent/atom {}))
+
 
 (defn create [data]
   (go (when (-> {:json-params data
@@ -24,6 +45,22 @@
         (reset! create-mode* false))))
 
 
+(defn create-project []
+  [:div
+   [:h2 "Create a new project"]
+   [:form
+    {:on-submit (fn [e] (.preventDefault e) (create @create-data*))}
+    [forms/input-component create-data* [:id]]
+    [forms/input-component create-data* [:name]]
+    [forms/input-component create-data* [:git_url]]
+    [forms/cancel-component :on-click #(reset! create-mode* false)]
+    [forms/submit-component
+     :inner [:span [icons/create] " Create"]
+     :btn-classes [:btn-primary]]]])
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn page-nav []
   [:<>
    [:> bs/Nav.Item
@@ -31,24 +68,6 @@
      {:on-click #(reset! create-mode* true)
       :disabled @create-mode*}
      [icons/create] " Create project"]]])
-
-(defn create-project []
-  (let [data* (reagent/atom {})]
-    [:div
-     [:h2 "Create a new project"]
-     [:form
-      {:on-submit (fn [e] (.preventDefault e) (create @data*))}
-      [forms/input-component data* [:id]]
-      [forms/input-component data* [:name]]
-      [forms/input-component data* [:url]]
-      [forms/cancel-component :on-click #(reset! create-mode* false)]
-      [forms/submit-component
-       :inner [:span [icons/create] " Create"]
-       :btn-classes [:btn-primary]]]]))
-
-(defn projects []
-  [:h2 [icons/projects] " Projects"]
-  )
 
 (defn page []
   [:div.page

@@ -6,7 +6,7 @@
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :as state]
+    [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
     [cljs.core.async :refer [go]]
     [cljs.pprint :refer [pprint]]
     [reagent.core :as reagent :refer [reaction]]
@@ -22,12 +22,26 @@
 (def fetch-id* (atom nil))
 
 
-(defn projects []
+(defn projects-component []
   [:div.projects
    [:h2 [icons/projects] " Projects"]
    [state/hidden-routing-state-component
     :did-change #(http-client/route-cached-fetch
-                   data* :reload true :timeout 500)]])
+                   data* :reload true :timeout 500)]
+
+   (if-not (contains? @data* (:route @routing-state*))
+     [:div "Spinner..."]
+     (let [projects (seq (get @data* (:route @routing-state*)))]
+       (if-not projects
+         [:div "Empty..."]
+         [:table.table.table-striped.projects
+          [:thead]
+          [:tbody
+           (for [project projects]
+             ^{:key (:id project)}
+             [:tr.project
+              [:td (:id project)]
+              [:td (:name project)]])]])))])
 
 
 
@@ -73,7 +87,7 @@
   [:div.page
    (if @create-mode*
      [create-project]
-     [projects])])
+     [projects-component])])
 
 
 (def components {:page page

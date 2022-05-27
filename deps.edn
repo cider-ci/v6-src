@@ -15,10 +15,16 @@
         lambdaisland/uri {:mvn/version "1.13.95"}
         logbug/logbug {:mvn/version "5.0.0"}
         metosin/reitit {:mvn/version "0.5.17"}
+        mvxcvi/clj-pgp {:mvn/version "0.9.0"}
         nrepl/nrepl {:mvn/version "0.9.0"}
+        org.bouncycastle/bcpg-jdk15on {:mvn/version "1.59"}
+        org.bouncycastle/bcpkix-jdk15on {:mvn/version "1.59"}
+        org.bouncycastle/bcprov-jdk15on {:mvn/version "1.59"}
+        org.clojars.hozumi/clj-commons-exec {:mvn/version "1.2.0"}
         org.clojure/core.memoize {:mvn/version "1.0.257"}
         org.clojure/tools.cli {:mvn/version "1.0.206"}
         org.clojure/tools.namespace {:mvn/version "1.2.0"}
+        org.eclipse.jgit/org.eclipse.jgit {:mvn/version "4.11.0.201803080745-r"}
         pg-types/pg-types {:mvn/version  "3.0.0"}
         reagent/reagent {:mvn/version "1.1.1"}
         ring-middleware-accept/ring-middleware-accept {:mvn/version "2.0.3"}

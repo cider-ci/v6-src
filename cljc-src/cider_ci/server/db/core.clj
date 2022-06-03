@@ -21,9 +21,11 @@
     [com.zaxxer.hikari HikariDataSource]))
 
 
-(defonce ds* (atom nil))
+(defonce ^:private ds* (atom nil))
 
-(defn get-ds [] @ds*)
+(defn get-ds []
+  (jdbc/with-options @ds*
+    {:builder-fn jdbc-rs/as-unqualified-lower-maps}))
 
 
 ;;; CLI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

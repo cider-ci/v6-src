@@ -7,6 +7,7 @@
   (:require
     [cider-ci.utils.duration :as duration]
     [clj-time.core :as time]
+    [clj-commons-exec :as commons-exec]
     )
   (:import
     [org.apache.commons.exec ExecuteWatchdog]

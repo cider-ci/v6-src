@@ -4,7 +4,7 @@
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [cider-ci.utils.json :as json]
-    [cider-ci.server.db.core :refer [ds*]]
+    [cider-ci.server.db.core :refer [get-ds]]
     [next.jdbc :as jdbc]
     [next.jdbc.result-set :as jdbc-rs]
     [taoensso.timbre :refer [debug info warn error spy]]
@@ -19,7 +19,7 @@
    :else true])
 
 
-(comment (jdbc/execute! @ds*
+(comment (jdbc/execute! (get-ds)
                         (sql-format (sql/select [needs-init :needs_init]))))
 
 (def state-query
@@ -32,4 +32,4 @@
   (jdbc/execute-one! ds (sql-format state-query)))
 
 
-(comment (db-state @ds*))
+(comment (db-state (get-ds)))

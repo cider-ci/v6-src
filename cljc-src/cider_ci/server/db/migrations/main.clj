@@ -1,6 +1,6 @@
 (ns cider-ci.server.db.migrations.main
   (:require
-    [cider-ci.server.db.core :as db]
+    [cider-ci.server.db.core :as db :refer [get-ds]]
     [cider-ci.server.db.migrations.migrations :as migrations]
     [clj-yaml.core :as yaml]
     [clojure.java.io :as io]
@@ -45,9 +45,9 @@
 
 (defn init [options]
   (info 'init)
-  (apply (-> migrations/migrations (get 0) (get :up)) [@db/ds*])
+  (apply (-> migrations/migrations (get 0) (get :up)) [(get-ds)])
   (->> ["SELECT * FROM migrations ORDER BY id;"]
-       (jdbc/execute! @db/ds*)
+       (jdbc/execute! (get-ds))
        (map :migrations/id)
        (apply sorted-set)))
 
@@ -86,7 +86,7 @@
            'target target
            'downs downs
            'ups ups})
-    (jdbc/with-transaction [tx @db/ds*]
+    (jdbc/with-transaction [tx (get-ds)]
       (migrate-downs! tx downs)
       (migrate-ups! tx ups))))
 

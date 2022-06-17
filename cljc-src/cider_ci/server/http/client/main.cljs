@@ -6,7 +6,7 @@
   (:require
     [cider-ci.server.http.anti-csrf.main  :as anti-csrf]
     [cider-ci.server.http.client.shared :refer [wait-component]]
-    [cider-ci.server.http.core :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_SAVE_METHODS]]
+    [cider-ci.server.http.core :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_SAFE_METHODS]]
     [cider-ci.server.routes :refer [path]]
     [cider-ci.utils.core :refer [str keyword presence]]
     [cider-ci.server.state :as state :refer [state* routing*] :rename {routing* routing-state*}]
@@ -43,7 +43,7 @@
       (as-> data
         (update data :modal-on-request
                 #(if-not (nil? %) %
-                   (if (HTTP_SAVE_METHODS (:method data))
+                   (if (HTTP_SAFE_METHODS (:method data))
                      false true)))
         (update data :modal-on-response-success
                 #(if-not (nil? %) %

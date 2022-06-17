@@ -3,7 +3,7 @@
   (:require
     [madek.media-service.authentication.token :refer [find-token-secret-in-header]]
     [madek.media-service.utils.core :refer [keyword presence str]]
-    [madek.media-service.utils.http.shared :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_UNSAVE_METHODS HTTP_SAVE_METHODS]]
+    [madek.media-service.utils.http.shared :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_UNSAFE_METHODS HTTP_SAFE_METHODS]]
     [logbug.debug]
     )
   (:import
@@ -11,7 +11,7 @@
     ))
 
 (defn http-safe? [request]
-  (boolean (-> request :request-method HTTP_SAVE_METHODS)))
+  (boolean (-> request :request-method HTTP_SAFE_METHODS)))
 
 (def http-unsafe? (complement http-safe?))
 

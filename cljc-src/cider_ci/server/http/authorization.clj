@@ -1,7 +1,7 @@
 (ns cider-ci.server.http.authorization
   (:require
     [cider-ci.utils.core :refer [presence]]
-    [cider-ci.server.http.core :refer [HTTP_SAVE_METHODS HTTP_UNSAVE_METHODS]]
+    [cider-ci.server.http.core :refer [HTTP_SAFE_METHODS HTTP_UNSAFE_METHODS]]
     [cider_ci.server.entities.passwords :refer [password-authenticated-user]]
     [cider_ci.server.entities.sessions :as sessions]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -40,6 +40,6 @@
         :as request}]
     (debug request)
     (condp contains? request-method
-      HTTP_SAVE_METHODS (check! auth-http-safe request)
-      HTTP_UNSAVE_METHODS (check! auth-http-unsafe request))
+      HTTP_SAFE_METHODS (check! auth-http-safe request)
+      HTTP_UNSAFE_METHODS (check! auth-http-unsafe request))
     (handler request)))

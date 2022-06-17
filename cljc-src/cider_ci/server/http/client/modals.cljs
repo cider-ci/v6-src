@@ -4,7 +4,7 @@
     [cider-ci.server.html.clipboard :as clipboard]
     [cider-ci.server.http.client.main :refer [requests* dismiss]]
     [cider-ci.server.http.client.shared :refer [wait-component]]
-    [cider-ci.server.http.core :refer [HTTP_UNSAVE_METHODS]]
+    [cider-ci.server.http.core :refer [HTTP_UNSAFE_METHODS]]
     [cider-ci.utils.core :refer [keyword presence str]]
     [cljs-http.client :as http.client]
     [cljs.core.async :as async :refer [timeout go]]
@@ -73,7 +73,7 @@
          [modal-body-inner body]
          [:hr]])
       [:small
-       (if (HTTP_UNSAVE_METHODS (:method request))
+       (if (HTTP_UNSAFE_METHODS (:method request))
          [:p "Please try to send the data again. If that fails use reload button of your browser and send again. "]
          [:p "Please try to reload this page with the reload button of your browser. "])
        [:p [:span

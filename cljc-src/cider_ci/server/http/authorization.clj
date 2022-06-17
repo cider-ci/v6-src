@@ -35,11 +35,11 @@
 
 (defn wrap [handler]
   (fn [{request-method :request-method
-        {{auth-http-save :auth-http-save
-          auth-http-unsave :auth-http-unsave} :data} :route
+        {{auth-http-safe :auth-http-safe
+          auth-http-unsafe :auth-http-unsafe} :data} :route
         :as request}]
     (debug request)
     (condp contains? request-method
-      HTTP_SAVE_METHODS (check! auth-http-save request)
-      HTTP_UNSAVE_METHODS (check! auth-http-unsave request))
+      HTTP_SAVE_METHODS (check! auth-http-safe request)
+      HTTP_UNSAVE_METHODS (check! auth-http-unsafe request))
     (handler request)))

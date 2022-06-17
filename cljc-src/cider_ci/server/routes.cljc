@@ -10,38 +10,38 @@
 
 (def routes
   [["/" {:name :root
-         :auth-http-unsave #{}
-         :auth-http-save #{:public}}]
+         :auth-http-unsafe #{}
+         :auth-http-safe #{:public}}]
    ["/init" {:name :init
              :no-sign-in-page true
-             :auth-http-save #{:public}
-             :auth-http-unsave #{:public}}]
+             :auth-http-safe #{:public}
+             :auth-http-unsafe #{:public}}]
    ["/projects/" {:name :projects
-                 :auth-http-save #{:user}
-                 :auth-http-unsave #{:admin}}]
-   ["/sign-in" {:auth-http-unsave #{:public}}
+                 :auth-http-safe #{:user}
+                 :auth-http-unsafe #{:admin}}]
+   ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]
    ["/sign-out" {:name :sign-out
-                 :auth-http-unsave #{:public}
-                 :auth-http-save #{:public}}]
+                 :auth-http-unsafe #{:public}
+                 :auth-http-safe #{:public}}]
    ["/users"
     ["/" {:name :users
-          :auth-http-save #{:admin}
-          :auth-http-unsave #{:admin}}
+          :auth-http-safe #{:admin}
+          :auth-http-unsafe #{:admin}}
      [":user-id"
       ["" {:name :user
-           :auth-http-save #{:self}}]
+           :auth-http-safe #{:self}}]
       ["/password" {:name :user-password
-                    :auth-http-unsave #{:self}}]
+                    :auth-http-unsafe #{:self}}]
       ["/email-addresses"
        ["/" {:name :user-email-addresses
-             :auth-http-save #{:self}
-             :auth-http-unsave #{:admin}}]
+             :auth-http-safe #{:self}
+             :auth-http-unsafe #{:admin}}]
        ["/:email-address"
         ["" {:name :user-email-address}]
         ["/primary" {:name :user-email-address-primary
-                     :auth-http-unsave #{:self}}]]]]]]])
+                     :auth-http-unsafe #{:self}}]]]]]]])
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"}))

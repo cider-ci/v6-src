@@ -18,11 +18,7 @@
   (let [query (-> (sql/select :*)
                   (sql/from :repositories)
                   (sql-format :inline true))
-
-        project (jdbc/execute-one! (get-ds)
-                                   query
-                                   )
-
+        project (jdbc/execute-one! (get-ds) query)
         ]
     (info project)
     ; initialized but not yet fetchted

@@ -5,6 +5,7 @@
 /.cpcache
 /.sass-cache
 /.shadow-cljs
+/data
 /log
 /node_modules
 /resources/cider-ci/public/css/

@@ -4,7 +4,6 @@
     [cider-ci.server.db.type-conversion]
     [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [str keyword]]
-    [clojure.tools.logging :as logging]
     [environ.core :refer [env]]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -23,9 +22,11 @@
 
 (defonce ^:private ds* (atom nil))
 
+(def builder-fn-options-default
+  {:builder-fn jdbc-rs/as-unqualified-lower-maps})
+
 (defn get-ds []
-  (jdbc/with-options @ds*
-    {:builder-fn jdbc-rs/as-unqualified-lower-maps}))
+  (jdbc/with-options @ds* builder-fn-options-default))
 
 
 ;;; CLI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,19 +77,22 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+
+
 (defn wrap-tx [handler]
   (fn [request]
     (jdbc/with-transaction [tx @ds*]
       (try
-        (let [tx-with-opts  (jdbc/with-options tx {:builder-fn jdbc-rs/as-unqualified-lower-maps})]
+        (let [tx-with-opts  (jdbc/with-options tx builder-fn-options-default )]
           (let [resp (handler (assoc request :tx tx-with-opts))]
             (when-let [status (:status resp)]
               (when (>= status 400 )
-                (logging/warn "Rolling back transaction because error status " status)
+                (warn "Rolling back transaction because error status " status)
                 (.rollback tx)))
             resp))
         (catch Throwable th
-          (logging/warn "Rolling back transaction because of " (.getMessage th))
+          (warn "Rolling back transaction because of " (.getMessage th))
           (debug (.get-cause th))
           (.rollback tx)
           (throw th))))))
@@ -100,11 +104,11 @@
 (defn close []
   (when @ds*
     (do
-      (logging/info "Closing db pool ...")
+      (info "Closing db pool ...")
       (.close ^HikariDataSource @ds*)
 
       (reset! ds* nil)
-      (logging/info "Closing db pool done."))))
+      (info "Closing db pool done."))))
 
 (defn init-ds [db-options]
   (close)

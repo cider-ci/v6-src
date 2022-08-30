@@ -14,6 +14,7 @@
         http-kit/http-kit {:mvn/version "2.5.3"}
         lambdaisland/uri {:mvn/version "1.13.95"}
         logbug/logbug {:mvn/version "5.0.0"}
+        me.raynes/fs {:mvn/version "1.4.6"}
         metosin/reitit {:mvn/version "0.5.17"}
         mvxcvi/clj-pgp {:mvn/version "0.9.0"}
         nrepl/nrepl {:mvn/version "0.9.0"}

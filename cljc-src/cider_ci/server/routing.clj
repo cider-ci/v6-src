@@ -1,6 +1,7 @@
 (ns cider-ci.server.routing
   (:require
     [cider-ci.server.db.core :refer [wrap-tx]]
+    [cider-ci.server.db.settings :as settings]
     [cider-ci.server.html.spa :as spa]
     [cider-ci.server.html.static-resources :as static-resources]
     [cider-ci.server.http.authentication :as authentication]
@@ -88,6 +89,7 @@
       wrap-tx
       wrap-accept
       static-resources-wrap
+      settings/wrap
       wrap-catch
       wrap-content-type))
 

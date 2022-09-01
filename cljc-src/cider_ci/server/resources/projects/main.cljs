@@ -29,6 +29,10 @@
     :did-change #(http-client/route-cached-fetch
                    data* :reload true :timeout 500)]
 
+   [:<> (when @state/debug?*
+          [:div.pre (with-out-str (pprint @data*))]
+          )]
+
    (if-not (contains? @data* (:route @routing-state*))
      [:div "Spinner..."]
      (let [projects (seq (get @data* (:route @routing-state*)))]
@@ -42,7 +46,6 @@
              [:tr.project
               [:td (:id project)]
               [:td (:name project)]])]])))])
-
 
 
 ;;; CREATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

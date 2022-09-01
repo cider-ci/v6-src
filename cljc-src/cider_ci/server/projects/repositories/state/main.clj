@@ -8,7 +8,7 @@
     [cider-ci.server.projects.repositories.state.db :as db]
     [cider-ci.server.projects.repositories.state.repositories :as state.repositories]
     [cider-ci.utils.core :refer [keyword str]]
-    [clj-time.core :as time]
+    [tick.core :refer [now]]
     [logbug.catcher :as catcher :refer [snatch]]
     [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
@@ -29,7 +29,7 @@
                  db)
              (-> db
                  (update-in [:repositories id] fun)
-                 (assoc-in [:repositories id :modified_at] (time/now)))))
+                 (assoc-in [:repositories id :modified_at] (now)))))
          (keyword id) fun))
 
 (defn get-db [] @db/db*)

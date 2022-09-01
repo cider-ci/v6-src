@@ -1,7 +1,8 @@
 (ns cider-ci.server.run
   (:require
-    [cider-ci.server.html.server :as http-server]
     [cider-ci.server.db.core :as db]
+    [cider-ci.server.html.server :as http-server]
+    [cider-ci.server.projects.repositories.main :as repositories]
     [cider-ci.server.routing :as routing]
     [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
@@ -41,7 +42,8 @@
              '[cider-ci.server.routing]))
   (db/init options)
   (let [routes (routing/init options)]
-    (http-server/init routes options)))
+    (http-server/init routes options))
+  (repositories/init options))
 
 
 (defn main [gopts args]

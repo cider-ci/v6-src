@@ -7,6 +7,7 @@
   (:require
     [cider-ci.utils.core :refer [keyword str presence]]
     [cider-ci.utils.nio :as nio]
+    [clojure.string :as string :refer [blank? split trim]]
     [taoensso.timbre :refer [debug info warn error spy]]
     )
   (:import
@@ -14,7 +15,6 @@
     [java.nio.file Files FileSystems]
     [java.io File]
     ))
-
 
 
 ; TODO cli arg and init
@@ -34,3 +34,11 @@
   (.build (doto (new FileRepositoryBuilder)
             (.setGitDir (.toFile path))
             (.setBare))))
+
+(defn repository-fs-path [repository-or-id]
+  (let [id (if (map? repository-or-id)
+             (str (:id repository-or-id))
+             repository-or-id)]
+    (assert (not (blank? id)))
+    (str repositories-dir-path (File/separator) id)))
+

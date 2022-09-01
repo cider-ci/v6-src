@@ -1,6 +1,7 @@
 CREATE TABLE settings (
   id int DEFAULT 0 NOT NULL PRIMARY KEY CHECK (id = 0),
   external_base_url text NOT NULL DEFAULT 'http://localhost:3838',
+  git_fetch_and_update_max_concurrent INT CHECK (git_fetch_and_update_max_concurrent > 0),
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   updated_at timestamp with time zone DEFAULT now() NOT NULL
 );

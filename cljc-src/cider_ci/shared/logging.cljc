@@ -4,8 +4,10 @@
 
 (def LOGGING_CONFIG
   {:min-level [[#{
-                  "cider-ci.server.resources.users.user.email-addresses"
-                  "cider-ci.server.routes"
+                  ;"cider-ci.server.resources.users.user.email-addresses"
+                  ;"cider-ci.server.routes"
+                  "cider-ci.server.projects.*"
+                  ;"cider-ci.server.db.migrations.main"
                   ; "cider-ci.server.http.authorization"
                   } :debug]
                [#{

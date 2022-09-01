@@ -10,7 +10,8 @@
     [environ.core :refer [env]]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :as jdbc-sql]
-    [taoensso.timbre :refer [debug info warn error]]
+    [logbug.debug :as debug]
+    [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 
@@ -46,10 +47,15 @@
 (defn init [options]
   (info 'init)
   (apply (-> migrations/migrations (get 0) (get :up)) [(get-ds)])
+  (debug "applied migration 0")
   (->> ["SELECT * FROM migrations ORDER BY id;"]
        (jdbc/execute! (get-ds))
-       (map :migrations/id)
-       (apply sorted-set)))
+       spy
+       (map :id)
+       spy
+       (apply sorted-set)
+       spy
+       ))
 
 (defn migrate-downs! [ds downs]
   (doseq [down (reverse downs)]
@@ -75,10 +81,12 @@
                   (apply max migrated))
         downs (->> migrated
                    (filter #(> % start))
+                   spy
                    (into (sorted-set)))
         ups (->> (difference available migrated)
                  (union downs)
                  (filter #(<= % target))
+                 spy
                  (into (sorted-set)))]
     (info {'migrated migrated
            'available available
@@ -106,4 +114,7 @@
     (catch Exception e
       (warn e))))
 
+
+;#### debug ###################################################################
+(debug/debug-ns *ns*)
 

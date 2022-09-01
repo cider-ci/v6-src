@@ -8,6 +8,7 @@
     [cider-ci.server.projects.repositories.fetch-and-update.db-schema :as db-schema]
     [cider-ci.server.projects.repositories.state.main :as state]
     [cider-ci.utils.core :refer [keyword str]]
+    [logbug.debug :as debug]
     [schema.core :as schema]
     [tick.core :as tick]
     ))
@@ -36,4 +37,4 @@
 ;### Debug ####################################################################
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)
-;(debug/debug-ns *ns*)
+(debug/debug-ns *ns*)

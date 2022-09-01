@@ -20,4 +20,4 @@
              ))
 
 ;(fipp.edn/pprint @db*)
-;(debug/debug-ns *ns*)
+(debug/debug-ns *ns*)

@@ -1,7 +1,7 @@
 (ns cider-ci.server.resources.projects.main
   (:require
-    [cider-ci.utils.core :refer [presence]]
     [cider-ci.server.projects.repositories.state.db :refer [db*] :rename {db* repo-state-db*}]
+    [cider-ci.utils.core :refer [presence]]
     [cider_ci.server.entities.passwords :as passwords]
     [cider_ci.server.entities.users :as users]
     [cuerdas.core :as string]

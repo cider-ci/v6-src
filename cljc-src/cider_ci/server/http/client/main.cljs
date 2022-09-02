@@ -142,7 +142,7 @@
                      resp (<! chan)]
                  (when (< (:status resp) 300)
                    (swap! data* assoc route (-> resp :body)))))
-             (<! (timeout timeout))
+             (<! (async/timeout timeout))
              (if (= (:route @routing-state*) route)
                (when (= id (get @route-cached-fetch-ids* route))
                  (recur reload))

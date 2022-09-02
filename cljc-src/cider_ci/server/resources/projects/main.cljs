@@ -1,7 +1,9 @@
 (ns cider-ci.server.resources.projects.main
   (:refer-clojure :exclude [keyword str])
   (:require
+    ["date-fns" :as date-fns]
     ["react-bootstrap" :as bs]
+    [cider-ci.utils.core :refer [str keyword]]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
@@ -22,6 +24,19 @@
 (def fetch-id* (atom nil))
 
 
+(defn fetch-td-component [params]
+  (let [ctx-class (case (some-> params :state)
+                    "ok" "table-success"
+                    "table-warning")]
+    (info 'ctx-class ctx-class)
+    [:td
+     {:class [ctx-class]}
+     [:<>
+      (when-let [last-fetched-at (some-> params :last_fetched_at (js/Date.))]
+        [:span (date-fns/formatDistance last-fetched-at, (js/Date.), (clj->js {:addSuffix true}))])]
+     ]))
+
+
 (defn projects-component []
   [:div.projects
    [:h2 [icons/projects] " Projects"]
@@ -38,14 +53,20 @@
      (let [projects (seq (get @data* (:route @routing-state*)))]
        (if-not projects
          [:div "Empty..."]
-         [:table.table.table-striped.projects
-          [:thead]
+         [:table.table.table-sm.table-striped.projects
+          [:thead
+           [:tr
+            [:th "ID"]
+            [:th "Name"]
+            [:th "Fetch and Update"]]]
           [:tbody
            (for [project projects]
              ^{:key (:id project)}
              [:tr.project
               [:td (:id project)]
-              [:td (:name project)]])]])))])
+              [:td (:name project)]
+              [:<> (fetch-td-component (:fetch-and-update project))]
+              ])]])))])
 
 
 ;;; CREATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

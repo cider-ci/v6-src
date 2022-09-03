@@ -11,9 +11,6 @@
     ))
 
 
-
-
-
 (defn doit []
   (let [query (-> (sql/select :*)
                   (sql/from :repositories)

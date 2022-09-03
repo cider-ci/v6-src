@@ -34,8 +34,7 @@
      [:<>
       (when-let [last-fetched-at (some-> params :last_fetched_at (js/Date.))]
         [:span (date-fns/formatDistance
-                 last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]
-     ]))
+                 last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]]))
 
 
 (defn projects-component []

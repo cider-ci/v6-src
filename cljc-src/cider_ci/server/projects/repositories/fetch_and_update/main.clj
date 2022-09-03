@@ -5,6 +5,7 @@
 (ns cider-ci.server.projects.repositories.fetch-and-update.main
   (:refer-clojure :exclude [str keyword])
   (:require
+    ; TODO branch-updates
     ;[cider-ci.server.projects.repositories.branch-updates.core :as branch-updates]
     [cider-ci.server.db.settings :refer [get-setting!]]
     [cider-ci.server.projects.repositories.fetch-and-update.fetch :as fetch]

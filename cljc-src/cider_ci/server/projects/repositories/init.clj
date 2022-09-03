@@ -2,7 +2,7 @@
 ; Licensed under the terms of the GNU Affero General Public License v3.
 ; See the "LICENSE.txt" file provided with this software.
 
-(ns cider-ci.server.projects.repositories
+(ns cider-ci.server.projects.repositories.init
   (:refer-clojure :exclude [str keyword])
   (:require
     [cider-ci.server.projects.repositories.http-backend :as http-backend]
@@ -12,6 +12,9 @@
     [cider-ci.utils.system :as system]
     [taoensso.timbre :refer [debug info warn error spy]])
     )
+
+
+; TODO none of this seems to be used anymore
 
 
 (def path shared/path)

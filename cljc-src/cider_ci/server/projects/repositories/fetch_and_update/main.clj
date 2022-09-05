@@ -5,9 +5,8 @@
 (ns cider-ci.server.projects.repositories.fetch-and-update.main
   (:refer-clojure :exclude [str keyword])
   (:require
-    ; TODO branch-updates
-    ;[cider-ci.server.projects.repositories.branch-updates.core :as branch-updates]
     [cider-ci.server.db.settings :refer [get-setting!]]
+    [cider-ci.server.projects.repositories.branch-updates.core :as branch-updates]
     [cider-ci.server.projects.repositories.fetch-and-update.fetch :as fetch]
     [cider-ci.server.projects.repositories.fetch-and-update.scheduler :as scheduler]
     [cider-ci.server.projects.repositories.fetch-and-update.shared :as shared :refer [db-get-fetch-and-update db-update-fetch-and-update]]
@@ -15,9 +14,6 @@
     [cider-ci.server.projects.repositories.state.main :as state]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
-    [logbug.thrown :as thrown]
     [taoensso.timbre :refer [debug info warn error]]
     [tick.core :refer [now]])
   (:import

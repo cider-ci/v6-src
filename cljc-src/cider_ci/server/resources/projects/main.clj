@@ -35,7 +35,7 @@
                            (some->
                              @repo-state-db*
                              (get-in [:repositories (keyword id)])
-                             (select-keys [:fetch-and-update])))))))})
+                             (select-keys [:fetch-and-update :branch-updates])))))))})
 
 (defn handler
   [{{{user-id :user-id} :path-params

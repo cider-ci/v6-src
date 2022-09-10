@@ -36,6 +36,10 @@
         [:span (date-fns/formatDistance
                  last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]]))
 
+(defn branch-update-td-component [params]
+  [:td
+   [:pre (with-out-str (pprint params))]])
+
 
 (defn projects-component []
   [:div.projects
@@ -58,7 +62,8 @@
            [:tr
             [:th "ID"]
             [:th "Name"]
-            [:th "Fetch and Update"]]]
+            [:th "Fetch"]
+            [:th "Branches"]]]
           [:tbody
            (for [project projects]
              ^{:key (:id project)}
@@ -66,6 +71,7 @@
               [:td (:id project)]
               [:td (:name project)]
               [:<> (fetch-td-component (:fetch-and-update project))]
+              [:<> (branch-update-td-component (:branch-updates project))]
               ])]])))])
 
 

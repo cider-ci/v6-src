@@ -42,7 +42,6 @@
      {route-name :name} :data} :route
     request-method :request-method
     data :body tx :tx :as request}]
-  (warn request)
   (case route-name
     :projects (case request-method
                 :post (create-project tx data)

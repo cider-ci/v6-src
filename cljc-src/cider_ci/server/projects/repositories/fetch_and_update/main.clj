@@ -14,6 +14,8 @@
     [cider-ci.server.projects.repositories.state.main :as state]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
+    [logbug.catcher :as catcher]
+    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error]]
     [tick.core :refer [now]])
   (:import
@@ -41,8 +43,7 @@
         {:return-fn (fn [e] (catch-fetch-and-update-exception e repository))}
         (let [path (repository-fs-path repository)]
           (fetch/fetch repository path)
-          ; TODO
-          ; (branch-updates/update repository)
+          (branch-updates/update repository)
           )))))
 
 (defn- submit-pending-repositories []
@@ -88,4 +89,4 @@
 ;### Debug ####################################################################
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)

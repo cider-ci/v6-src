@@ -5,11 +5,11 @@
 (ns cider-ci.server.projects.repositories.state.repositories
   (:refer-clojure :exclude [str keyword])
   (:require
-    ;[cider-ci.server.repository.branch-updates.db-schema :as branch-updates.db-schema]
+    [cider-ci.server.projects.repositories.branch-updates.db-schema :as branch-updates.db-schema]
     [cider-ci.server.projects.repositories.fetch-and-update.db-schema :as fetch-and-update.db-schema]
-    ;[cider-ci.server.repository.push-hooks.db-schema :as push-hooks.db-schema]
-    ;[cider-ci.server.repository.push-notifications.db-schema :as push-notifications.db-schema]
-    ;[cider-ci.server.repository.status-pushes.db-schema :as status-pushes.db-schema]
+    ;[cider-ci.server.projects.repositories.push-hooks.db-schema :as push-hooks.db-schema]
+    ;[cider-ci.server.projects.repositories.push-notifications.db-schema :as push-notifications.db-schema]
+    ;[cider-ci.server.projects.repositories.status-pushes.db-schema :as status-pushes.db-schema]
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.db.row-events :as row-events]
     [cider-ci.server.projects.repositories.state.db :as db]
@@ -32,7 +32,7 @@
        (swap! db/db* update-rows-in-db :repositories
               {
                ; TODO
-               ;:branch-updates (branch-updates.db-schema/default)
+               :branch-updates (branch-updates.db-schema/default)
                :fetch-and-update (fetch-and-update.db-schema/default)
                ;:push-notification (push-notifications.db-schema/default)
                ;:push-hook (push-hooks.db-schema/default)

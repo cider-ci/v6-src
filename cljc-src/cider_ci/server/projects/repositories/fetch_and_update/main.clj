@@ -10,7 +10,6 @@
     [cider-ci.server.projects.repositories.fetch-and-update.fetch :as fetch]
     [cider-ci.server.projects.repositories.fetch-and-update.scheduler :as scheduler]
     [cider-ci.server.projects.repositories.fetch-and-update.shared :as shared :refer [db-get-fetch-and-update db-update-fetch-and-update]]
-    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
     [cider-ci.server.projects.repositories.state.main :as state]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
@@ -41,10 +40,8 @@
     (locking (str "fetch-and-update-lock_" id)
       (catcher/snatch
         {:return-fn (fn [e] (catch-fetch-and-update-exception e repository))}
-        (let [path (repository-fs-path repository)]
-          (fetch/fetch repository path)
-          (branch-updates/update repository)
-          )))))
+        (fetch/fetch repository)
+        (branch-updates/update repository)))))
 
 (defn- submit-pending-repositories []
   (doseq [repository (map second (:repositories (state/get-db)))]
@@ -80,13 +77,29 @@
 (defn init [options]
   (info "INIT fetch-and-update >>> ")
   (initialize-fetch-and-update-pool)
-  (start-submit-pending-repositories)
-  (submit-pending-repositories)
-  (scheduler/initialize)
+  ;TODO
+  ;(start-submit-pending-repositories)
+  ;(submit-pending-repositories)
+  ;(scheduler/initialize)
   (info "INIT fetch-and-update <<< "))
 
 
+
+
 ;### Debug ####################################################################
+
+
+(defn- first-repo []
+  (some-> (state/get-db)
+          :repositories
+          (->> (map second)
+               first)))
+(comment
+  (first-repo)
+  (fetch/fetch (first-repo))
+  ; TODO make this work
+  (branch-updates/update (first-repo)))
+
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)
 ;(debug/debug-ns *ns*)

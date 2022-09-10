@@ -10,6 +10,7 @@
     [cider-ci.server.projects.repositories.branch-updates.update :as update]
     [cider-ci.server.projects.repositories.shared :refer :all]
     [cider-ci.server.projects.repositories.state.main :as state]
+    [logbug.debug :as debug]
     [logbug.catcher :as catcher]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
@@ -79,6 +80,4 @@
 
 
 ;### Debug ####################################################################
-;(logging-config/set-logger! :level :debug)
-;(logging-config/set-logger! :level :info)
-;(debug/debug-ns *ns*)
+(debug/debug-ns *ns*)

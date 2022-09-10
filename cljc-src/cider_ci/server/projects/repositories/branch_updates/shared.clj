@@ -8,6 +8,7 @@
   (:require
     [cider-ci.server.projects.repositories.branch-updates.db-schema :as db-schema]
     [cider-ci.server.projects.repositories.state.main :as state]
+    [logbug.debug :as debug]
     [tick.core :refer [now]]
     [schema.core :as schema]))
 
@@ -26,4 +27,4 @@
   (-> (state/get-db) :repositories (get (keyword id)) :branch-updates))
 
 ;### Debug ####################################################################
-;(debug/debug-ns *ns*)
+(debug/debug-ns *ns*)

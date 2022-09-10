@@ -6,9 +6,10 @@
   {:min-level [[#{
                   ;"cider-ci.server.resources.users.user.email-addresses"
                   ;"cider-ci.server.routes"
-                  "cider-ci.server.projects.*"
+                  ;"cider-ci.server.projects.*"
                   ;"cider-ci.server.db.migrations.main"
                   ; "cider-ci.server.http.authorization"
+                  "cider-ci.server.projects.repositories.branch-updates.*"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

@@ -6,6 +6,7 @@
   (:require [cider-ci.utils.core :refer [keyword str]])
   (:require
     [cider-ci.server.projects.repositories.fetch-and-update.shared :refer [git-url db-update-fetch-and-update]]
+    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
     [cider-ci.utils.system :as system]
     [logbug.debug :as debug]
     [me.raynes.fs :as fs]
@@ -25,8 +26,9 @@
     ["git" "update-server-info"]
     {:dir path :env {"TERM" "VT-100"}}))
 
-(defn fetch [repository path]
-  (let [id (:id repository)]
+(defn fetch [repository]
+  (let [id (:id repository)
+        path (repository-fs-path repository)]
     (db-update-fetch-and-update id #(assoc % :state "fetching"))
     (Thread/sleep 1000)
     (when-not (fs/exists? path) (git-init path))

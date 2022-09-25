@@ -62,15 +62,17 @@
   (Thread/sleep 1000)
   (jdbc/with-transaction [tx (get-ds)]
     (let [git-branches (get-git-branches path)
-          canonic-id (git.repositories/canonic-id repository)]
-      {:created (branches/create-new tx git-branches canonic-id path)
-       :updated (branches/update-outdated tx git-branches canonic-id path)
+          ;canonic-id (git.repositories/canonic-id repository)
+          ]
+      {:created (branches/create-new tx git-branches (:id repository) path)
+       :updated (branches/update-outdated tx git-branches (:id repository) path)
        :deleted (delete-removed-branches tx git-branches (:git_url repository))})))
 
 
 ;### update branches in db ####################################################
 
 (defn update [repository]
+  (debug 'update repository)
   (let [repo-id (:id repository)
         path (repository-fs-path repository)
         update_info (update-branches repository path)
@@ -93,4 +95,4 @@
 ;### Debug ####################################################################
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)

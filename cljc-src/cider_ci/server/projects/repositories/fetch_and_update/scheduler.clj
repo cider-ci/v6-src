@@ -10,7 +10,7 @@
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :as daemon :refer [defdaemon]]
     [cider-ci.utils.duration :as duration]
-    [clj-time.core :as time]
+    [tick.core :as tick]
     [clojure.java.jdbc :as jdbc]
     [logbug.catcher :as catcher :refer [snatch]]
     [logbug.debug :as debug]
@@ -20,18 +20,18 @@
 ;### update repository ########################################################
 
 (defn- git-fetch-and-update-interval [repository]
-  (time/seconds
-    (snatch
-      {:return-expr 60}
-      (duration/parse-string-to-seconds
-        (:remote_fetch_interval repository)))))
+  (let [secs (snatch
+               {:return-expr 60}
+               (duration/parse-string-to-seconds
+                 (:remote_fetch_interval repository)))]
+    (tick/new-duration secs :seconds)))
 
 (defn last-succeeded-or-failed-fetch-at [repository]
   "Returns the timestamp of the most resent (succeeded or failed) fetch or nil."
   (let [{last-fetched-at :last_fetched_at
          last-fetch-failed-at :last_fetch_and_update_failed_at} repository]
     (if (and last-fetched-at last-fetch-failed-at)
-      (if (time/after? last-fetched-at last-fetch-failed-at)
+      (if (tick/> last-fetched-at last-fetch-failed-at)
         last-fetched-at last-fetch-failed-at)
       (or last-fetched-at last-fetch-failed-at))))
 
@@ -40,15 +40,15 @@
         last-fetched-at (:last_fetched_at fetch-and-update)
         last-error-at (:last_error_at fetch-and-update)
         reference (if (and last-fetched-at last-error-at)
-                    (time/latest last-fetched-at last-error-at)
+                    (tick/max last-fetched-at last-error-at)
                     (or last-fetched-at last-error-at))]
     (cond (contains? ["fetching" "waiting"]
                      (:state fetch-and-update)) false
           (:pending? fetch-and-update) false
           (not reference) true
-          :else (time/after?
-                  (time/now)
-                  (time/plus reference
+          :else (tick/>
+                  (tick/now)
+                  (tick/>> reference
                              (git-fetch-and-update-interval repository))))))
 
 (defn fetch-and-update-repositories []
@@ -67,4 +67,4 @@
 ;#### debug ###################################################################
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)

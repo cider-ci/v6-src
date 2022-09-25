@@ -27,4 +27,4 @@
   (-> (state/get-db) :repositories (get (keyword id)) :branch-updates))
 
 ;### Debug ####################################################################
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)

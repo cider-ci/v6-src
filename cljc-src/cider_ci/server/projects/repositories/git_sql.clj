@@ -8,7 +8,7 @@
     ;[cider-ci.server.projects.repositories :as repositories]
     ;[cider-ci.server.projects.repositories.shared :as repositories-shared]
     ;[cider-ci.utils.rdbms :as ds]
-    [cider-ci.server.db.core :refer [get-ds]]
+    [cider-ci.server.db.core :as db]
     [cider-ci.server.db.utils :refer [insert-or-update]]
     [cider-ci.utils.core :refer [keyword str presence]]
     [cider-ci.utils.git-gpg :as git-gpg]
@@ -17,6 +17,7 @@
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [logbug.catcher :as catcher]
+    [logbug.debug :as debug]
     [next.jdbc :as jdbc]
     [next.jdbc.result-set :as jdbc-rs]
     [next.jdbc.sql :refer [query insert!]]
@@ -36,7 +37,7 @@
 
 ;;; depths ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def ^:private update-depths-sql
+(def ^:private update-null-depths-sql
   "UPDATE commits AS children
   SET depth = parents.depth + 1
   FROM commits AS parents,
@@ -46,9 +47,12 @@
   AND children.id = commit_arcs.child_id
   AND parents.id = commit_arcs.parent_id")
 
+(defn- update-null-depths! [tx]
+  (jdbc/execute-one! tx update-null-depths-sql))
+
 (defn- update-depths [tx]
   (loop [ct 0]
-    (let [updates (+ ct (first (jdbc/execute! tx [update-depths-sql])))]
+    (let [updates (+ ct  (update-null-depths! tx))]
       (if (< ct updates)
         (recur updates)
         updates))))
@@ -265,10 +269,8 @@
     (catcher/with-logging {}
       (let [repository (:repository project)]
         (assert (instance? Repository repository))
-        (jdbc/with-transaction [_tx (get-ds)]
-          (let [tx (jdbc/with-options _tx {:builder-fn jdbc-rs/as-unqualified-lower-maps})]
-
-
+        (jdbc/with-transaction [_tx (db/get-ds)]
+          (let [tx (jdbc/with-options _tx db/builder-fn-options-default)]
             (.scanForRepoChanges repository)
             (doseq [branch (some->> repository
                                     Git. .branchList .call seq
@@ -276,3 +278,4 @@
               (import-branch branch repository project tx))))))))
 
 
+;(debug/debug-ns *ns*)

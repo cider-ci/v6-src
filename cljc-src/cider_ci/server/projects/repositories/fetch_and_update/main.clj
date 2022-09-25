@@ -78,12 +78,13 @@
   (info "INIT fetch-and-update >>> ")
   (initialize-fetch-and-update-pool)
   ;TODO
-  ;(start-submit-pending-repositories)
-  ;(submit-pending-repositories)
-  ;(scheduler/initialize)
+  (start-submit-pending-repositories)
+  (submit-pending-repositories)
+  (scheduler/initialize)
   (info "INIT fetch-and-update <<< "))
 
 
+(comment (init {}))
 
 
 ;### Debug ####################################################################
@@ -98,7 +99,7 @@
   (first-repo)
   (fetch/fetch (first-repo))
   ; TODO make this work
-  (branch-updates/update (first-repo)))
+  (future (branch-updates/update (first-repo))))
 
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)

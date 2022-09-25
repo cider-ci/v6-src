@@ -124,6 +124,8 @@ CREATE TABLE commits (
     committer_date timestamp with time zone,
     subject text,
     body text,
+    signed_message text,
+    signature text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );

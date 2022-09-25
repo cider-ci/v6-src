@@ -6,22 +6,30 @@
   (:refer-clojure :exclude [str keyword])
   (:require
     [cider-ci.utils.core :refer [keyword str]]
-    [next.jdbc.sql :refer [insert! query update!]]
+    [honey.sql :refer [format] :rename {format sql-format}]
+    [honey.sql.helpers :as sql]
+    [logbug.debug :as debug]
     [next.jdbc :as jdbc]
+    [next.jdbc.sql :refer [insert! query update!]]
+    [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
 
-(def ^:private update-depths-where-query
-  "NOT EXISTS
-  (SELECT 1
-  FROM commit_arcs
-  WHERE commits.id = commit_arcs.child_id)
-  AND commits.depth IS NULL ")
+(def ^:private update-root-depths-cmd
+  (-> (sql/update :commits)
+      (sql/set {:depth 0})
+      (sql/where [:not
+                  [:exists
+                   (-> (sql/select true)
+                       (sql/from :commit_arcs)
+                       (sql/where [:= :commits.id :commit_arcs.child_id])
+                       (sql/where [:= :commits.depth nil]))]])
+      (sql-format)))
 
-(defn- update-root-depths [ds]
-  (first (update! ds :commits
-                {:depth 0}
-                [update-depths-where-query])))
+(defn- update-root-depths [tx]
+  (->> update-root-depths-cmd
+       (jdbc/execute-one! tx)
+       :next.jdbc/update-count))
 
 (def ^:private update-next-non-root-dephts-query
   "UPDATE commits AS children
@@ -34,7 +42,8 @@
   AND parents.id = commit_arcs.parent_id")
 
 (defn- update-next-non-root-dephts [ds]
-  (first (jdbc/execute! ds [update-next-non-root-dephts-query])))
+  (:next.jdbc/update-count
+    (jdbc/execute-one! ds [update-next-non-root-dephts-query])))
 
 
 (defn update-depths
@@ -49,3 +58,5 @@
 
 ;(update-depths (rdbms/get-ds))
 
+;### Debug ####################################################################
+;(debug/debug-ns *ns*)

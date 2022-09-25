@@ -14,6 +14,7 @@
     [logbug.catcher :as catcher]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
+    [taoensso.timbre :refer [debug info warn error]]
     [tick.core :refer [now]])
   (:import
     [java.util.concurrent Executors ExecutorService Callable]))
@@ -36,9 +37,11 @@
 (defn- execute-update-branches [repository]
   (let [id (:id repository)]
     (locking (str "fetch-and-update-lock_" id)
-      (catcher/snatch
-        {:return-fn (fn [e] (catch-branch-updates-exception e repository))}
-        (update/update repository)))))
+      (try
+        (update/update repository)
+        (catch Exception e
+          (warn e)
+          (catch-branch-updates-exception e repository))))))
 
 (defn- submit-pending-repositories []
   (doseq [repository (map second (:repositories (state/get-db)))]
@@ -72,12 +75,12 @@
   (db-update-branch-updates
     (:id repository) #(assoc % :pending? true)))
 
-(defn initialize []
+(defn init [opts]
   (initialize-branch-updates-pool)
   (start-submit-pending-repositories)
   (submit-pending-repositories))
 
 
-
 ;### Debug ####################################################################
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)
+

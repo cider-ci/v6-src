@@ -10,9 +10,10 @@
                   ;"cider-ci.server.projects.*"
                   ;"cider-ci.server.db.migrations.main"
                   ; "cider-ci.server.http.authorization"
-                  "cider-ci.server.projects.repositories.branch-updates.*"
-                  "cider-ci.server.projects.repositories.branch-updates.core"
-                  "cider-ci.server.projects.repositories.branch-updates.shared"
+                  ;"cider-ci.server.projects.repositories.git.commits"
+                  ;"cider-ci.server.projects.repositories.branch-updates.*"
+                  ;"cider-ci.server.projects.repositories.git-sql"
+                  ;"cider-ci.server.projects.repositories.sql.commits.depth"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

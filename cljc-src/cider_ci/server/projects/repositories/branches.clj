@@ -10,7 +10,7 @@
     [cider-ci.utils.core :refer [keyword str]]
     [logbug.debug :as debug]
     [next.jdbc.sql :refer [insert! query update!]]
-    ))
+    [taoensso.timbre :refer [debug info warn error spy]]))
 
 
 ;### create-new db branches ###################################################
@@ -33,8 +33,8 @@
 (defn- create-new-db-branch [tx repository-path repository-id git-branch]
   (let [commit-id (:current_commit_id git-branch)
         current_commit (commits/import-recursively tx commit-id repository-path)
-        db-branch (first (sql.branches/create!
-                           tx (assoc git-branch :repository_id repository-id)))]
+        db-branch (sql.branches/create!
+                    tx (assoc git-branch :repository_id repository-id))]
     (update-or-create-branches-commits tx db-branch)
     db-branch))
 

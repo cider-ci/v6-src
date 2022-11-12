@@ -14,6 +14,7 @@
                   ;"cider-ci.server.projects.repositories.branch-updates.*"
                   ;"cider-ci.server.projects.repositories.git-sql"
                   ;"cider-ci.server.projects.repositories.sql.commits.depth"
+                  "cider-ci.server.projects.repositories.branch-updates.*"
                   } :debug]
                [#{
                   #?(:clj "com.zaxxer.hikari.*")

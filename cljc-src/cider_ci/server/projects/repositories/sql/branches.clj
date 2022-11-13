@@ -9,6 +9,7 @@
     [next.jdbc.sql :refer [insert! query]]
     [clojure.java.jdbc :as jdbc]
     [cider-ci.server.db.core :as db]
+    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -16,7 +17,12 @@
   (insert! ds :branches params db/builder-fn-options-default))
 
 (defn for-repository [ds canonic-id]
-  (query ds
-         ["SELECT * FROM branches WHERE repository_id = ? " canonic-id]))
+  (->> ["SELECT * FROM branches WHERE repository_id = ? " canonic-id]
+       (#(query ds % db/builder-fn-options-default))))
 
+
+;#### debug ###################################################################
+;(debug/debug-ns *ns*)
+;(logging-config/set-logger! :level :debug)
+;(logging-config/set-logger! :level :info)
 

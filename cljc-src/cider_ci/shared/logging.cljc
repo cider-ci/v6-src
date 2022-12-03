@@ -1,6 +1,7 @@
 (ns cider-ci.shared.logging
   (:require
     #?(:clj [taoensso.timbre.tools.logging])
+    [taoensso.timbre.appenders.core :as appenders]
     [taoensso.timbre :as timbre :refer [debug info]]))
 
 (def LOGGING_CONFIG
@@ -16,14 +17,18 @@
                   ;"cider-ci.server.projects.repositories.sql.commits.depth"
                   ;"cider-ci.server.projects.repositories.branch-updates.*"
                   ;"cider-ci.server.projects.repositories.sql.branches"
-                  "cider-ci.server.projects.repositories.branch-updates.update"
-                  "cider-ci.server.projects.repositories.branches"
+                  ;"cider-ci.server.projects.repositories.branch-updates.update"
+                  ;"cider-ci.server.projects.repositories.branches"
                   } :debug]
 
                [#{
                   #?(:clj "com.zaxxer.hikari.*")
                   "cider-ci.*"} :info]
                [#{"*"} :warn]]
+   :appenders #?(:clj {:spit (appenders/spit-appender {:fname "log/debug.log"})}
+                 :cljs {})
+
+
    :log-level nil})
 
 

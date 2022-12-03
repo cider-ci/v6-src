@@ -7,12 +7,15 @@
     [next.jdbc.connection :as connection]
     [next.jdbc.prepare :as prepare]
     [next.jdbc.result-set :as jdbc-rs]
+    [next.jdbc.date-time]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:import
     [java.sql PreparedStatement]
     [org.postgresql.util PGobject]
     ))
 
+
+(next.jdbc.date-time/read-as-instant)
 
 (def ->json json/write-str)
 

@@ -71,19 +71,31 @@
 
 ;### update branches in db ####################################################
 
+
+(defn repo-branches-query [repo-id]
+  (-> (sql/select [:%count.* :branches_count]
+                  [[:max :commits.committer_date] :last_commited_at]
+
+                  )
+      (sql/from :repositories)
+      (sql/where [:= :repositories.id repo-id])
+      (sql/join :branches [:= :repositories.id :branches.repository_id])
+      (sql/join :commits [:= :branches.current_commit_id :commits.id])
+      (sql/group-by :repositories.id)))
+
+(comment (-> "test"
+             repo-branches-query (sql-format :inline true)
+             (->> (jdbc/execute-one! (get-ds)))
+             :last_commited_at type
+             ))
+
+
 (defn update [repository]
   (debug 'update repository)
   (let [repo-id (:id repository)
         path (repository-fs-path repository)
         update_info (update-branches repository path)
-        params (-> (sql/select [:%count.* :branches_count]
-                               [:%max.commits.committer_date :last_commited_at])
-                   (sql/from :repositories)
-                   (sql/where [:= :repositories.id repo-id])
-                   (sql/join :branches [:= :repositories.id :branches.repository_id])
-                   (sql/join :commits [:= :branches.current_commit_id :commits.id])
-                   (sql/group-by :repositories.id)
-                   sql-format
+        params (-> repo-id repo-branches-query sql-format
                    (->> (jdbc/execute-one! (get-ds))))]
     (when params
       (db-update-branch-updates
@@ -95,4 +107,4 @@
 ;### Debug ####################################################################
 ;(logging-config/set-logger! :level :debug)
 ;(logging-config/set-logger! :level :info)
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)

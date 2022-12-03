@@ -13,8 +13,8 @@
         hiccup/hiccup {:mvn/version "1.0.5"}
         http-kit/http-kit {:mvn/version "2.5.3"}
         lambdaisland/uri {:mvn/version "1.13.95"}
-        logbug/logbug {:mvn/version "5.0.0"
-                       ;:local/root "../../CLOJURE/logbug"
+        logbug/logbug {;:mvn/version "5.0.0"
+                       :local/root "../../CLOJURE/logbug"
                        }
         me.raynes/fs {:mvn/version "1.4.6"}
         metosin/reitit {:mvn/version "0.5.17"}

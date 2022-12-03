@@ -37,11 +37,14 @@
 (defn- execute-update-branches [repository]
   (let [id (:id repository)]
     (locking (str "fetch-and-update-lock_" id)
-      (try
-        (update/update repository)
-        (catch Exception e
-          (warn e)
-          (catch-branch-updates-exception e repository))))))
+      (catcher/snatch
+        {:return-fn #(catch-branch-updates-exception % repository)}
+        (update/update repository))
+      (comment (try
+                 (update/update repository)
+                 (catch Exception e
+                   (warn e)
+                   (catch-branch-updates-exception e repository)))))))
 
 (defn- submit-pending-repositories []
   (doseq [repository (map second (:repositories (state/get-db)))]
@@ -82,5 +85,5 @@
 
 
 ;### Debug ####################################################################
-(debug/debug-ns *ns*)
+;(debug/debug-ns *ns*)
 

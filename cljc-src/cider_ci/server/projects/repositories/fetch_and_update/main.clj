@@ -75,13 +75,14 @@
 (def fetch-and-update shared/fetch-and-update)
 
 (defn init [options]
-  (info "INIT fetch-and-update >>> ")
-  (initialize-fetch-and-update-pool)
-  ;TODO
-  (start-submit-pending-repositories)
-  (submit-pending-repositories)
-  (scheduler/initialize)
-  (info "INIT fetch-and-update <<< "))
+  (when true
+    (info "INIT fetch-and-update >>> ")
+    (initialize-fetch-and-update-pool)
+    ;TODO
+    (start-submit-pending-repositories)
+    (submit-pending-repositories)
+    (scheduler/initialize)
+    (info "INIT fetch-and-update <<< ")))
 
 
 (comment (init {}))

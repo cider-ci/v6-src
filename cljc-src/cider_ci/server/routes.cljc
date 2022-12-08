@@ -8,6 +8,35 @@
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
+(def projects
+  ["/projects/" {:name :projects
+                 :auth-http-safe #{:user}
+                 :auth-http-unsafe #{:admin}}])
+
+(def users
+  ["/users"
+   ["/" {:name :users
+         :auth-http-safe #{:admin}
+         :auth-http-unsafe #{:admin}}
+    [":user-id"
+     ["" {:name :user
+          :auth-http-safe #{:self}}]
+     ["/password" {:name :user-password
+                   :auth-http-unsafe #{:self}}]
+     ["/email-addresses"
+      ["/" {:name :user-email-addresses
+            :auth-http-safe #{:self}
+            :auth-http-unsafe #{:admin}}]
+      ["/:email-address"
+       ["" {:name :user-email-address}]
+       ["/primary" {:name :user-email-address-primary
+                    :auth-http-unsafe #{:self}}]]]]]])
+
+(def workspace
+  ["/commits"
+   ["/" {:name :commits
+         :auth-http-safe #{:user}}]])
+
 (def routes
   [["/" {:name :root
          :auth-http-unsafe #{}
@@ -16,32 +45,15 @@
              :no-sign-in-page true
              :auth-http-safe #{:public}
              :auth-http-unsafe #{:public}}]
-   ["/projects/" {:name :projects
-                 :auth-http-safe #{:user}
-                 :auth-http-unsafe #{:admin}}]
+   projects
    ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]
    ["/sign-out" {:name :sign-out
                  :auth-http-unsafe #{:public}
                  :auth-http-safe #{:public}}]
-   ["/users"
-    ["/" {:name :users
-          :auth-http-safe #{:admin}
-          :auth-http-unsafe #{:admin}}
-     [":user-id"
-      ["" {:name :user
-           :auth-http-safe #{:self}}]
-      ["/password" {:name :user-password
-                    :auth-http-unsafe #{:self}}]
-      ["/email-addresses"
-       ["/" {:name :user-email-addresses
-             :auth-http-safe #{:self}
-             :auth-http-unsafe #{:admin}}]
-       ["/:email-address"
-        ["" {:name :user-email-address}]
-        ["/primary" {:name :user-email-address-primary
-                     :auth-http-unsafe #{:self}}]]]]]]])
+   users
+   workspace ])
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"}))

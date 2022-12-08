@@ -87,6 +87,8 @@
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
    [:> bs/Container {:class "justify-content-center"}
     [:> bs/Nav.Item
+     [:> bs/Nav.Link {:href (path :commits)} [icons/commits] " Commits"] ]
+    [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :projects)} [icons/projects] " Projects"]]]
    [:<> (when-let [center-nav (:center-nav @state/routing*)]
           [center-nav])]

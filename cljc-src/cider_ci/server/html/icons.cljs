@@ -8,6 +8,8 @@
     ))
 
 
+(defn commit [] (FontAwesomeIcon #js{:icon solids/faCodeCommit :className ""}))
+(def commits commit)
 (defn delete [] (FontAwesomeIcon #js{:icon solids/faTimes :className ""}))
 (defn email [] (FontAwesomeIcon #js{:icon solids/faEnvelope :className ""}))
 (defn password [] (FontAwesomeIcon #js{:icon solids/faKey :className ""}))

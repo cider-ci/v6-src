@@ -1,5 +1,9 @@
 require 'spec_helper'
 
+def tr_project(id)
+  find("tr.project td.id", text: 'cider-ci-demo-project').ancestor("tr")
+end
+
 
 feature 'Projects' do
 
@@ -13,6 +17,12 @@ feature 'Projects' do
       fill_in 'id', with: 'cider-ci-demo-project'
       fill_in 'name', with: 'Cider-CI Demo-Project'
       fill_in 'url', with: 'https://github.com/cider-ci/cider-ci_demo-project-bash.git'
+      click_on 'Create'
+      wait_until (30) do
+        within(tr_project('cider-ci-demo-project')) do
+          all("td.fetch.success").first
+        end
+      end
       binding.pry
     end
 

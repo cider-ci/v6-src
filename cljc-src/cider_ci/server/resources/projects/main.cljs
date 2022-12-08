@@ -25,12 +25,11 @@
 
 
 (defn fetch-td-component [params]
-  (let [ctx-class (case (some-> params :state)
-                    "ok" "table-success"
-                    "table-warning")]
-    (info 'ctx-class ctx-class)
-    [:td
-     {:class [ctx-class]}
+  (let [ctx-classes (case (some-> params :state)
+                    "ok" ["success" "table-success"]
+                    ["table-warning"])]
+    [:td.fetch
+     {:class ctx-classes}
      [:<>
       (when-let [last-fetched-at (some-> params :last_fetched_at (js/Date.))]
         [:span (date-fns/formatDistance
@@ -68,8 +67,8 @@
            (for [project projects]
              ^{:key (:id project)}
              [:tr.project
-              [:td (:id project)]
-              [:td (:name project)]
+              [:td.id (:id project)]
+              [:td.name (:name project)]
               [:<> (fetch-td-component (:fetch-and-update project))]
               [:<> (branch-update-td-component (:branch-updates project))]
               ])]])))])

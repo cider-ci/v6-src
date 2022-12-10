@@ -135,16 +135,13 @@
         id (random-uuid)]
     (swap! route-cached-fetch-ids* assoc route id)
     (go-loop [do-fetch true]
-             ;(logging/info 'route-cached-fetch 'go-loop {:route route})
              (when do-fetch
                (let [req (request {:chan chan
                                    :url route})
                      resp (<! chan)]
                  (when (< (:status resp) 300)
                    (swap! data* assoc route (-> resp :body)))))
-             (debug "before reload-delay" reload-delay)
              (<! (async/timeout reload-delay))
-             (debug "after reload-delay")
              (if (= (:route @routing-state*) route)
                (when (= id (get @route-cached-fetch-ids* route))
                  (recur reload))

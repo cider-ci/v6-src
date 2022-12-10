@@ -19,7 +19,6 @@
                   ;"cider-ci.server.projects.repositories.sql.branches"
                   ;"cider-ci.server.projects.repositories.branch-updates.update"
                   ;"cider-ci.server.projects.repositories.branches"
-                  "cider-ci.server.http.client.main"
                   "cider-ci.server.resources.commits.*"
                   } :debug]
 

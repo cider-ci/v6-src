@@ -45,7 +45,7 @@
    [:h2 [icons/projects] " Projects"]
    [state/hidden-routing-state-component
     :did-change #(http-client/route-cached-fetch
-                   data* :reload true :timeout 500)]
+                   data* :reload true :reload-delay 500)]
 
    [:<> (when @state/debug?*
           [:div.pre (with-out-str (pprint @data*))]

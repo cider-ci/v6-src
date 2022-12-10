@@ -35,7 +35,7 @@
 (def workspace
   ["/commits"
    ["/" {:name :commits
-         :auth-http-safe #{:user}}]])
+         :auth-http-safe #{:public}}]])
 
 (def routes
   [["/" {:name :root

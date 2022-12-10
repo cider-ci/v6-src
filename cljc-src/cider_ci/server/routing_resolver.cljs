@@ -1,6 +1,7 @@
 (ns cider-ci.server.routing-resolver
   (:require
     [cider-ci.server.resources.init.page :as init]
+    [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.projects.main :as projects]
     [cider-ci.server.resources.root :as root]
     [cider-ci.server.resources.sign-in.page :as sign-in]
@@ -14,6 +15,7 @@
 (def route-page-table
   {:root root/components
    :init init/components
+   :commits commits/components
    :projects projects/components
    :sign-in sign-in/components
    :user user/components

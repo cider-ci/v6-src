@@ -127,9 +127,9 @@
 (def route-cached-fetch-ids* (reagent/atom {}))
 
 (defn route-cached-fetch
-  [data* & {:keys [reload timeout]
+  [data* & {:keys [reload reload-delay]
             :or {reload false
-                 timeout (* 3 60 1000)}}]
+                 reload-delay (* 3 60 1000)}}]
   (let [route (:route @routing-state*)
         chan (async/chan)
         id (random-uuid)]
@@ -142,7 +142,9 @@
                      resp (<! chan)]
                  (when (< (:status resp) 300)
                    (swap! data* assoc route (-> resp :body)))))
-             (<! (async/timeout timeout))
+             (debug "before reload-delay" reload-delay)
+             (<! (async/timeout reload-delay))
+             (debug "after reload-delay")
              (if (= (:route @routing-state*) route)
                (when (= id (get @route-cached-fetch-ids* route))
                  (recur reload))

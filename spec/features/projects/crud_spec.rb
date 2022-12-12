@@ -1,3 +1,5 @@
+require 'git'
+require 'fileutils'
 require 'spec_helper'
 
 def tr_project(id)
@@ -23,10 +25,8 @@ feature 'Projects' do
           all("td.fetch.success").first
         end
       end
-      binding.pry
     end
 
-  end
 
 end
 

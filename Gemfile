@@ -11,6 +11,9 @@ gem "selenium-webdriver"
 
 gem 'require_all'
 
+gem 'git', "~> 1.12"
+gem 'gpgme'
+
 gem "sequel", "~> 5.54"
 gem "rspec", "~> 3.11"
 gem "faker", "~> 2.20"

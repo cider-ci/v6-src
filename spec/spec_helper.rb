@@ -1,6 +1,8 @@
 require 'active_support/all'
 require 'pry'
 
+PROJECT_DIR = Pathname.new(__FILE__).join("../..").realdirpath
+
 require 'config/database'
 require 'config/factories'
 require 'config/browser'
@@ -8,6 +10,8 @@ require 'config/browser'
 
 require 'helpers/global'
 # require 'helpers/user'
+
+
 
 RSpec.configure do |config|
 

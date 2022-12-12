@@ -1,9 +1,12 @@
+require Pathname.new(File.dirname(__FILE__)).join("users","gpg_key")
+
 class User < Sequel::Model
   attr_accessor :password
   attr_accessor :firstname
   attr_accessor :lastname
   attr_accessor :session_token
   attr_accessor :email_address
+  attr_accessor :gpg_home
 end
 
 FactoryBot.define do
@@ -15,6 +18,7 @@ FactoryBot.define do
     email_address  {firstname + '.' + lastname + '@' + Faker::Internet.domain_name }
     password { "secret" }
     session_token { SecureRandom.uuid }
+    gpg_home { nil }
 
     after :create do |user|
 
@@ -38,6 +42,12 @@ FactoryBot.define do
           user_id: user.id,
           email_address: "#{user.firstname}_#{i}@#{user.lastname}.example",
           is_primary: false)
+      end
+    end
+
+    trait :with_gpg_key do
+      after :create do |user|
+        user.gpg_home = GPG_USER.create_gpg_key(user)
       end
     end
 

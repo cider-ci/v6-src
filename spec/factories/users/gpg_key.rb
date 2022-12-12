@@ -1,6 +1,10 @@
 require 'gpgme'
 require 'fileutils'
 
+# this works
+# commiting + signing via gpg works which set GNUPGHOME
+# Problem: passphrase asking does practially not work in a CI setting
+# so far no success setting an empty password
 
 module GPG_USER
 
@@ -40,8 +44,7 @@ module GPG_USER
       Key-Length: 1024
       Subkey-Type: ELG-E
       Subkey-Length: 1024
-      Name-Real: Joe Tester
-      Name-Comment: with stupid passphrase
+      Name-Real: #{user.name}
       Name-Email: #{user.email_address}
       Expire-Date: 0
       Passphrase: abc

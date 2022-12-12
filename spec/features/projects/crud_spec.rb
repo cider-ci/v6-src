@@ -2,10 +2,6 @@ require 'git'
 require 'fileutils'
 require 'spec_helper'
 
-def tr_project(id)
-  find("tr.project td.id", text: 'cider-ci-demo-project').ancestor("tr")
-end
-
 
 feature 'Projects' do
 

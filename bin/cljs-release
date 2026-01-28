@@ -2,7 +2,6 @@
 set -euxo
 PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
 cd $PROJECT_DIR
-source $PROJECT_DIR/clojure/bin/activate
 rm -rf resources/cider-ci/public/js/
 npm ci
 npx shadow-cljs release cider-ci

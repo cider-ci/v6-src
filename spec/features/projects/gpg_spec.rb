@@ -31,11 +31,13 @@ feature 'Projects' do
         test_repo.config('user.name', @current_user.name)
         test_repo.config('user.email', @current_user.email_address)
 
+
         (1..3).each do |i|
           File.write(test_repo_path.join("README.txt"), "Commit #{'%02d' % [i]}")
           test_repo.add("README.txt")
-          test_repo.commit("Commit #{'%02d' % [i]}", no_gpg_sign: false)
+          test_repo.commit("Commit #{'%02d' % [i]}", gpg_sign: true)
         end
+
 
         click_on 'Projects'
         click_on 'Create'
@@ -49,7 +51,6 @@ feature 'Projects' do
           end
         end
 
-        binding.pry
       end
     end
   end

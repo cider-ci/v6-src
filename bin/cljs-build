@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-set -euxo
+set -euo pipefail
 PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
 cd $PROJECT_DIR
-source $PROJECT_DIR/support/clojure/bin/activate
 rm -rf resources/media-service/public/js/
 npx shadow-cljs compile cider-ci

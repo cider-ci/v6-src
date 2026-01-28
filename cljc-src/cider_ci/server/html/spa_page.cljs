@@ -1,18 +1,17 @@
 (ns cider-ci.server.html.spa-page
   (:refer-clojure :exclude [keyword str])
   (:require
-    ["react-bootstrap" :as bs]
-    [cider-ci.server.html.icons :as icons]
-    [cider-ci.server.html.utils.forms :as forms]
-    [cider-ci.server.http.client.main :as http-client]
-    [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
-    [cljs.core.async :refer [go]]
-    [cuerdas.core :as string]
-    [reagent.core :as reagent]
-    [reagent.dom :as rdom]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   ["react-bootstrap" :as bs]
+   [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.html.utils.forms :as forms]
+   [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.routes :refer [path navigate!]]
+   [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
+   [cljs.core.async :refer [go]]
+   [cuerdas.core :as string]
+   [reagent.core :as reagent]
+   [reagent.dom.client :as rdom]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 
 (defn append []
@@ -26,21 +25,21 @@
 (defn sign-in-form []
   (let [data* (reagent/atom {})]
     (reagent/create-class
-      {:component-did-mount
-       (fn []
-         (swap! data* assoc :login
-                (some-> @routing-state* :query-params :login)))
-       :render
-       (fn []
-         [:form.d-flex
-          {:on-submit (fn [e]
-                        (.preventDefault e)
-                        (navigate! (path :sign-in {} {:login (:login @data*)})))}
-          [forms/input-component data* [:login]
-           :label :none
-           :outer-classes ""
-           :placeholder "email or login"
-           :append append]])})))
+     {:component-did-mount
+      (fn []
+        (swap! data* assoc :login
+               (some-> @routing-state* :query-params :login)))
+      :render
+      (fn []
+        [:form.d-flex
+         {:on-submit (fn [e]
+                       (.preventDefault e)
+                       (navigate! (path :sign-in {} {:login (:login @data*)})))}
+         [forms/input-component data* [:login]
+          :label :none
+          :outer-classes ""
+          :placeholder "email or login"
+          :append append]])})))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -58,7 +57,7 @@
                 :chan <! http-client/filter-success)
         (navigate! (path :root) nil :reload true))))
 
-(defn user-component[user]
+(defn user-component [user]
   [:<>
    [:span.user-icon
     (if (:is_admin user)
@@ -87,7 +86,7 @@
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
    [:> bs/Container {:class "justify-content-center"}
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :commits)} [icons/commits] " Commits"] ]
+     [:> bs/Nav.Link {:href (path :commits)} [icons/commits] " Commits"]]
     [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :projects)} [icons/projects] " Projects"]]]
    [:<> (when-let [center-nav (:center-nav @state/routing*)]

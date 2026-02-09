@@ -17,5 +17,7 @@
 (defn project [] [FontAwesomeIcon {:icon (.-faGitAlt brands) :className ""}])
 (def projects project)
 (defn user [] [FontAwesomeIcon {:icon (.-faUser solids) :className ""}])
+(defn users [] [FontAwesomeIcon {:icon (.-faUsers solids) :className ""}])
 (defn user-admin [] [FontAwesomeIcon {:icon (.-faUserGear solids) :className ""}])
 (defn create [] [FontAwesomeIcon {:icon (.-faCirclePlus solids) :className ""}])
+(defn sign-in [] [FontAwesomeIcon {:icon (.-faRightToBracket solids) :className ""}])

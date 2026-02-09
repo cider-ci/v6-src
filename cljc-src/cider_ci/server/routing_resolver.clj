@@ -5,6 +5,7 @@
     [cider-ci.server.resources.projects.main :as projects]
     [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
     [cider-ci.server.resources.sign-out :as sign-out]
+    [cider-ci.server.resources.users.main :as users]
     [cider-ci.server.resources.users.user.email-addresses :as user-email-addresses]
     [cider-ci.server.resources.users.user.main :as user]
     [cider-ci.server.resources.users.user.password :as user-password]
@@ -18,6 +19,7 @@
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler
+   :users #'users/handler
    :user #'user/handler
    :user-email-address #'user-email-addresses/handler
    :user-email-addresses #'user-email-addresses/handler

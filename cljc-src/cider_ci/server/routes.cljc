@@ -1,12 +1,11 @@
 (ns cider-ci.server.routes
   (:require
-    #?(:cljs [cider-ci.server.html.history-navigation :as navigation :refer []])
-    [reitit.core :as reitit]
-    [taoensso.timbre :refer [debug info warn error]]
-    [cider-ci.utils.query-params :as query-params]
-    [cuerdas.core :as string :refer []]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   #?(:cljs [cider-ci.server.html.history-navigation :as navigation :refer []])
+   [reitit.core :as reitit]
+   [taoensso.timbre :refer [debug info warn error]]
+   [cider-ci.utils.query-params :as query-params]
+   [cuerdas.core :as string :refer []]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 (def projects
   ["/projects/" {:name :projects
@@ -17,20 +16,20 @@
   ["/users"
    ["/" {:name :users
          :auth-http-safe #{:admin}
-         :auth-http-unsafe #{:admin}}
-    [":user-id"
-     ["" {:name :user
-          :auth-http-safe #{:self}}]
-     ["/password" {:name :user-password
-                   :auth-http-unsafe #{:self}}]
-     ["/email-addresses"
-      ["/" {:name :user-email-addresses
-            :auth-http-safe #{:self}
-            :auth-http-unsafe #{:admin}}]
-      ["/:email-address"
-       ["" {:name :user-email-address}]
-       ["/primary" {:name :user-email-address-primary
-                    :auth-http-unsafe #{:self}}]]]]]])
+         :auth-http-unsafe #{:admin}}]
+   ["/:user-id"
+    ["" {:name :user
+         :auth-http-safe #{:self}}]
+    ["/password" {:name :user-password
+                  :auth-http-unsafe #{:self}}]
+    ["/email-addresses"
+     ["/" {:name :user-email-addresses
+           :auth-http-safe #{:self}
+           :auth-http-unsafe #{:admin}}]
+     ["/:email-address"
+      ["" {:name :user-email-address}]
+      ["/primary" {:name :user-email-address-primary
+                   :auth-http-unsafe #{:self}}]]]]])
 
 (def workspace
   ["/commits"
@@ -53,7 +52,7 @@
                  :auth-http-unsafe #{:public}
                  :auth-http-safe #{:public}}]
    users
-   workspace ])
+   workspace])
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"}))
@@ -69,7 +68,7 @@
 
 (defn route [path]
   (-> path
-      (string/split #"\?" )
+      (string/split #"\?")
       first
       (->> (reitit/match-by-path router))))
 
@@ -80,8 +79,8 @@
    (path kw route-params {}))
   ([kw route-params query-params]
    (when-let [p (reitit/match->path
-                  (reitit/match-by-name
-                    router kw route-params))]
+                 (reitit/match-by-name
+                  router kw route-params))]
      (if (seq query-params)
        (str p "?" (query-params/encode query-params))
        p))))
@@ -90,15 +89,15 @@
    (defn navigate!
      ([url]
       (navigation/navigate! url nil))
-     ([url event &{:keys [reload]
-                   :or {reload false}}]
+     ([url event & {:keys [reload]
+                    :or {reload false}}]
       (if reload
         (set! js/window.location url)
         (navigation/navigate! url event)))))
 
 
 (comment
-  (->> [:user-email-addresses {:user-id "123"} ]
+  (->> [:user-email-addresses {:user-id "123"}]
        spy
        (apply path)
        spy
@@ -111,8 +110,7 @@
        (apply path)
        spy
        ;(reitit/match-by-path router)
-       spy
-       )
+       spy)
 
 
   (reitit/match-by-name router :users {:user-id "123"}))

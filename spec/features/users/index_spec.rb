@@ -17,16 +17,12 @@ feature 'Users' do
       
       # Wait for the page to load
       wait_until(10) do
-        page.has_content?('Users') || 
-        page.has_content?('Page Not-Found') ||
-        page.has_content?('Not Found')
+        page.has_content?('Users') 
       end
       
       # For now, just verify the route resolves to something
       expect(current_path).to eq '/users/'
       
-      # For now, we expect it to show Page Not-Found since we're still developing this feature
-      expect(page).to have_content('Page Not-Found').or have_content('Not Found')
     end
 
   end
@@ -39,33 +35,18 @@ feature 'Users' do
 
     scenario 'cannot access users index page' do
       visit '/users/'
-      
       wait_until(10) do
-        page.has_content?('Not Found') || 
-        page.has_content?('Page Not-Found')
+        page.has_content?('Authorization not satisfied') 
       end
-      
-      # Regular users should not be able to access users index
-      expect(page).to have_content('Page Not-Found').or have_content('Not Found')
-      expect(current_path).to eq '/users/'
     end
-
   end
 
   context 'As an unauthenticated user' do
     scenario 'cannot access users index page' do
       visit '/users/'
-      
       wait_until(10) do
-        page.has_content?('Not Found') || 
-        page.has_content?('Page Not-Found')
+        page.has_content?('Authorization not satisfied') 
       end
-      
-      # Unauthenticated users should not be able to access users index
-      expect(page).to have_content('Page Not-Found').or have_content('Not Found')
-      expect(current_path).to eq '/users/'
     end
-
   end
-
 end

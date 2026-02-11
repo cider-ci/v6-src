@@ -27,3 +27,7 @@ module Helpers
 
   end
 end
+
+def tr_project(id)
+  find("tr.project td.id", text: id).ancestor("tr")
+end

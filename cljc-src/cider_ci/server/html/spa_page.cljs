@@ -7,7 +7,7 @@
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.routes :refer [path navigate!]]
    [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
-   [cljs.core.async :refer [go]]
+   [cljs.core.async :refer [go <!]]
    [cuerdas.core :as string]
    [reagent.core :as reagent]
    [reagent.dom.client :as rdom]

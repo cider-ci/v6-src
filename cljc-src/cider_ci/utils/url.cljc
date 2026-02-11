@@ -1,7 +1,7 @@
 (ns cider-ci.utils.url
-  (:require
-    #?(:clj [ring.util.codec])
-    ))
+  #?(:clj
+     (:require
+      [ring.util.codec])))
 
 (def decode
   #?(:cljs js/decodeURIComponent

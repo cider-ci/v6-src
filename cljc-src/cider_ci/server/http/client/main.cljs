@@ -1,24 +1,23 @@
 (ns cider-ci.server.http.client.main
   (:refer-clojure :exclude [str keyword send-off])
   (:require-macros
-    [reagent.ratom :as ratom :refer [reaction]]
-    [cljs.core.async.macros :refer [go go-loop]])
+   [reagent.ratom :as ratom :refer [reaction]])
   (:require
-    [cider-ci.server.http.anti-csrf.main  :as anti-csrf]
-    [cider-ci.server.http.client.shared :refer [wait-component]]
-    [cider-ci.server.http.core :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_SAFE_METHODS]]
-    [cider-ci.server.routes :refer [path]]
-    [cider-ci.utils.core :refer [str keyword presence]]
-    [cider-ci.server.state :as state :refer [state* routing*] :rename {routing* routing-state*}]
-    [cljs-http.client :as http-client]
-    [cljs.core.async :as async :refer [timeout]]
-    [clojure.pprint :refer [pprint]]
-    [clojure.string :as str]
-    [goog.string :as gstring]
-    [goog.string.format]
-    [reagent.core :as reagent]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   [cljs.core.async :refer [go go-loop <! >! timeout]]
+   [cider-ci.server.http.anti-csrf.main  :as anti-csrf]
+   [cider-ci.server.http.client.shared :refer [wait-component]]
+   [cider-ci.server.http.core :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_SAFE_METHODS]]
+   [cider-ci.server.routes :refer [path]]
+   [cider-ci.utils.core :refer [str keyword presence]]
+   [cider-ci.server.state :as state :refer [state* routing*] :rename {routing* routing-state*}]
+   [cljs-http.client :as http-client]
+   [cljs.core.async :as async :refer [timeout]]
+   [clojure.pprint :refer [pprint]]
+   [clojure.string :as str]
+   [goog.string :as gstring]
+   [goog.string.format]
+   [reagent.core :as reagent]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 (def base-delay* (reagent/atom 0))
 
@@ -31,9 +30,9 @@
   (-> data
       (update :chan (fn [chan] (or chan (async/chan))))
       (update :delay #(+ (or % 0) @base-delay*))
-      (update :id #(random-uuid))
+      (assoc :id (random-uuid))
       (update :method #(or % :get))
-      (update :timestamp #(js/Date.))
+      (assoc  :timestamp #(js/Date.))
       (update :url (fn [url] (or url (-> @routing-state* :route))))
       (update-in [:headers "accept"]
                  #(or % "application/json"))
@@ -41,13 +40,13 @@
                  #(or % (anti-csrf/token)))
       (update :modal-on-response-error #(if-not (nil? %) % true))
       (as-> data
-        (update data :modal-on-request
-                #(if-not (nil? %) %
-                   (if (HTTP_SAFE_METHODS (:method data))
-                     false true)))
+            (update data :modal-on-request
+                    #(if-not (nil? %) %
+                             (if (HTTP_SAFE_METHODS (:method data))
+                               false true)))
         (update data :modal-on-response-success
                 #(if-not (nil? %) %
-                   (:modal-on-request data))))))
+                         (:modal-on-request data))))))
 
 (defn request
   ([] (request {}))
@@ -135,14 +134,14 @@
         id (random-uuid)]
     (swap! route-cached-fetch-ids* assoc route id)
     (go-loop [do-fetch true]
-             (when do-fetch
-               (let [req (request {:chan chan
-                                   :url route})
-                     resp (<! chan)]
-                 (when (< (:status resp) 300)
-                   (swap! data* assoc route (-> resp :body)))))
-             (<! (async/timeout reload-delay))
-             (if (= (:route @routing-state*) route)
-               (when (= id (get @route-cached-fetch-ids* route))
-                 (recur reload))
-               (swap! data* dissoc route)))))
+      (when do-fetch
+        (let [req (request {:chan chan
+                            :url route})
+              resp (<! chan)]
+          (when (< (:status resp) 300)
+            (swap! data* assoc route (-> resp :body)))))
+      (<! (async/timeout reload-delay))
+      (if (= (:route @routing-state*) route)
+        (when (= id (get @route-cached-fetch-ids* route))
+          (recur reload))
+        (swap! data* dissoc route)))))

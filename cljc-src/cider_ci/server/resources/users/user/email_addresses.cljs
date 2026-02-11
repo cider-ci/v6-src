@@ -1,19 +1,18 @@
 (ns cider-ci.server.resources.users.user.email-addresses
   (:refer-clojure :exclude [keyword str])
   (:require
-    ["react-bootstrap" :as bs]
-    [cider-ci.server.html.icons :as icons]
-    [cider-ci.server.html.utils.forms :as forms]
-    [cider-ci.server.http.client.main :as http-client]
-    [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :as state]
-    [cider-ci.utils.core :refer [str]]
-    [cljs.core.async :refer [go]]
-    [cljs.pprint :refer [pprint]]
-    [cuerdas.core :as string]
-    [reagent.core :as reagent :refer [reaction]]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   ["react-bootstrap" :as bs]
+   [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.html.utils.forms :as forms]
+   [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.routes :refer [path navigate!]]
+   [cider-ci.server.state :as state]
+   [cider-ci.utils.core :refer [str]]
+   [cljs.core.async :refer [go <!]]
+   [cljs.pprint :refer [pprint]]
+   [cuerdas.core :as string]
+   [reagent.core :as reagent :refer [reaction]]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 (defonce _data* (reagent/atom nil))
 
@@ -27,25 +26,25 @@
 
 (defn delete [row]
   (go (when-let
-        [res (-> {:method :delete
-                  :url (->> [:user-email-address
-                             {:user-id (-> @state/routing* :path-params :user-id)
-                              :email-address (:email_address row)}]
-                            (apply path))}
-                 http-client/request
-                 :chan <! spy http-client/filter-success :body)]
+       [res (-> {:method :delete
+                 :url (->> [:user-email-address
+                            {:user-id (-> @state/routing* :path-params :user-id)
+                             :email-address (:email_address row)}]
+                           (apply path))}
+                http-client/request
+                :chan <! spy http-client/filter-success :body)]
         (swap! _data* assoc (-> @state/routing* :path) res))))
 
 (defn set-as-primary [row]
   (go (when-let
-        [res (-> {:json-params (assoc row :is_primary true)
-                  :method :patch
-                  :url (->> [:user-email-address
-                             {:user-id (-> @state/routing* :path-params :user-id)
-                              :email-address (:email_address row)}]
-                            (apply path))}
-                 http-client/request
-                 :chan <! spy http-client/filter-success :body)]
+       [res (-> {:json-params (assoc row :is_primary true)
+                 :method :patch
+                 :url (->> [:user-email-address
+                            {:user-id (-> @state/routing* :path-params :user-id)
+                             :email-address (:email_address row)}]
+                           (apply path))}
+                http-client/request
+                :chan <! spy http-client/filter-success :body)]
         (swap! _data* assoc (-> @state/routing* :path) res))))
 
 (defn email-addresses-component []
@@ -79,13 +78,13 @@
 
 (defn put [data*]
   (go (when-let
-        [res (-> {:json-params {}
-                  :method :put
-                  :url (->> [:user-email-address
-                             {:user-id (-> @state/routing* :path-params :user-id)
-                              :email-address (:email_address @data*)}]
-                            (apply path))}
-                 http-client/request :chan <! http-client/filter-success :body)]
+       [res (-> {:json-params {}
+                 :method :put
+                 :url (->> [:user-email-address
+                            {:user-id (-> @state/routing* :path-params :user-id)
+                             :email-address (:email_address @data*)}]
+                           (apply path))}
+                http-client/request :chan <! http-client/filter-success :body)]
         (swap! data* assoc :email_address nil)
         (swap! _data* assoc (-> @state/routing* :path) res))))
 
@@ -103,9 +102,9 @@
          :type :text
          :post-change (fn [v]
                         (swap!
-                          add-data* assoc
-                          :disabled (if (string/includes? v "@")
-                                      false true))
+                         add-data* assoc
+                         :disabled (if (string/includes? v "@")
+                                     false true))
                         v)
          :input-classes [(when (:is_invalid @add-data*) :is-invalid)]
          :label "New email address"]

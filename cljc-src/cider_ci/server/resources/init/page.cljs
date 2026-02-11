@@ -1,7 +1,7 @@
 (ns cider-ci.server.resources.init.page
   (:refer-clojure :exclude [keyword str])
   (:require
-    [cljs.core.async :refer [go]]
+    [cljs.core.async :refer [go <!]]
     [cider-ci.server.html.utils.forms :as forms]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]

@@ -1,17 +1,16 @@
 (ns cider-ci.server.resources.users.user.password
   (:refer-clojure :exclude [keyword str])
   (:require
-    ["react-bootstrap" :as bs]
-    [cider-ci.server.html.icons :as icons]
-    [cider-ci.server.html.utils.forms :as forms]
-    [cider-ci.server.http.client.main :as http-client]
-    [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :as state]
-    [cljs.core.async :refer [go]]
-    [cljs.pprint :refer [pprint]]
-    [reagent.core :as reagent :refer [reaction]]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   ["react-bootstrap" :as bs]
+   [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.html.utils.forms :as forms]
+   [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.routes :refer [path navigate!]]
+   [cider-ci.server.state :as state]
+   [cljs.core.async :refer [go <!]]
+   [cljs.pprint :refer [pprint]]
+   [reagent.core :as reagent :refer [reaction]]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 (defn put [data*]
   (go (when (-> {:json-params (select-keys @data* [:password])

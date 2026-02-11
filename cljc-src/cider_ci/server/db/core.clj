@@ -20,7 +20,7 @@
     [com.zaxxer.hikari HikariDataSource]))
 
 
-(defonce ^:private ds* (atom nil))
+(defonce ds* (atom nil))
 
 (def builder-fn-options-default
   {:builder-fn jdbc-rs/as-unqualified-lower-maps})

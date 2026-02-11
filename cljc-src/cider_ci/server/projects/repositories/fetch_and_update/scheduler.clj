@@ -5,29 +5,30 @@
 (ns cider-ci.server.projects.repositories.fetch-and-update.scheduler
   (:refer-clojure :exclude [str keyword])
   (:require
-    [cider-ci.server.projects.repositories.fetch-and-update.shared :refer [fetch-and-update db-get-fetch-and-update]]
-    [cider-ci.server.projects.repositories.state.main :as state]
-    [cider-ci.utils.core :refer [keyword str]]
-    [cider-ci.utils.daemon :as daemon :refer [defdaemon]]
-    [cider-ci.utils.duration :as duration]
-    [tick.core :as tick]
-    [clojure.java.jdbc :as jdbc]
-    [logbug.catcher :as catcher :refer [snatch]]
-    [logbug.debug :as debug]
-    ))
+   [cider-ci.server.projects.repositories.fetch-and-update.shared :refer [fetch-and-update db-get-fetch-and-update]]
+   [cider-ci.server.projects.repositories.state.main :as state]
+   [cider-ci.utils.core :refer [keyword str]]
+   [cider-ci.utils.daemon :as daemon :refer [defdaemon]]
+   [cider-ci.utils.duration :as duration]
+   [tick.core :as tick]
+   [clojure.java.jdbc :as jdbc]
+   [logbug.catcher :as catcher :refer [snatch]]
+   [logbug.debug :as debug]))
 
+(declare start-fetch-and-update-repositories)
 
 ;### update repository ########################################################
 
 (defn- git-fetch-and-update-interval [repository]
   (let [secs (snatch
-               {:return-expr 60}
-               (duration/parse-string-to-seconds
-                 (:remote_fetch_interval repository)))]
+              {:return-expr 60}
+              (duration/parse-string-to-seconds
+               (:remote_fetch_interval repository)))]
     (tick/new-duration secs :seconds)))
 
-(defn last-succeeded-or-failed-fetch-at [repository]
+(defn last-succeeded-or-failed-fetch-at
   "Returns the timestamp of the most resent (succeeded or failed) fetch or nil."
+  [repository]
   (let [{last-fetched-at :last_fetched_at
          last-fetch-failed-at :last_fetch_and_update_failed_at} repository]
     (if (and last-fetched-at last-fetch-failed-at)
@@ -47,9 +48,9 @@
           (:pending? fetch-and-update) false
           (not reference) true
           :else (tick/>
-                  (tick/now)
-                  (tick/>> reference
-                             (git-fetch-and-update-interval repository))))))
+                 (tick/now)
+                 (tick/>> reference
+                          (git-fetch-and-update-interval repository))))))
 
 (defn fetch-and-update-repositories []
   (doseq [[_ repository] (:repositories (state/get-db))]

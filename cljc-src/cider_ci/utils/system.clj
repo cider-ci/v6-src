@@ -5,13 +5,11 @@
 
 (ns cider-ci.utils.system
   (:require
-    [cider-ci.utils.duration :as duration]
-    [clj-time.core :as time]
-    [clj-commons-exec :as commons-exec]
-    )
+   [cider-ci.utils.duration :as duration]
+   [clj-time.core :as time]
+   [clj-commons-exec :as commons-exec])
   (:import
-    [org.apache.commons.exec ExecuteWatchdog]
-    ))
+   [org.apache.commons.exec ExecuteWatchdog]))
 
 
 ;### helpers ###################################################################
@@ -19,9 +17,9 @@
 
 (defn create-watchdog
   ([]
-   (create-watchdog (ExecuteWatchdog/INFINITE_TIMEOUT)))
+   (create-watchdog ExecuteWatchdog/INFINITE_TIMEOUT))
   ([timeout-ms]
-   (ExecuteWatchdog. timeout-ms )))
+   (ExecuteWatchdog. timeout-ms)))
 
 (defn normalized-timeout-ms [opts]
   (let [timeout (or (:timeout opts)

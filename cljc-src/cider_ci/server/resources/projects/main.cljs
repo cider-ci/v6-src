@@ -1,19 +1,18 @@
 (ns cider-ci.server.resources.projects.main
   (:refer-clojure :exclude [keyword str])
   (:require
-    ["date-fns" :as date-fns]
-    ["react-bootstrap" :as bs]
-    [cider-ci.utils.core :refer [str keyword]]
-    [cider-ci.server.html.icons :as icons]
-    [cider-ci.server.html.utils.forms :as forms]
-    [cider-ci.server.http.client.main :as http-client]
-    [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
-    [cljs.core.async :refer [go]]
-    [cljs.pprint :refer [pprint]]
-    [reagent.core :as reagent :refer [reaction]]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   ["date-fns" :as date-fns]
+   ["react-bootstrap" :as bs]
+   [cider-ci.utils.core :refer [str keyword]]
+   [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.html.utils.forms :as forms]
+   [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.routes :refer [path navigate!]]
+   [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
+   [cljs.core.async :refer [go <!]]
+   [cljs.pprint :refer [pprint]]
+   [reagent.core :as reagent :refer [reaction]]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 
 ;;; PROJECTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -26,14 +25,14 @@
 
 (defn fetch-td-component [params]
   (let [ctx-classes (case (some-> params :state)
-                    "ok" ["success" "table-success"]
-                    ["table-warning"])]
+                      "ok" ["success" "table-success"]
+                      ["table-warning"])]
     [:td.fetch
      {:class ctx-classes}
      [:<>
       (when-let [last-fetched-at (some-> params :last_fetched_at (js/Date.))]
         [:span (date-fns/formatDistance
-                 last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]]))
+                last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]]))
 
 (defn branch-update-td-component [params]
   [:td
@@ -45,11 +44,10 @@
    [:h2 [icons/projects] " Projects"]
    [state/hidden-routing-state-component
     :did-change #(http-client/route-cached-fetch
-                   data* :reload true :reload-delay 500)]
+                  data* :reload true :reload-delay 500)]
 
    [:<> (when @state/debug?*
-          [:div.pre (with-out-str (pprint @data*))]
-          )]
+          [:div.pre (with-out-str (pprint @data*))])]
 
    (if-not (contains? @data* (:route @routing-state*))
      [:div "Spinner..."]
@@ -70,8 +68,7 @@
               [:td.id (:id project)]
               [:td.name (:name project)]
               [:<> (fetch-td-component (:fetch-and-update project))]
-              [:<> (branch-update-td-component (:branch-updates project))]
-              ])]])))])
+              [:<> (branch-update-td-component (:branch-updates project))]])]])))])
 
 
 ;;; CREATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

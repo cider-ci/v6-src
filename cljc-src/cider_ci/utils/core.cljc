@@ -1,5 +1,5 @@
 (ns cider-ci.utils.core
-  (:refer-clojure :exclude [str keyword])
+  (:refer-clojure :exclude [str keyword update-vals])
   (:require #?@(:clj [[clojure.tools.logging :as log]
                       [clojure.pprint :refer [code-dispatch pprint with-pprint-dispatch]]] )
             [clojure.string :refer [trim-newline]]))

@@ -1,21 +1,19 @@
 (ns cider-ci.server.resources.sign-in.page
   (:refer-clojure :exclude [keyword str])
   (:require
-    [cider-ci.server.html.utils.forms :as forms]
-    [cider-ci.server.http.client.main :as http-client]
-    [cider-ci.server.routes :refer [path navigate!]]
-    [cider-ci.server.state :refer [routing* hidden-routing-state-component] :rename {routing* routing-state*}]
-    [cljs.core.async :refer [go]]
-    [reagent.core :as reagent]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    ))
+   [cider-ci.server.html.utils.forms :as forms]
+   [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.routes :refer [path navigate!]]
+   [cider-ci.server.state :refer [routing* hidden-routing-state-component] :rename {routing* routing-state*}]
+   [cljs.core.async :refer [go <!]]
+   [reagent.core :as reagent]
+   [taoensso.timbre :refer [debug info warn error spy]]))
 
 (defn password-sign-in [data]
   (go (let [req (-> {:json-params data
                      :url (path :sign-in-authenticate-password)
                      :method :post}
-                    http-client/request
-                    )]
+                    http-client/request)]
         (if-let [body (some-> req :chan <! http-client/filter-success :body)]
           (navigate! (path :root) nil :reload true)
           (error "request failed")))))
@@ -42,8 +40,7 @@
 (defn page []
   [:div
    [:h2.mt-3 "Sign-in"]
-   [form]
-   ])
+   [form]])
 
 (def components
   {:page page})

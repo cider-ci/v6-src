@@ -32,7 +32,7 @@
       (update :delay #(+ (or % 0) @base-delay*))
       (assoc :id (random-uuid))
       (update :method #(or % :get))
-      (assoc  :timestamp #(js/Date.))
+      (assoc  :timestamp (js/Date.))
       (update :url (fn [url] (or url (-> @routing-state* :route))))
       (update-in [:headers "accept"]
                  #(or % "application/json"))

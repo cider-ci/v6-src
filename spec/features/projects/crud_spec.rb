@@ -22,7 +22,5 @@ feature 'Projects' do
         end
       end
     end
-
-
+  end
 end
-

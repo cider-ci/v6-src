@@ -139,7 +139,8 @@
   (let [submodule-ref (resolve-submodule-git-ref [git-ref] submodule-path)]
     (let [project (projects.core/resolve-project submodule-ref)]
       (when-not project
-        (throw (ex-info {:status 404
+        (throw (ex-info "The git ref could not be resolved to any repository."
+                        {:status 404
                          :title "The git ref could not be resolved to any repository."
                          :hint "Is a repository push (in a submodule) pending?"
                          :ref git-ref})))

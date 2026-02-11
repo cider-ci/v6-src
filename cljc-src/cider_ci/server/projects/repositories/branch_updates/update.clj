@@ -5,21 +5,22 @@
 (ns cider-ci.server.projects.repositories.branch-updates.update
   (:refer-clojure :exclude [str keyword update])
   (:require
-    [cider-ci.server.db.core :refer [get-ds]]
-    [cider-ci.server.projects.repositories.branch-updates.shared :refer :all]
-    [cider-ci.server.projects.repositories.branches :as branches]
-    [cider-ci.server.projects.repositories.git.repositories :as git.repositories]
-    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
-    [cider-ci.utils.core :refer [deep-merge keyword str]]
-    [cider-ci.utils.system :as system]
-    [honey.sql :refer [format] :rename {format sql-format}]
-    [honey.sql.helpers :as sql]
-    [logbug.debug :as debug :refer [I> I>> identity-with-logging]]
-    [next.jdbc :as jdbc]
-    [tick.core :refer [now]]
-    [taoensso.timbre :refer [debug info warn error spy]])
+   [cider-ci.server.db.core :refer [get-ds]]
+   [cider-ci.server.projects.repositories.branch-updates.shared :refer :all]
+   [cider-ci.server.projects.repositories.branches :as branches]
+   [cider-ci.server.projects.repositories.git.repositories :as git.repositories]
+   [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
+   [cider-ci.utils.core :refer [deep-merge keyword str]]
+   [cider-ci.utils.system :as system]
+   [honey.sql :refer [format] :rename {format sql-format}]
+   [honey.sql.helpers :as sql]
+   [logbug.debug :as debug :refer [I> I>> identity-with-logging]]
+   [next.jdbc :as jdbc]
+   [clojure.string]
+   [tick.core :refer [now]]
+   [taoensso.timbre :refer [debug info warn error spy]])
   (:import
-    [java.util.concurrent Executors ExecutorService Callable]))
+   [java.util.concurrent Executors ExecutorService Callable]))
 
 
 ;### delete branches ##########################################################
@@ -45,12 +46,13 @@
 
 (defn- get-git-branches [repository-path]
   (I>> identity-with-logging
-       (I> identity-with-logging
-           (system/exec!
-             ["git" "branch" "--list" "--no-abbrev" "--no-color" "-v"]
-             {:timeout "1 Minutes", :dir repository-path, :env {"TERM" "VT-100"}})
-           :out
-           (clojure.string/split #"\n"))
+       (->
+       ; I> identity-with-logging
+        (system/exec!
+         ["git" "branch" "--list" "--no-abbrev" "--no-color" "-v"]
+         {:timeout "1 Minutes", :dir repository-path, :env {"TERM" "VT-100"}})
+        :out
+        (clojure.string/split #"\n"))
        (map (fn [line]
               (let [[_ branch-name current-commit-id]
                     (re-find #"^?\s+(.+)\s+([0-9a-f]{40})\s+(.*)$" line)]
@@ -74,9 +76,7 @@
 
 (defn repo-branches-query [repo-id]
   (-> (sql/select [:%count.* :branches_count]
-                  [[:max :commits.committer_date] :last_commited_at]
-
-                  )
+                  [[:max :commits.committer_date] :last_commited_at])
       (sql/from :repositories)
       (sql/where [:= :repositories.id repo-id])
       (sql/join :branches [:= :repositories.id :branches.repository_id])
@@ -86,8 +86,7 @@
 (comment (-> "test"
              repo-branches-query (sql-format :inline true)
              (->> (jdbc/execute-one! (get-ds)))
-             :last_commited_at type
-             ))
+             :last_commited_at type))
 
 
 (defn update [repository]
@@ -99,10 +98,10 @@
                    (->> (jdbc/execute-one! (get-ds))))]
     (when params
       (db-update-branch-updates
-        repo-id #(deep-merge % params
-                             {:update_info update_info
-                              :branches_updated_at (now)
-                              :state "ok" })))))
+       repo-id #(deep-merge % params
+                            {:update_info update_info
+                             :branches_updated_at (now)
+                             :state "ok"})))))
 
 ;### Debug ####################################################################
 ;(logging-config/set-logger! :level :debug)

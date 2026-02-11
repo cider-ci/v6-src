@@ -4,11 +4,11 @@
 
 (ns cider-ci.server.projects.repositories.project-configuration.expansion
   (:require
-    [cider-ci.server.projects.repositories.project-configuration.replacement :as replacement]
-    [cider-ci.server.projects.repositories.project-configuration.shared :refer [get-content parse-path-content resolve-submodule-git-ref]]
-    [cider-ci.utils.core :refer [deep-merge]]
-    [logbug.catcher :as catcher]
-    ))
+   [cider-ci.server.projects.repositories.project-configuration.replacement :as replacement]
+   [cider-ci.server.projects.repositories.project-configuration.shared :refer [get-content parse-path-content resolve-submodule-git-ref]]
+   [cider-ci.utils.core :refer [deep-merge]]
+   [logbug.debug :as debug :refer [I> I>> identity-with-logging]]
+   [logbug.catcher :as catcher]))
 
 
 (defn- get-include-content-for-path [git-ref-id path]
@@ -18,8 +18,8 @@
         content (parse-path-content path raw-content)]
     (if-not (map? content)
       (throw (IllegalStateException.
-               (str "Only maps can be included. Given "
-                    (type content))))
+              (str "Only maps can be included. Given "
+                   (type content))))
       content)))
 
 
@@ -32,8 +32,8 @@
     (map? include-spec) {:submodule (or (:submodule include-spec) [])
                          :path (or (:path include-spec)
                                    (throw (IllegalStateException.
-                                            (str "Can not determine :path for include-spec: "
-                                                 include-spec))))}
+                                           (str "Can not determine :path for include-spec: "
+                                                include-spec))))}
     :else (throw (IllegalStateException. (str "include-spec must be either a map or string, is "
                                               (type include-spec))))))
 
@@ -54,19 +54,20 @@
     (expand submodule-ref content)))
 
 (defn get-inclusions [git-ref-id include-specs]
-  (I>> identity-with-logging
-       (format-include-specs include-specs)
-       (map #(get-inclusion git-ref-id %))
-       (reduce deep-merge)))
+  (->>
+   ; I>> identity-with-logging
+   (format-include-specs include-specs)
+   (map #(get-inclusion git-ref-id %))
+   (reduce deep-merge)))
 
 (defn include-maps [git-ref-id spec]
   (if-let [include-specs (:include spec)]
     (let [to-be-included (get-inclusions
-                           git-ref-id include-specs)]
+                          git-ref-id include-specs)]
       (include-maps git-ref-id
                     (deep-merge
-                      to-be-included
-                      (dissoc spec :include))))
+                     to-be-included
+                     (dissoc spec :include))))
     (->> spec
          (map (fn [[k v]] [k (expand git-ref-id v)]))
          (into {}))))

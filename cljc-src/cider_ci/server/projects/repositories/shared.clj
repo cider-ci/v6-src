@@ -5,24 +5,22 @@
 (ns cider-ci.server.projects.repositories.shared
   (:refer-clojure :exclude [str keyword])
   (:require
-    [cider-ci.utils.core :refer [keyword str presence]]
-    [cider-ci.utils.nio :as nio]
-    [clojure.string :as string :refer [blank? split trim]]
-    [taoensso.timbre :refer [debug info warn error spy]]
-    )
+   [cider-ci.utils.core :refer [keyword str presence]]
+   [cider-ci.utils.nio :as nio]
+   [clojure.string :as string :refer [blank? split trim]]
+   [taoensso.timbre :refer [debug info warn error spy]])
   (:import
-    [org.eclipse.jgit.storage.file FileRepositoryBuilder]
-    [java.nio.file Files FileSystems]
-    [java.io File]
-    ))
+   [org.eclipse.jgit.storage.file FileRepositoryBuilder]
+   [java.nio.file Files FileSystems]
+   [java.io File]))
 
 
 ; TODO cli arg and init
 (def ^:dynamic repositories-dir-path
   (nio/path
-    (System/getProperty "user.dir")
-    "data"
-    "repositories"))
+   (System/getProperty "user.dir")
+   "data"
+   "repositories"))
 
 (defn path [project-params]
   (let [project-id (or (:project-id project-params)
@@ -40,5 +38,5 @@
              (str (:id repository-or-id))
              repository-or-id)]
     (assert (not (blank? id)))
-    (str repositories-dir-path (File/separator) id)))
+    (str repositories-dir-path File/separator id)))
 

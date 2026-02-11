@@ -21,6 +21,7 @@
     [taoensso.timbre :refer [debug info warn error spy]]))
 
 
+(declare start-update-repositories)
 
 (defn update-repositories []
   (->> ["SELECT * from repositories"]

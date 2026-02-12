@@ -24,12 +24,12 @@
                   :auth-http-unsafe #{:self}}]
     ["/email-addresses"
      ["/" {:name :user-email-addresses
-           :auth-http-safe #{:self}
+           :auth-http-safe #{:self :admin}
            :auth-http-unsafe #{:admin}}]
-     ["/:email-address"
+     ["/:email-addres"
       ["" {:name :user-email-address}]
       ["/primary" {:name :user-email-address-primary
-                   :auth-http-unsafe #{:self}}]]]]])
+                   :auth-http-unsafe #{:admin}}]]]]])
 
 (def workspace
   ["/commits"

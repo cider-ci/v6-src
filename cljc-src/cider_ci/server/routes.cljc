@@ -21,13 +21,15 @@
     ["" {:name :user
          :auth-http-safe #{:self}}]
     ["/password" {:name :user-password
-                  :auth-http-unsafe #{:self}}]
+                  :auth-http-unsafe #{:self :admin}}]
     ["/email-addresses"
      ["/" {:name :user-email-addresses
            :auth-http-safe #{:self :admin}
            :auth-http-unsafe #{:admin}}]
-     ["/:email-addres"
-      ["" {:name :user-email-address}]
+     ["/:email-address"
+      ["" {:name :user-email-address
+           :auth-http-safe #{:self :admin}
+           :auth-http-unsafe #{:admin}}]
       ["/primary" {:name :user-email-address-primary
                    :auth-http-unsafe #{:admin}}]]]]])
 

@@ -8,7 +8,6 @@
    [honey.sql.helpers :as sql]
    [next.jdbc :as jdbc]
    [taoensso.timbre :refer [debug info warn error spy]]
-
    [logbug.debug :as debug]
    [ring.util.request :as req]))
 

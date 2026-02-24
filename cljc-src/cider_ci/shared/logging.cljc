@@ -9,7 +9,7 @@
                   ;"cider-ci.server.routes"
                   ;"cider-ci.server.projects.*"
                   ;"cider-ci.server.db.migrations.main"
-                  ; "cider-ci.server.http.authorization"
+                  "cider-ci.server.http.authorization"
                   ;"cider-ci.server.projects.repositories.git.commits"
                   ;"cider-ci.server.projects.repositories.branch-updates.*"
                   ;"cider-ci.server.projects.repositories.git-sql"
@@ -20,7 +20,7 @@
                   ;"cider-ci.server.projects.repositories.branches"
                   ;"cider-ci.server.http.authorization"
                   ;"cider-ci.server.resources.commits.*"
-                  }:debug]
+                  } :debug]
 
                [#{#?(:clj "com.zaxxer.hikari.*")
                   "cider-ci.*"} :info]

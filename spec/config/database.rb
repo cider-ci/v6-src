@@ -11,6 +11,7 @@ end
 
 def db_con_str
   logger = Logger.new(STDOUT)
+  logger.level = Logger::Severity::INFO
   s = 'postgres://' \
     + (ENV['PGUSER'].presence || 'cider-ci') \
     + ((pw = (ENV['DB_PASSWORD'].presence || ENV['PGPASSWORD'].presence)) ? ":#{pw}" : "") \

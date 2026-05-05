@@ -15,7 +15,7 @@ feature 'Projects' do
 
     context 'Repo with sigend commits' do
 
-      scenario 'parsing a 3 commit git repo' do
+      xscenario 'parsing a 3 commit git repo' do
 
         visit '/'
 

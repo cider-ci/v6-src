@@ -20,10 +20,6 @@ feature 'Users' do
         page.has_content?('Users') || page.has_content?('Not Found') || page.has_content?('Page Not-Found')
       end
       
-      # Debug what we actually see
-      puts "Current path: #{current_path}"
-      puts "Page content: #{page.body}"
-      
       if page.has_content?('Users')
         expect(page).to have_content 'Users'
         expect(page).to have_content @admin.email_address

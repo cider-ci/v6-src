@@ -1,7 +1,3 @@
-; Copyright © 2013 - 2016 Dr. Thomas Schank <Thomas.Schank@AlgoCon.ch>
-; Licensed under the terms of the GNU Affero General Public License v3.
-; See the "LICENSE.txt" file provided with this software.
-
 (ns cider-ci.server.projects.repositories.fetch-and-update.scheduler
   (:refer-clojure :exclude [str keyword])
   (:require
@@ -12,6 +8,7 @@
    [cider-ci.utils.duration :as duration]
    [tick.core :as tick]
    [clojure.java.jdbc :as jdbc]
+   [taoensso.timbre :as timbre :refer [debug info]]
    [logbug.catcher :as catcher :refer [snatch]]
    [logbug.debug :as debug]))
 
@@ -55,6 +52,7 @@
 (defn fetch-and-update-repositories []
   (doseq [[_ repository] (:repositories (state/get-db))]
     (when (due? repository)
+      (debug "Repository" (:id repository) "is due for fetch and update.")
       (fetch-and-update repository))))
 
 (defdaemon "fetch-and-update-repositories" 1 (fetch-and-update-repositories))

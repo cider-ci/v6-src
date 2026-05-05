@@ -19,8 +19,7 @@ feature 'Projects' do
       # TODO fix this, updating fetch seems not to work right now
       wait_until (30) do
         within(tr_project('cider-ci-demo-project')) do
-          # all("td.fetch.success").first
-          true
+          all("td.fetch.success").first
         end
       end
     end

@@ -5,21 +5,19 @@
 (ns cider-ci.server.projects.repositories.fetch-and-update.db-schema
   (:refer-clojure :exclude [str keyword])
   (:require
-    [cider-ci.utils.core :refer [keyword str]]
-    [schema.core :as schema]
-    [tick.core :as tick :refer [now]]
-    )
+   [cider-ci.utils.core :refer [keyword str]]
+   [schema.core :as schema]
+   [taoensso.timbre :as timbre :refer [debug info]]
+   [tick.core :as tick :refer [now]])
   (:import [java.time Instant]))
 
 (defn default []
-  {
-   :last_fetched_at nil
+  {:last_fetched_at nil
    :last_error nil
    :last_error_at nil
    :updated_at (now)
    :pending? true
-   :state "initializing"
-   })
+   :state "initializing"})
 
 (def schema
   {:last_fetched_at (schema/maybe Instant)
@@ -27,11 +25,11 @@
    :last_error_at (schema/maybe Instant)
    :updated_at Instant
    :state (schema/enum
-            "error"
-            "fetching"
-            "initializing"
-            "ok"
-            "waiting")
-   :pending? Boolean })
+           "error"
+           "fetching"
+           "initializing"
+           "ok"
+           "waiting")
+   :pending? Boolean})
 
 (schema/validate schema (default))

@@ -8,9 +8,12 @@
    [taoensso.timbre :refer [debug info warn error spy]]))
 
 (def projects
-  ["/projects/" {:name :projects
-                 :auth-http-safe #{:user}
-                 :auth-http-unsafe #{:admin}}])
+  ["/projects"
+   ["/" {:name :projects
+         :auth-http-safe #{:user}
+         :auth-http-unsafe #{:admin}}]
+   ["/:project-id" {:name :project
+                    :auth-http-safe #{:user}}]])
 
 (def users
   ["/users"

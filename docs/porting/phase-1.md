@@ -77,18 +77,21 @@ Currently GPG signatures are *stored* but never *checked*. Decisions needed firs
 
 ### 3.2 Read-side routes
 
+**Schema reality check (verified 2026-05-19):** v6 has no separate `projects` table — the `repositories` table *is* the project. The current `/projects/` list endpoint already selects from `:repositories`. So routes should use a single `:project-id` (= repository id) without a nested repo segment.
+
 Add Reitit routes in `routes.cljc`, paired handlers under `server/resources/`. Auth: `:public` for browsing public projects, `:user` otherwise (mirrors legacy).
 
 | Route | Handler |
 |---|---|
-| `GET /projects/:project-id` | project detail (with embedded repository summary) |
-| `GET /projects/:project-id/repositories/:repo-id` | repository detail |
-| `GET /projects/:project-id/repositories/:repo-id/branches` | branch list |
-| `GET /projects/:project-id/repositories/:repo-id/branches/:branch-name` | branch detail + recent commits |
-| `GET /projects/:project-id/repositories/:repo-id/commits/:commit-id` | commit detail |
-| `GET /projects/:project-id/repositories/:repo-id/commits/:commit-id/blob/*path` | blob content (single file by path) |
+| `GET /projects/:project-id` | project (= repository) detail with branch summary |
+| `GET /projects/:project-id/branches/` | branch list |
+| `GET /projects/:project-id/branches/:branch-name` | branch detail + recent commits |
+| `GET /projects/:project-id/commits/:commit-id` | commit detail incl. signature status |
+| `GET /projects/:project-id/commits/:commit-id/blob/*path` | blob content (single file by path) |
 
 The blob endpoint is needed for the SPA to render `cider-ci.yml` and similar; legacy `repository.web/path-content` is the model. **No tree-listing endpoint** in Phase 1 — fetching a single file by known path is sufficient. A full tree browser is Phase 7.
+
+A separate `projects` table (1 project → N repositories) is deferred. The 1:1 collapse is consistent with how the current code already treats them.
 
 ### 3.3 Write-side routes (admin actions)
 

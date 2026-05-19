@@ -4,6 +4,7 @@
     [cider-ci.server.resources.init.page :as init]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.projects.main :as projects]
+    [cider-ci.server.resources.projects.project :as project]
     [cider-ci.server.resources.root :as root]
     [cider-ci.server.resources.sign-in.page :as sign-in]
     [cider-ci.server.resources.users.main :as users]
@@ -21,6 +22,7 @@
    :root root/components
    :init init/components
    :commits commits/components
+   :project  project/components
    :projects projects/components
    :sign-in sign-in/components
    :users users/components

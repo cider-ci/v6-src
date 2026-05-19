@@ -4,6 +4,7 @@
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.init.http :as init]
     [cider-ci.server.resources.projects.main :as projects]
+    [cider-ci.server.resources.projects.project :as project]
     [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
     [cider-ci.server.resources.sign-out :as sign-out]
     [cider-ci.server.resources.users.main :as users]
@@ -20,6 +21,7 @@
    :admin-gpg-keys #'admin-gpg-keys/handler
    :init #'init/handler
    :commits #'commits/handler
+   :project  #'project/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler

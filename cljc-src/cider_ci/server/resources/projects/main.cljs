@@ -65,8 +65,10 @@
            (for [project projects]
              ^{:key (:id project)}
              [:tr.project
-              [:td.id (:id project)]
-              [:td.name (:name project)]
+              [:td.id [:a {:href (path :project {:project-id (:id project)})}
+                       (:id project)]]
+              [:td.name [:a {:href (path :project {:project-id (:id project)})}
+                         (:name project)]]
               [:<> (fetch-td-component (:fetch-and-update project))]
               [:<> (branch-update-td-component (:branch-updates project))]])]])))])
 

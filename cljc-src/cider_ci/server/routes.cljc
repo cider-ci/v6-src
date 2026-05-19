@@ -12,8 +12,11 @@
    ["/" {:name :projects
          :auth-http-safe #{:user}
          :auth-http-unsafe #{:admin}}]
-   ["/:project-id" {:name :project
-                    :auth-http-safe #{:user}}]])
+   ["/:project-id"
+    ["" {:name :project
+         :auth-http-safe #{:user}}]
+    ["/commits/:commit-id" {:name :project-commit
+                            :auth-http-safe #{:user}}]]])
 
 (def users
   ["/users"

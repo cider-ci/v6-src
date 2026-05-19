@@ -3,6 +3,7 @@
    ["date-fns" :as date-fns]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state]
    [cider-ci.utils.core :refer [presence]]
    [cljs.pprint :refer [pprint]]
@@ -62,7 +63,13 @@
           ^{:key (:id b)}
           [:tr
            [:td (:name b)]
-           [:td [:code.small (some-> (:current_commit_id b) (subs 0 8))]]
+           [:td
+            (if-let [cid (:current_commit_id b)]
+              [:a {:href (path :project-commit
+                               {:project-id (-> @state/routing* :path-params :project-id)
+                                :commit-id  cid})}
+               [:code.small (subs cid 0 8)]]
+              "—")]
            [:td [:small (or (relative-time (:commit_committer_date b)) "—")]]
            [:td [signature-cell (:commit_signature_fingerprint b)]]
            [:td.text-truncate {:style {:max-width "32em"}}

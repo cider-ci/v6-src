@@ -31,7 +31,24 @@
            :auth-http-safe #{:self :admin}
            :auth-http-unsafe #{:admin}}]
       ["/primary" {:name :user-email-address-primary
-                   :auth-http-unsafe #{:admin}}]]]]])
+                   :auth-http-unsafe #{:admin}}]]]
+    ["/gpg-keys"
+     ["/" {:name :user-gpg-keys
+           :auth-http-safe #{:self :admin}
+           :auth-http-unsafe #{:self}}]
+     ["/:gpg-key-id" {:name :user-gpg-key
+                      :auth-http-safe #{:self :admin}
+                      :auth-http-unsafe #{:self :admin}}]]]])
+
+(def admin
+  ["/admin"
+   ["/gpg-keys"
+    ["/" {:name :admin-gpg-keys
+          :auth-http-safe #{:admin}
+          :auth-http-unsafe #{:admin}}]
+    ["/:gpg-key-id" {:name :admin-gpg-key
+                     :auth-http-safe #{:admin}
+                     :auth-http-unsafe #{:admin}}]]])
 
 (def workspace
   ["/commits"
@@ -46,6 +63,7 @@
              :no-sign-in-page true
              :auth-http-safe #{:public}
              :auth-http-unsafe #{:public}}]
+   admin
    projects
    ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]

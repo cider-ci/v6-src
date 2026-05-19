@@ -55,4 +55,16 @@ module GPG_USER
 
     gpg_dir
   end
+
+  def self.ascii_public_key(user)
+    old_home = ENV['GNUPGHOME']
+    ENV['GNUPGHOME'] = user.gpg_home.to_s
+    ctx = GPGME::Ctx.new(armor: true)
+    data = GPGME::Data.new
+    ctx.export_keys(user.email_address, data)
+    data.seek(0)
+    data.read
+  ensure
+    ENV['GNUPGHOME'] = old_home
+  end
 end

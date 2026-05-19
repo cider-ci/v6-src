@@ -1,5 +1,6 @@
 (ns cider-ci.server.routing-resolver
   (:require
+    [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.init.http :as init]
     [cider-ci.server.resources.projects.main :as projects]
@@ -7,6 +8,7 @@
     [cider-ci.server.resources.sign-out :as sign-out]
     [cider-ci.server.resources.users.main :as users]
     [cider-ci.server.resources.users.user.email-addresses :as user-email-addresses]
+    [cider-ci.server.resources.users.user.gpg-keys :as user-gpg-keys]
     [cider-ci.server.resources.users.user.main :as user]
     [cider-ci.server.resources.users.user.password :as user-password]
     [cider-ci.server.routes :as routes]
@@ -14,7 +16,9 @@
     ))
 
 (def route-resource-table
-  {:init #'init/handler
+  {:admin-gpg-key  #'admin-gpg-keys/handler
+   :admin-gpg-keys #'admin-gpg-keys/handler
+   :init #'init/handler
    :commits #'commits/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
@@ -23,7 +27,9 @@
    :user #'user/handler
    :user-email-address #'user-email-addresses/handler
    :user-email-addresses #'user-email-addresses/handler
-   :user-password #'user-password/handler })
+   :user-gpg-key  #'user-gpg-keys/handler
+   :user-gpg-keys #'user-gpg-keys/handler
+   :user-password #'user-password/handler})
 
 (defn route-resolve [handler {uri :uri :as request}]
   (if-let [route (routes/route uri)]

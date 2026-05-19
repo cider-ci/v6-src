@@ -121,18 +121,26 @@
          (query tx)
          first :persisted)))
 
-(defn import-gpg-signature-and-message [commit tree-id tx]
-  (let [ raw-commit (some-> commit .getRawBuffer RawParseUtils/decode)
-        gpg-signature (some-> raw-commit git-gpg/extract-ascii-commit-signature)
-        gpg-message (some->  raw-commit git-gpg/cat-file-commit-wo-signature)]
-    (when (and gpg-signature gpg-message)
-      (insert-or-update
-        tx "tree_signatures"
-        ["tree_id = ? AND message = ? AND signature = ?"
-         tree-id gpg-message gpg-signature]
-        {:tree_id tree-id
-         :message gpg-message
-         :signature gpg-signature}))))
+(defn- trusted-keys [author-email committer-email tx]
+  (query tx [(str "SELECT ascii_key FROM gpg_keys "
+                  "WHERE user_id IS NULL "
+                  "OR user_id IN ("
+                  "  SELECT user_id FROM email_addresses "
+                  "  WHERE lower(email_address) IN (lower(?), lower(?)))")
+             author-email committer-email]))
+
+(defn import-gpg-signature! [commit commit-id author-email committer-email tx]
+  (let [raw-commit (some-> commit .getRawBuffer RawParseUtils/decode)
+        signature  (some-> raw-commit git-gpg/extract-ascii-commit-signature)
+        signed-msg (some-> raw-commit git-gpg/cat-file-commit-wo-signature)]
+    (when (and signature signed-msg)
+      (jdbc/execute-one! tx ["UPDATE commits SET signed_message = ?, signature = ? WHERE id = ?"
+                             signed-msg signature commit-id])
+      (when-let [fingerprint (->> (trusted-keys author-email committer-email tx)
+                                  (map :ascii_key)
+                                  (some #(git-gpg/valid-signature-fingerprint raw-commit %)))]
+        (jdbc/execute-one! tx ["UPDATE commits SET signature_fingerprint = ? WHERE id = ?"
+                               fingerprint commit-id])))))
 
 (defn- commit-subject [commit]
   (def ^:dynamic commit* commit)
@@ -167,7 +175,7 @@
                        :body body
                        :depth depth}]
         (insert! tx :commits db-commit)
-        (import-gpg-signature-and-message commit tree-id tx)
+        (import-gpg-signature! commit commit-id author-email committer-email tx)
         (import-submodule-refs j-tree-id repository)
         (import-submodule-refs-via-commit commit repository tx)
         commit))))

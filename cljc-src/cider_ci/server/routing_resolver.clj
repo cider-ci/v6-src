@@ -5,6 +5,7 @@
     [cider-ci.server.resources.init.http :as init]
     [cider-ci.server.resources.projects.branch :as project-branch]
     [cider-ci.server.resources.projects.commit :as project-commit]
+    [cider-ci.server.resources.projects.fetch :as project-fetch]
     [cider-ci.server.resources.projects.main :as projects]
     [cider-ci.server.resources.projects.project :as project]
     [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
@@ -26,6 +27,7 @@
    :project  #'project/handler
    :project-branch #'project-branch/handler
    :project-commit #'project-commit/handler
+   :project-fetch #'project-fetch/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler

@@ -32,7 +32,7 @@
       (sql/order-by [:b.name :asc])))
 
 
-(defn handler [{{{project-id :project-id} :path-params} :route tx :tx}]
+(defn- get-handler [tx project-id]
   (if-let [repo (jdbc/execute-one! tx (sql-format (repository-sql project-id)))]
     (let [branches (jdbc/execute! tx (sql-format (branches-sql project-id)))
           repo-state (some-> @repo-state-db*
@@ -40,3 +40,19 @@
                              (select-keys [:fetch-and-update :branch-updates]))]
       {:body (merge repo repo-state {:branches branches})})
     {:status 404 :body "Project not found"}))
+
+(defn- delete-handler [tx project-id]
+  (let [deleted (jdbc/execute-one! tx (sql-format
+                                        (-> (sql/delete-from :repositories)
+                                            (sql/where [:= :id project-id])
+                                            (sql/returning :id))))]
+    (if deleted
+      {:status 200 :body {:id project-id}}
+      {:status 404 :body "Project not found"})))
+
+(defn handler [{{{project-id :project-id} :path-params} :route
+                tx :tx
+                request-method :request-method}]
+  (case request-method
+    :get    (get-handler tx project-id)
+    :delete (delete-handler tx project-id)))

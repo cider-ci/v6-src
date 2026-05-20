@@ -2,6 +2,7 @@
   (:require
    ["date-fns" :as date-fns]
    [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state]
@@ -22,6 +23,38 @@
 (defn- relative-time [iso-string]
   (when-let [s (presence iso-string)]
     (date-fns/formatDistance (js/Date. s) (js/Date.) (clj->js {:addSuffix true}))))
+
+
+(defn- project-id []
+  (-> @state/routing* :path-params :project-id))
+
+
+;;; actions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- fetch-request [method url on-success]
+  (-> (js/fetch url (clj->js {:method method
+                               :credentials "same-origin"
+                               :headers {"accept" "application/json"
+                                         "x-csrf-token" (anti-csrf/token)}}))
+      (.then on-success)))
+
+(defn- admin-actions []
+  (when (-> @state/user* :is_admin)
+    [:div.mt-3.d-flex.gap-2
+     [:form {:on-submit (fn [e]
+                          (.preventDefault e)
+                          (fetch-request "POST"
+                                         (path :project-fetch {:project-id (project-id)})
+                                         (fn [_] (set! js/window.location
+                                                        (path :project {:project-id (project-id)})))))}
+      [:button.btn.btn-sm.btn-secondary {:type :submit}
+       [:i.fas.fa-rotate] " Fetch now"]]
+     [:button.btn.btn-sm.btn-danger
+      {:on-click (fn [_]
+                   (fetch-request "DELETE"
+                                  (path :project {:project-id (project-id)})
+                                  (fn [_] (set! js/window.location (path :projects)))))}
+      [:i.fas.fa-trash] " Delete project"]]))
 
 
 ;;; project metadata ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,13 +96,13 @@
           ^{:key (:id b)}
           [:tr
            [:td [:a {:href (path :project-branch
-                                 {:project-id (-> @state/routing* :path-params :project-id)
+                                 {:project-id (project-id)
                                   :branch-name (:name b)})}
                  (:name b)]]
            [:td
             (if-let [cid (:current_commit_id b)]
               [:a {:href (path :project-commit
-                               {:project-id (-> @state/routing* :path-params :project-id)
+                               {:project-id (project-id)
                                 :commit-id  cid})}
                [:code.small (subs cid 0 8)]]
               "—")]
@@ -89,6 +122,7 @@
      [:<>
       [:h2 [icons/projects] " " (or (:name @data*) (:id @data*))]
       [project-metadata]
+      [admin-actions]
       [:h3.mt-4 "Branches"]
       [branches-table]
       (when @state/debug?*

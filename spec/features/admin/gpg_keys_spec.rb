@@ -3,9 +3,9 @@ require 'spec_helper'
 feature 'Admin global GPG keys' do
 
   before :each do
-    @admin = FactoryBot.create(:admin, :with_gpg_key)
-    @user  = FactoryBot.create(:user,  :with_gpg_key)
-    @admin_ascii_key = GPG_USER.ascii_public_key(@admin)
+    @admin = FactoryBot.create(:admin)
+    @user  = FactoryBot.create(:user)
+    @admin_ascii_key = STATIC_GPG_KEY
   end
 
   context 'as an admin' do
@@ -68,11 +68,10 @@ feature 'Admin global GPG keys' do
     end
 
     scenario 'POST is rejected with 403' do
-      user_ascii_key = GPG_USER.ascii_public_key(@user)
       # dismiss the GET 403 modal first so the form is clickable
       click_on 'Dismiss'
       fill_in 'Name', with: 'Attempt'
-      fill_in 'ascii_key', with: user_ascii_key
+      fill_in 'ascii_key', with: STATIC_GPG_KEY
       click_on 'Add key'
       expect(page).to have_content 'Request ERROR 403'
       expect(database[:gpg_keys].where(user_id: nil).count).to eq 0

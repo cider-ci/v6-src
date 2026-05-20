@@ -10,11 +10,11 @@
    [cljs.core.async :refer [go <!]]
    [cljs.pprint :refer [pprint]]
    [reagent.core :as reagent]
-   [taoensso.timbre :refer [debug spy]]))
+   [taoensso.timbre :refer [spy]]))
 
 (defonce _data* (reagent/atom nil))
 
-(def data* (reagent/reaction (get @_data* (:path @state/routing*))))
+(def data* (reagent/reaction (get @_data* (:route @state/routing*))))
 
 (defn fetch-data [& _]
   (http-client/route-cached-fetch _data*))
@@ -26,7 +26,7 @@
   (go (when-let [res (-> {:method :delete :url (key-url gpg-key-id)}
                          http-client/request :chan <! spy
                          http-client/filter-success :body)]
-        (swap! _data* assoc (:path @state/routing*) res))))
+        (swap! _data* assoc (:route @state/routing*) res))))
 
 
 ;;; list ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -62,7 +62,7 @@
                            :json-params @form-data*}
                          http-client/request :chan <! http-client/filter-success :body)]
         (reset! form-data* {:name "" :description "" :ascii_key ""})
-        (swap! _data* assoc (:path @state/routing*) res))))
+        (swap! _data* assoc (:route @state/routing*) res))))
 
 (defn- add-form []
   (let [form* (reagent/atom {:name "" :description "" :ascii_key ""})]

@@ -5,9 +5,9 @@ feature 'User GPG keys' do
   before :each do
     # ensure an admin exists so the SPA does not redirect to Initial Setup
     @admin = FactoryBot.create(:admin)
-    @user  = FactoryBot.create(:user, :with_gpg_key)
+    @user  = FactoryBot.create(:user)
     @other = FactoryBot.create(:user)
-    @ascii_key = GPG_USER.ascii_public_key(@user)
+    @ascii_key = STATIC_GPG_KEY
   end
 
   context 'as the user themselves' do

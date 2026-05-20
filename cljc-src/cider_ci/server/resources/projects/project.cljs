@@ -12,7 +12,7 @@
 
 (defonce _data* (reagent/atom {}))
 
-(def data* (reagent/reaction (get @_data* (:path @state/routing*))))
+(def data* (reagent/reaction (get @_data* (:route @state/routing*))))
 
 
 (defn- fetch-data [& _]
@@ -62,7 +62,10 @@
         (for [b branches]
           ^{:key (:id b)}
           [:tr
-           [:td (:name b)]
+           [:td [:a {:href (path :project-branch
+                                 {:project-id (-> @state/routing* :path-params :project-id)
+                                  :branch-name (:name b)})}
+                 (:name b)]]
            [:td
             (if-let [cid (:current_commit_id b)]
               [:a {:href (path :project-commit

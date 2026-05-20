@@ -11,7 +11,7 @@
 
 (defonce _data* (reagent/atom {}))
 
-(def data* (reagent/reaction (get @_data* (:path @state/routing*))))
+(def data* (reagent/reaction (get @_data* (:route @state/routing*))))
 
 
 (defn- fetch-data [& _]

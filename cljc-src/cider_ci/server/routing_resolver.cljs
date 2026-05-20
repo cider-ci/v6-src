@@ -3,6 +3,7 @@
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.init.page :as init]
     [cider-ci.server.resources.commits.main :as commits]
+    [cider-ci.server.resources.projects.branch :as project-branch]
     [cider-ci.server.resources.projects.commit :as project-commit]
     [cider-ci.server.resources.projects.main :as projects]
     [cider-ci.server.resources.projects.project :as project]
@@ -24,6 +25,7 @@
    :init init/components
    :commits commits/components
    :project  project/components
+   :project-branch project-branch/components
    :project-commit project-commit/components
    :projects projects/components
    :sign-in sign-in/components

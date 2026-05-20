@@ -16,7 +16,9 @@
     ["" {:name :project
          :auth-http-safe #{:user}}]
     ["/commits/:commit-id" {:name :project-commit
-                            :auth-http-safe #{:user}}]]])
+                            :auth-http-safe #{:user}}]
+    ["/branches/*branch-name" {:name :project-branch
+                               :auth-http-safe #{:user}}]]])
 
 (def users
   ["/users"

@@ -13,3 +13,4 @@
 /target
 /tmp
 resources/built-info.yml
+.claude/settings.local.json

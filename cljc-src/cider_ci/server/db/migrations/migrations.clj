@@ -24,6 +24,8 @@
         :down (partial exec-resource-sql! "migrations/00010_git_down.sql")}
     11 {:up (partial exec-resource-sql! "migrations/00011_gpg_up.sql")
         :down (partial exec-resource-sql! "migrations/00011_gpg_down.sql")}
+    12 {:up (partial exec-resource-sql! "migrations/00012_jobs_up.sql")
+        :down (partial exec-resource-sql! "migrations/00012_jobs_down.sql")}
     ))
 
 (defn available []

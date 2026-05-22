@@ -96,11 +96,14 @@
           [:<>
            [:h4.mt-4 "Message"]
            [:pre.bg-light.p-3 body]])
-        [:div.mt-3
+        [:div.mt-3.d-flex.gap-3
          [:a {:href (path :project-blob {:project-id (project-id)
                                          :commit-id  (:id c)
                                          :blob-path  "cider-ci.yml"})}
-          [:i.fas.fa-file-code] " cider-ci.yml"]]
+          [:i.fas.fa-file-code] " cider-ci.yml"]
+         [:a {:href (path :project-jobs {:project-id (project-id)
+                                         :commit-id  (:id c)})}
+          [:i.fas.fa-play-circle] " Jobs"]]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
 

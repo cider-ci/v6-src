@@ -22,7 +22,13 @@
      ["" {:name :project-commit
           :auth-http-safe #{:user}}]
      ["/blob/*blob-path" {:name :project-blob
-                          :auth-http-safe #{:user}}]]
+                          :auth-http-safe #{:user}}]
+     ["/jobs"
+      ["" {:name :project-jobs
+           :auth-http-safe #{:user}
+           :auth-http-unsafe #{:user}}]
+      ["/:job-id" {:name :project-job
+                   :auth-http-safe #{:user}}]]]
     ["/branches/*branch-name" {:name :project-branch
                                :auth-http-safe #{:user}}]]])
 

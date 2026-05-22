@@ -6,6 +6,7 @@
     [cider-ci.server.resources.projects.blob :as project-blob]
     [cider-ci.server.resources.projects.branch :as project-branch]
     [cider-ci.server.resources.projects.commit :as project-commit]
+    [cider-ci.server.resources.projects.jobs :as project-jobs]
     [cider-ci.server.resources.projects.main :as projects]
     [cider-ci.server.resources.projects.project :as project]
     [cider-ci.server.resources.root :as root]
@@ -29,6 +30,8 @@
    :project-blob project-blob/components
    :project-branch project-branch/components
    :project-commit project-commit/components
+   :project-jobs project-jobs/components
+   :project-job project-jobs/components
    :projects projects/components
    :sign-in sign-in/components
    :users users/components

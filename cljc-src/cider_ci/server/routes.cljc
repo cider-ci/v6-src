@@ -18,8 +18,11 @@
          :auth-http-unsafe #{:admin}}]
     ["/fetch" {:name :project-fetch
                :auth-http-unsafe #{:admin}}]
-    ["/commits/:commit-id" {:name :project-commit
-                            :auth-http-safe #{:user}}]
+    ["/commits/:commit-id"
+     ["" {:name :project-commit
+          :auth-http-safe #{:user}}]
+     ["/blob/*blob-path" {:name :project-blob
+                          :auth-http-safe #{:user}}]]
     ["/branches/*branch-name" {:name :project-branch
                                :auth-http-safe #{:user}}]]])
 

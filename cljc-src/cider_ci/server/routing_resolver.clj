@@ -3,6 +3,7 @@
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.init.http :as init]
+    [cider-ci.server.resources.projects.blob :as project-blob]
     [cider-ci.server.resources.projects.branch :as project-branch]
     [cider-ci.server.resources.projects.commit :as project-commit]
     [cider-ci.server.resources.projects.fetch :as project-fetch]
@@ -25,6 +26,7 @@
    :init #'init/handler
    :commits #'commits/handler
    :project  #'project/handler
+   :project-blob #'project-blob/handler
    :project-branch #'project-branch/handler
    :project-commit #'project-commit/handler
    :project-fetch #'project-fetch/handler

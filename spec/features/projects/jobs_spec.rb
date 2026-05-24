@@ -36,4 +36,16 @@ feature 'Jobs' do
     expect(page).not_to have_content 'Recorded Jobs'
   end
 
+  scenario 'job detail page shows tasks after triggering a job' do
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
+    find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
+
+    find('a code', text: 'introduction-demo').click
+
+    expect(page).to have_content 'Tasks'
+    expect(page).to have_css '.badge', text: 'pending'
+    expect(page).to have_content 'main'
+  end
+
 end

@@ -24,6 +24,9 @@
 (defn- commit-id []
   (-> @state/routing* :path-params :commit-id))
 
+(defn- job-id []
+  (-> @state/routing* :path-params :job-id))
+
 
 (defn- trigger-job [job-key]
   (-> (js/fetch (path :project-jobs {:project-id (project-id)
@@ -47,6 +50,8 @@
               "bg-secondary")]
     [:span.badge {:class cls} s]))
 
+
+;;; Jobs list page (route :project-jobs)
 
 (defn- job-row [j]
   ^{:key (:id j)}
@@ -93,7 +98,7 @@
      [:p.text-muted "No jobs defined in cider-ci.yml for this commit."])])
 
 
-(defn page []
+(defn- jobs-list-page []
   [:div.page.jobs
    [state/hidden-routing-state-component :did-change #(fetch-data)]
    (if-not (seq @data*)
@@ -110,6 +115,59 @@
       [created-jobs-panel (:created @data*)]
       (when @state/debug?*
         [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])])])
+
+
+;;; Job detail page (route :project-job)
+
+(defn- task-row [t]
+  ^{:key (:id t)}
+  [:tr
+   [:td [:code (:name t)]]
+   [:td [state-badge (:state t)]]
+   [:td [:span.text-muted (str (:created_at t))]]])
+
+
+(defn- tasks-panel [tasks]
+  [:<>
+   [:h4.mt-3 "Tasks"]
+   (if (seq tasks)
+     [:table.table.table-sm
+      [:thead
+       [:tr [:th "Name"] [:th "State"] [:th "Created"]]]
+      [:tbody
+       (for [t tasks] [task-row t])]]
+     [:p.text-muted "No tasks for this job."])])
+
+
+(defn- job-detail-page []
+  [:div.page.job
+   [state/hidden-routing-state-component :did-change #(fetch-data)]
+   (if-not (seq @data*)
+     [:div "Loading..."]
+     (let [job @data*]
+       [:<>
+        [:nav.mb-3
+         [:a {:href (path :project {:project-id (project-id)})}
+          [icons/projects] " " (project-id)]
+         " / "
+         [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
+          [:code (subs (commit-id) 0 8)]]
+         " / "
+         [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (commit-id)})}
+          "Jobs"]
+         " / "
+         [:code (:key job)]]
+        [:h3 (:name job) " " [state-badge (:state job)]]
+        [tasks-panel (:tasks job)]
+        (when @state/debug?*
+          [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
+
+
+(defn page []
+  (case (:name @state/routing*)
+    :project-job  [job-detail-page]
+    :project-jobs [jobs-list-page]
+    [:div "Unknown route"]))
 
 
 (def components {:page page})

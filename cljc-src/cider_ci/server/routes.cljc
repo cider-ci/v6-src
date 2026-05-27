@@ -70,6 +70,15 @@
                      :auth-http-safe #{:admin}
                      :auth-http-unsafe #{:admin}}]]])
 
+(def executor
+  ["/executor"
+   ["/sync" {:name           :executor-sync
+             :auth-http-safe #{:public}
+             :auth-http-unsafe #{:public}}]
+   ["/trials/:trial-id" {:name             :executor-trial
+                         :auth-http-safe   #{:public}
+                         :auth-http-unsafe #{:public}}]])
+
 (def workspace
   ["/commits"
    ["/" {:name :commits
@@ -84,6 +93,7 @@
              :auth-http-safe #{:public}
              :auth-http-unsafe #{:public}}]
    admin
+   executor
    projects
    ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]

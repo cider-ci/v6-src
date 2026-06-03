@@ -1,6 +1,7 @@
 (ns cider-ci.main
   (:require
     [cider-ci.dev]
+    [cider-ci.executor.main :as executor]
     [cider-ci.server.main :as server]
     [cider-ci.shared.logging :as logging]
     [cider-ci.shared.repl :as repl]
@@ -59,7 +60,8 @@
     (cond
       (:help options) (print-summary)
       :else (case cmd
-              :server (server/main options pass-on-args)
+              :executor (executor/main pass-on-args)
+              :server   (server/main options pass-on-args)
               (print-summary)))))
 
 ;(cider-ci.dev/reload!)

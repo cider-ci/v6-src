@@ -1,5 +1,6 @@
 (ns cider-ci.server.executors.handler
   (:require
+    [cider-ci.server.projects.repositories.shared :as repo-shared]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -58,6 +59,7 @@
              :job_id     (str (:job_id t))
              :commit_id  (:commit_id t)
              :project_id (:project_id t)
+             :git_url    (str "file://" (repo-shared/repository-fs-path (:project_id t)))
              :patch_path (str "/executor/trials/" (:id t))})
           trials)))
 
@@ -119,12 +121,20 @@
 
 (defn- handle-trial-patch [tx trial-id body]
   (let [new-state  (:state body)
+        error-msg  (:error body)
         trial-uuid (java.util.UUID/fromString trial-id)]
     (when-not new-state
       (throw (ex-info "Missing state" {:status 400})))
-    (let [result (jdbc/execute-one! tx
-                   ["UPDATE trials SET state = ?, updated_at = now() WHERE id = ?"
-                    new-state trial-uuid])]
+    (let [terminal? #{"passed" "failed" "defective" "aborted"}
+          set-map   (cond-> {:state new-state :updated_at [:raw "now()"]}
+                      (#{"executing"} new-state)   (assoc :started_at  [:raw "now()"])
+                      (terminal? new-state)         (assoc :finished_at [:raw "now()"])
+                      error-msg                     (assoc :error error-msg))
+          result    (jdbc/execute-one! tx
+                      (-> (sql/update :trials)
+                          (sql/set set-map)
+                          (sql/where [:= :id trial-uuid])
+                          sql-format))]
       (when (zero? (:next.jdbc/update-count result))
         (throw (ex-info "Trial not found" {:status 404}))))
     (propagate-from-trial tx trial-uuid)

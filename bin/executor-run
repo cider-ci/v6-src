@@ -1,0 +1,8 @@
+#!/bin/bash -eu
+
+set -euo pipefail
+PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
+cd $PROJECT_DIR
+clj -M -m cider-ci.main executor "$@"
+
+# vi: ft=sh

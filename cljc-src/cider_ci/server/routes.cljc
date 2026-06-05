@@ -72,12 +72,26 @@
 
 (def executor
   ["/executor"
-   ["/sync" {:name           :executor-sync
-             :auth-http-safe #{:public}
+   ["/sync" {:name             :executor-sync
+             :bypass-spa       true
+             :auth-http-safe   #{:public}
              :auth-http-unsafe #{:public}}]
-   ["/trials/:trial-id" {:name             :executor-trial
-                         :auth-http-safe   #{:public}
-                         :auth-http-unsafe #{:public}}]])
+   ["/trials/:trial-id"
+    ["" {:name             :executor-trial
+         :bypass-spa       true
+         :auth-http-safe   #{:public}
+         :auth-http-unsafe #{:public}}]
+    ["/attachments/*attachment-path" {:name             :executor-trial-attachment
+                                      :bypass-spa       true
+                                      :auth-http-safe   #{:public}
+                                      :auth-http-unsafe #{:public}}]]])
+
+(def trials
+  ["/trials"
+   ["/:trial-id/attachments/*attachment-path"
+    {:name           :trial-attachment
+     :bypass-spa     true
+     :auth-http-safe #{:user}}]])
 
 (def workspace
   ["/commits"
@@ -95,6 +109,7 @@
    admin
    executor
    projects
+   trials
    ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]

@@ -3,7 +3,18 @@
     [cheshire.core :as json]
     [org.httpkit.client :as http-client]
     [taoensso.timbre :refer [info warn]])
-  (:import [java.io File]))
+  (:import [java.io File FileOutputStream]))
+
+
+(defn- put-attachment! [{:keys [id] :as _trial} {:keys [server-url token]} attachment-name content-type content]
+  (let [url  (str server-url "/executor/trials/" id "/attachments/" attachment-name)
+        resp @(http-client/put url
+                {:headers {"Authorization" (str "Bearer " token)
+                           "Content-Type"  content-type}
+                 :body    content
+                 :timeout 30000})]
+    (when-not (#{200 201 204} (:status resp))
+      (warn "PUT" url "returned HTTP" (:status resp) (:body resp)))))
 
 
 (defn- patch-trial! [{:keys [patch_path] :as _trial} {:keys [server-url token]} state extra]
@@ -20,9 +31,7 @@
     resp))
 
 
-(defn- run-scripts! [work-dir task-spec]
-  "Run each script in task-spec sequentially. Returns \"passed\" if all succeed,
-  \"failed\" on first non-zero exit code."
+(defn- run-scripts! [work-dir task-spec log-file]
   (let [scripts (:scripts task-spec)]
     (loop [[[_ script] & rest-scripts] (seq scripts)]
       (if-not script
@@ -33,6 +42,8 @@
           (.setExecutable script-file true)
           (let [proc      (-> (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
                               (.directory (File. ^String work-dir))
+                              (.redirectErrorStream true)
+                              (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file))
                               .start)
                 exit-code (.waitFor proc)]
             (if (zero? exit-code)
@@ -51,11 +62,12 @@
 
 (defn execute! [{:keys [id git_url commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
-  (let [work-dir (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))]
+  (let [work-dir (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))
+        log-file (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id ".log"))]
     (try
       (patch-trial! trial opts "executing" {})
 
-      ;; Clone bare repo to working directory
+      ;; Clone repo to working directory
       (let [clone-proc (-> (ProcessBuilder. ["git" "clone" git_url (.getAbsolutePath work-dir)])
                            .start)]
         (when-not (zero? (.waitFor clone-proc))
@@ -68,14 +80,18 @@
         (when-not (zero? (.waitFor co-proc))
           (throw (ex-info "git checkout failed" {:commit-id commit_id}))))
 
-      ;; Run scripts and report the outcome
-      (let [result (run-scripts! (.getAbsolutePath work-dir) task_spec)]
+      ;; Run scripts, capturing output to log-file
+      (let [result (run-scripts! (.getAbsolutePath work-dir) task_spec log-file)]
         (info "Trial" id "finished with" result)
+        (put-attachment! trial opts "log" "text/plain" (java.io.FileInputStream. log-file))
         (patch-trial! trial opts result {}))
 
       (catch Exception e
         (warn "Trial" id "failed with exception:" (.getMessage e))
+        (when (.exists log-file)
+          (put-attachment! trial opts "log" "text/plain" (java.io.FileInputStream. log-file)))
         (patch-trial! trial opts "defective" {:error (.getMessage e)}))
 
       (finally
-        (delete-dir! work-dir)))))
+        (delete-dir! work-dir)
+        (.delete log-file)))))

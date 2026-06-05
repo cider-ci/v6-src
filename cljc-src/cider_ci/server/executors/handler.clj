@@ -6,7 +6,8 @@
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :as jdbc-sql]
-    [taoensso.timbre :refer [warn]]))
+    [taoensso.timbre :refer [warn]])
+  (:import [java.io InputStream]))
 
 
 (defn- sha256 [^String s]
@@ -111,6 +112,24 @@
       (propagate-from-task tx task-id))))
 
 
+(defn- handle-trial-attachment-put [tx trial-id attachment-path request]
+  (let [trial-uuid   (java.util.UUID/fromString trial-id)
+        content-type (get-in request [:headers "content-type"] "application/octet-stream")
+        body         (:body request)
+        content      (if (instance? InputStream body)
+                       (.readAllBytes ^InputStream body)
+                       (.getBytes ^String (str body) "UTF-8"))]
+    (jdbc/execute-one! tx
+      ["INSERT INTO trial_attachments (trial_id, path, content_type, content)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT (trial_id, path)
+        DO UPDATE SET content = EXCLUDED.content,
+                      content_type = EXCLUDED.content_type,
+                      updated_at = now()"
+       trial-uuid attachment-path content-type content])
+    {:status 201 :body {:path attachment-path}}))
+
+
 (defn- handle-sync [tx executor body]
   (let [available-load (or (:available_load body) 1.0)
         to-execute     (dispatch-trials tx executor available-load)]
@@ -147,7 +166,8 @@
                 request-method :request-method
                 body           :body
                 headers        :headers
-                {{:keys [trial-id]} :path-params} :route}]
+                {{:keys [trial-id attachment-path]} :path-params} :route
+                :as request}]
   (let [auth-header (get headers "authorization")]
     (if-let [executor (find-executor tx auth-header)]
       (case route-name
@@ -159,6 +179,11 @@
         :executor-trial
         (case request-method
           :patch (handle-trial-patch tx trial-id body)
+          {:status 405 :body "Method not allowed"})
+
+        :executor-trial-attachment
+        (case request-method
+          :put (handle-trial-attachment-put tx trial-id attachment-path request)
           {:status 405 :body "Method not allowed"})
 
         {:status 500 :body "Unresolved route"})

@@ -13,6 +13,7 @@
     [cider-ci.server.resources.projects.project :as project]
     [cider-ci.server.resources.sign-in.password-authentication :as password-authentication]
     [cider-ci.server.resources.sign-out :as sign-out]
+    [cider-ci.server.resources.trials :as trials]
     [cider-ci.server.resources.users.main :as users]
     [cider-ci.server.resources.users.user.email-addresses :as user-email-addresses]
     [cider-ci.server.resources.users.user.gpg-keys :as user-gpg-keys]
@@ -23,12 +24,14 @@
     ))
 
 (def route-resource-table
-  {:admin-gpg-key  #'admin-gpg-keys/handler
-   :admin-gpg-keys #'admin-gpg-keys/handler
-   :executor-sync  #'executors/handler
-   :executor-trial #'executors/handler
-   :init #'init/handler
-   :commits #'commits/handler
+  {:admin-gpg-key             #'admin-gpg-keys/handler
+   :admin-gpg-keys            #'admin-gpg-keys/handler
+   :executor-sync             #'executors/handler
+   :executor-trial            #'executors/handler
+   :executor-trial-attachment #'executors/handler
+   :trial-attachment          #'trials/handler
+   :init                      #'init/handler
+   :commits                   #'commits/handler
    :project  #'project/handler
    :project-blob #'project-blob/handler
    :project-branch #'project-branch/handler

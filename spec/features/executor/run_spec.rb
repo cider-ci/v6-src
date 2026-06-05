@@ -69,6 +69,10 @@ feature 'Executor Run' do
     end
 
     expect(page).to have_css '.badge', text: 'passed', minimum: 2
+
+    # Verify that log attachments were uploaded for the trial(s)
+    expect(page).to have_link 'Log'
+    expect(database[:trial_attachments].where(path: 'log').count).to be >= 1
   end
 
 end

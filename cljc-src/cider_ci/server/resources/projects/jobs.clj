@@ -82,6 +82,14 @@
                               :name  (:name job-entry)
                               :state "pending"}})))))
 
+(defn- get-trials-for-task [task-id]
+  (jdbc-sql/query (get-ds)
+    (-> (sql/select :id :state :started_at :finished_at)
+        (sql/from :trials)
+        (sql/where [:= :task_id task-id])
+        (sql/order-by [:created_at :asc])
+        sql-format)))
+
 (defn- get-job-with-tasks [project-id job-id]
   (when-let [job (first (jdbc-sql/query (get-ds)
                           (-> (sql/select :*)
@@ -89,12 +97,14 @@
                               (sql/where [:= :id (java.util.UUID/fromString job-id)])
                               (sql/where [:= :project_id project-id])
                               sql-format)))]
-    (let [tasks (jdbc-sql/query (get-ds)
-                  (-> (sql/select :id :name :state :created_at)
-                      (sql/from :tasks)
-                      (sql/where [:= :job_id (:id job)])
-                      (sql/order-by [:created_at :asc])
-                      sql-format))]
+    (let [tasks (mapv (fn [t]
+                        (assoc t :trials (get-trials-for-task (:id t))))
+                      (jdbc-sql/query (get-ds)
+                        (-> (sql/select :id :name :state :created_at)
+                            (sql/from :tasks)
+                            (sql/where [:= :job_id (:id job)])
+                            (sql/order-by [:created_at :asc])
+                            sql-format)))]
       (assoc job :tasks tasks))))
 
 (defn handler [{{{:keys [project-id commit-id job-id]} :path-params} :route

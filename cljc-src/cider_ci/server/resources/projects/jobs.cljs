@@ -124,7 +124,14 @@
   [:tr
    [:td [:code (:name t)]]
    [:td [state-badge (:state t)]]
-   [:td [:span.text-muted (str (:created_at t))]]])
+   [:td [:span.text-muted (str (:created_at t))]]
+   [:td
+    (for [trial (:trials t)]
+      ^{:key (:id trial)}
+      [:a {:href   (str "/trials/" (:id trial) "/attachments/log")
+           :target "_blank"
+           :class  "me-2"}
+       "Log"])]])
 
 
 (defn- tasks-panel [tasks]
@@ -133,7 +140,7 @@
    (if (seq tasks)
      [:table.table.table-sm
       [:thead
-       [:tr [:th "Name"] [:th "State"] [:th "Created"]]]
+       [:tr [:th "Name"] [:th "State"] [:th "Created"] [:th "Log"]]]
       [:tbody
        (for [t tasks] [task-row t])]]
      [:p.text-muted "No tasks for this job."])])

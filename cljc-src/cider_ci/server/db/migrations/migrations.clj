@@ -32,6 +32,8 @@
         :down (partial exec-resource-sql! "migrations/00014_trials_down.sql")}
     15 {:up (partial exec-resource-sql! "migrations/00015_executors_up.sql")
         :down (partial exec-resource-sql! "migrations/00015_executors_down.sql")}
+    16 {:up (partial exec-resource-sql! "migrations/00016_trial_attachments_up.sql")
+        :down (partial exec-resource-sql! "migrations/00016_trial_attachments_down.sql")}
     ))
 
 (defn available []

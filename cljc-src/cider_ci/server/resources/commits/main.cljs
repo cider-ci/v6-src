@@ -15,7 +15,7 @@
 
 
 (defn- fetch-data []
-  (http-client/route-cached-fetch _data* :reload true))
+  (http-client/route-cached-fetch _data* :reload true :reload-delay 15000))
 
 
 (defn- state-cls [s]
@@ -70,7 +70,12 @@
      [:td (:author_name c)]
      [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
      [:td (for [b (:branches c)] [branch-tag b])]
-     [:td (for [j (:jobs c)] [job-badge (:id c) j])]]))
+     [:td
+      (for [j (:jobs c)] [job-badge (:id c) j])
+      [:a.ms-1 {:href  (path :project-jobs {:project-id project-id
+                                             :commit-id  (:id c)})
+                :title "View / trigger jobs for this commit"}
+       [icons/create]]]]))
 
 
 (defn- commits-table [commits]
@@ -80,7 +85,7 @@
      [:thead
       [:tr
        [:th "Commit"] [:th "Subject"] [:th "Author"]
-       [:th "Date"] [:th "Branches"] [:th "Jobs"]]]
+       [:th "Date"] [:th "Branches"] [:th "CI"]]]
      [:tbody
       (for [c commits] [commit-row c])]]))
 

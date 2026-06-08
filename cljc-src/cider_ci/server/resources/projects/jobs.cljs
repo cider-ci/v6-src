@@ -15,7 +15,7 @@
 
 
 (defn- fetch-data [& _]
-  (http-client/route-cached-fetch _data*))
+  (http-client/route-cached-fetch _data* :reload true :reload-delay 10000))
 
 
 (defn- project-id []

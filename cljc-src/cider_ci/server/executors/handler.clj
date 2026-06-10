@@ -65,6 +65,15 @@
           trials)))
 
 
+(def ^:private terminal-states #{"passed" "failed" "defective" "aborted"})
+
+(defn- terminal-new-state [states]
+  (cond
+    (not-every? terminal-states states) nil
+    (every? #(= "passed" %) states)     "passed"
+    :else                               "failed"))
+
+
 (defn- propagate-from-task [tx task-id]
   (let [task      (first (jdbc-sql/query tx
                            (-> (sql/select :job_id)
@@ -78,10 +87,7 @@
                         (sql/where [:= :job_id job-id])
                         sql-format))
         states    (map :state all-tasks)
-        new-state (cond
-                    (every? #(= "passed" %) states) "passed"
-                    (some   #(= "failed" %) states) "failed"
-                    :else nil)]
+        new-state (terminal-new-state states)]
     (when new-state
       (jdbc/execute-one! tx
         ["UPDATE jobs SET state = ?, updated_at = now() WHERE id = ?"
@@ -101,10 +107,7 @@
                          (sql/where [:= :task_id task-id])
                          sql-format))
         states     (map :state all-trials)
-        new-state  (cond
-                     (every? #(= "passed" %) states) "passed"
-                     (some   #(= "failed" %) states) "failed"
-                     :else nil)]
+        new-state  (terminal-new-state states)]
     (when new-state
       (jdbc/execute-one! tx
         ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"

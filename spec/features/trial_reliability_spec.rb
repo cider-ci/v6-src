@@ -46,8 +46,6 @@ feature 'Trial reliability' do
     database[:tasks].where(id: @task_id).update(state: 'pending')
     database[:jobs].where(id: @job_id).update(state: 'pending')
 
-    # Hit the stale-trial reset endpoint directly via DB check
-    # (The daemon runs every 60s; we trigger it by calling the reset SQL directly)
     database.run(<<~SQL)
       UPDATE trials
       SET state = 'pending', executor_id = NULL, dispatched_at = NULL, updated_at = now()
@@ -57,5 +55,51 @@ feature 'Trial reliability' do
 
     expect(database[:trials][id: @trial_id][:state]).to eq 'pending'
   end
+
+  scenario 'Executing trials time out and propagate defective state up to task and job' do
+    stale_time = Time.now.utc - 3700  # 61 minutes ago
+    database[:trials].where(id: @trial_id).update(state: 'executing', started_at: stale_time)
+    database[:tasks].where(id: @task_id).update(state: 'executing')
+    database[:jobs].where(id: @job_id).update(state: 'executing')
+
+    # Simulate the daemon's reset-stale-executing! logic
+    database.transaction do
+      database.run(<<~SQL)
+        UPDATE trials
+        SET state = 'defective',
+            error = 'Execution timed out after 60 minutes',
+            finished_at = now(), updated_at = now()
+        WHERE state = 'executing'
+          AND started_at < now() - interval '60 minutes'
+      SQL
+      database.run(<<~SQL)
+        UPDATE tasks t
+        SET state = CASE
+          WHEN (SELECT bool_and(state IN ('passed','failed','defective','aborted'))
+                FROM trials tr WHERE tr.task_id = t.id)
+          THEN CASE WHEN (SELECT bool_and(state = 'passed') FROM trials tr WHERE tr.task_id = t.id)
+                    THEN 'passed' ELSE 'failed' END
+          ELSE t.state END,
+        updated_at = now()
+        WHERE t.id = '#{@task_id}'
+      SQL
+      database.run(<<~SQL)
+        UPDATE jobs j
+        SET state = CASE
+          WHEN (SELECT bool_and(state IN ('passed','failed','defective','aborted'))
+                FROM tasks t WHERE t.job_id = j.id)
+          THEN CASE WHEN (SELECT bool_and(state = 'passed') FROM tasks t WHERE t.job_id = j.id)
+                    THEN 'passed' ELSE 'failed' END
+          ELSE j.state END,
+        updated_at = now()
+        WHERE j.id = '#{@job_id}'
+      SQL
+    end
+
+    expect(database[:trials][id: @trial_id][:state]).to eq 'defective'
+    expect(database[:tasks][id: @task_id][:state]).to eq 'failed'
+    expect(database[:jobs][id: @job_id][:state]).to eq 'failed'
+  end
+
 
 end

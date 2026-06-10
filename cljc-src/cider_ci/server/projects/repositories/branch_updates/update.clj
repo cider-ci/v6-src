@@ -9,6 +9,7 @@
    [cider-ci.server.projects.repositories.branch-updates.shared :refer :all]
    [cider-ci.server.projects.repositories.branches :as branches]
    [cider-ci.server.projects.repositories.git.repositories :as git.repositories]
+   [cider-ci.server.jobs.auto-trigger :as auto-trigger]
    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
    [cider-ci.utils.core :refer [deep-merge keyword str]]
    [cider-ci.utils.system :as system]
@@ -91,17 +92,25 @@
 
 (defn update [repository]
   (debug 'update repository)
-  (let [repo-id (:id repository)
-        path (repository-fs-path repository)
-        update_info (update-branches repository path)
-        params (-> repo-id repo-branches-query sql-format
-                   (->> (jdbc/execute-one! (get-ds))))]
+  (let [repo-id     (:id repository)
+        path        (repository-fs-path repository)
+        update-info (update-branches repository path)
+        params      (-> repo-id repo-branches-query sql-format
+                        (->> (jdbc/execute-one! (get-ds))))]
     (when params
       (db-update-branch-updates
        repo-id #(deep-merge % params
-                            {:update_info update_info
+                            {:update_info update-info
                              :branches_updated_at (now)
-                             :state "ok"})))))
+                             :state "ok"})))
+    ;; Fire-and-forget: trigger jobs for every branch whose HEAD changed
+    (let [changed (concat (:created update-info) (:updated update-info))]
+      (when (seq changed)
+        (future
+          (doseq [branch changed]
+            (when-let [commit-id (:current_commit_id branch)]
+              (auto-trigger/trigger-for-commit! (get-ds) repo-id commit-id))))))))
+
 
 ;### Debug ####################################################################
 ;(logging-config/set-logger! :level :debug)

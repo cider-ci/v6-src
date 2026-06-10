@@ -107,6 +107,35 @@
                             sql-format)))]
       (assoc job :tasks tasks))))
 
+(defn- retry-job! [project-id job-id]
+  (let [job-uuid (java.util.UUID/fromString job-id)]
+    (when-not (first (jdbc-sql/query (get-ds)
+                       (-> (sql/select :id)
+                           (sql/from :jobs)
+                           (sql/where [:= :id job-uuid])
+                           (sql/where [:= :project_id project-id])
+                           sql-format)))
+      (throw (ex-info "Job not found" {:status 404})))
+    (jdbc/with-transaction [tx (get-ds)]
+      (jdbc/execute! tx
+        ["UPDATE trials t
+          SET state = 'pending', executor_id = NULL, dispatched_at = NULL,
+              started_at = NULL, finished_at = NULL, error = NULL, updated_at = now()
+          FROM tasks tsk
+          WHERE t.task_id = tsk.id AND tsk.job_id = ?
+            AND t.state NOT IN ('pending', 'passed')"
+         job-uuid])
+      (jdbc/execute! tx
+        ["UPDATE tasks SET state = 'pending', updated_at = now()
+          WHERE job_id = ? AND state NOT IN ('pending', 'passed')"
+         job-uuid])
+      (jdbc/execute! tx
+        ["UPDATE jobs SET state = 'pending', updated_at = now()
+          WHERE id = ? AND state NOT IN ('pending', 'passed')"
+         job-uuid]))
+    {:status 200 :body {:status "retrying"}}))
+
+
 (defn handler [{{{:keys [project-id commit-id job-id]} :path-params} :route
                 route-name    :route-name
                 request-method :request-method
@@ -118,6 +147,11 @@
       :get (if-let [result (get-job-with-tasks project-id job-id)]
              {:status 200 :body result}
              {:status 404 :body "Job not found"})
+      {:status 405 :body "Method not allowed"})
+
+    :project-job-retry
+    (case request-method
+      :post (retry-job! project-id job-id)
       {:status 405 :body "Method not allowed"})
 
     :project-jobs

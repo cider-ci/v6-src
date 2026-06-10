@@ -146,12 +146,25 @@
      [:p.text-muted "No tasks for this job."])])
 
 
+(defn- retry-job! []
+  (-> (js/fetch (path :project-job-retry {:project-id (project-id)
+                                          :commit-id  (commit-id)
+                                          :job-id     (job-id)})
+                (clj->js {:method      "POST"
+                           :credentials "same-origin"
+                           :headers     {"content-type" "application/json"
+                                         "accept"       "application/json"
+                                         "x-csrf-token" (anti-csrf/token)}}))
+      (.then (fn [_] (fetch-data)))))
+
+
 (defn- job-detail-page []
   [:div.page.job
    [state/hidden-routing-state-component :did-change #(fetch-data)]
    (if-not (seq @data*)
      [:div "Loading..."]
-     (let [job @data*]
+     (let [job   @data*
+           retry? (#{"failed" "defective" "aborted"} (:state job))]
        [:<>
         [:nav.mb-3
          [:a {:href (path :project {:project-id (project-id)})}
@@ -164,7 +177,11 @@
           "Jobs"]
          " / "
          [:code (:key job)]]
-        [:h3 (:name job) " " [state-badge (:state job)]]
+        [:h3 (:name job) " " [state-badge (:state job)]
+         (when retry?
+           [:button.btn.btn-sm.btn-outline-secondary.ms-2
+            {:on-click retry-job!}
+            [:i.fas.fa-rotate-right] " Retry"])]
         [tasks-panel (:tasks job)]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])

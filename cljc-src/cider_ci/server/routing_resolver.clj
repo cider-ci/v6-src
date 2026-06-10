@@ -37,8 +37,9 @@
    :project-branch #'project-branch/handler
    :project-commit #'project-commit/handler
    :project-fetch #'project-fetch/handler
-   :project-jobs #'project-jobs/handler
-   :project-job #'project-jobs/handler
+   :project-jobs       #'project-jobs/handler
+   :project-job        #'project-jobs/handler
+   :project-job-retry  #'project-jobs/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler

@@ -27,8 +27,11 @@
       ["" {:name :project-jobs
            :auth-http-safe #{:user}
            :auth-http-unsafe #{:user}}]
-      ["/:job-id" {:name :project-job
-                   :auth-http-safe #{:user}}]]]
+      ["/:job-id"
+       ["" {:name :project-job
+            :auth-http-safe #{:user}}]
+       ["/retry" {:name             :project-job-retry
+                  :auth-http-unsafe #{:user}}]]]]
     ["/branches/*branch-name" {:name :project-branch
                                :auth-http-safe #{:user}}]]])
 

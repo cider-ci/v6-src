@@ -110,7 +110,9 @@
           (doseq [branch changed]
             (when-let [commit-id (:current_commit_id branch)]
               (auto-trigger/trigger-for-commit!
-                (get-ds) repo-id commit-id (:name branch)))))))))
+                (get-ds) repo-id commit-id (:name branch)
+                :repo-include (:branch_trigger_include_match repository)
+                :repo-exclude (:branch_trigger_exclude_match repository)))))))))
 
 
 ;### Debug ####################################################################

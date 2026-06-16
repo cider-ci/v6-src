@@ -12,13 +12,11 @@
   (when-not (str/blank? pattern)
     (some? (re-find (re-pattern pattern) branch-name))))
 
-(defn- should-trigger? [{:keys [spec]} branch-name]
-  (let [trigger (get spec :trigger)]
-    (or (nil? trigger)
-        (let [include (get-in trigger [:branch :include_match])]
-          (if (str/blank? include)
-            true
-            (matches-pattern? include branch-name))))))
+(defn- repo-allows-branch? [repo-include repo-exclude branch-name]
+  (and (or (str/blank? repo-include)
+           (matches-pattern? repo-include branch-name))
+       (or (str/blank? repo-exclude)
+           (not (matches-pattern? repo-exclude branch-name)))))
 
 
 (defn- read-job-configs [repo commit-id]
@@ -51,17 +49,29 @@
              new-task-id]))))))
 
 
-(defn trigger-for-commit! [ds project-id commit-id branch-name]
-  (try
-    (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
-      (let [job-configs (read-job-configs repo commit-id)]
-        (doseq [job-config job-configs]
-          (when (should-trigger? job-config branch-name)
-            (try
-              (jdbc/with-transaction [tx ds]
-                (create-job-with-tasks! tx project-id commit-id job-config))
-              (catch Exception e
-                (warn "Failed to auto-trigger job" (:key job-config)
-                      "for" project-id commit-id "on" branch-name ":" (.getMessage e))))))))
-    (catch Exception e
-      (warn "Auto-trigger failed for" project-id commit-id "on" branch-name ":" (.getMessage e)))))
+(defn- job-should-trigger? [{:keys [spec]} branch-name]
+  (let [trigger (get spec :trigger)]
+    (or (nil? trigger)
+        (let [include (get-in trigger [:branch :include_match])]
+          (if (str/blank? include)
+            true
+            (matches-pattern? include branch-name))))))
+
+
+(defn trigger-for-commit! [ds project-id commit-id branch-name
+                            & {:keys [repo-include repo-exclude]
+                               :or   {repo-include "^.*$" repo-exclude ""}}]
+  (when (repo-allows-branch? repo-include repo-exclude branch-name)
+    (try
+      (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
+        (let [job-configs (read-job-configs repo commit-id)]
+          (doseq [job-config job-configs]
+            (when (job-should-trigger? job-config branch-name)
+              (try
+                (jdbc/with-transaction [tx ds]
+                  (create-job-with-tasks! tx project-id commit-id job-config))
+                (catch Exception e
+                  (warn "Failed to auto-trigger job" (:key job-config)
+                        "for" project-id commit-id "on" branch-name ":" (.getMessage e))))))))
+      (catch Exception e
+        (warn "Auto-trigger failed for" project-id commit-id "on" branch-name ":" (.getMessage e))))))

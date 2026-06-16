@@ -23,21 +23,32 @@ feature 'Trigger filtering' do
     sleep 1
   end
 
-  scenario 'trigger.branch.include filters which branches fire a job' do
+  scenario 'trigger.branch.include_match filters which branches fire a job' do
     visit "/projects/#{project_id}"
     find('button', text: /Fetch/).click
 
-    # Wait for branches (master + feature)
-    Timeout.timeout(30) do
-      sleep 1 until database[:branches].where(repository_id: project_id).count >= 2
-    end
-
-    # Wait for jobs: all-branches on both commits (2) + master-only on master only (1) = 3
-    Timeout.timeout(30) do
-      sleep 1 until database[:jobs].where(project_id: project_id).count >= 3
-    end
+    Timeout.timeout(30) { sleep 1 until database[:branches].where(repository_id: project_id).count >= 2 }
+    Timeout.timeout(30) { sleep 1 until database[:jobs].where(project_id: project_id).count >= 3 }
 
     expect(database[:jobs].where(project_id: project_id, key: 'all-branches').count).to eq 2
+    expect(database[:jobs].where(project_id: project_id, key: 'master-only').count).to eq 1
+  end
+
+  scenario 'repo branch_trigger_include_match suppresses jobs on non-matching branches' do
+    database[:repositories].where(id: project_id)
+      .update(branch_trigger_include_match: '^master$')
+    reload_server_repository_state
+
+    visit "/projects/#{project_id}"
+    find('button', text: /Fetch/).click
+
+    Timeout.timeout(30) { sleep 1 until database[:branches].where(repository_id: project_id).count >= 2 }
+    Timeout.timeout(30) { sleep 1 until database[:jobs].where(project_id: project_id).count >= 2 }
+    sleep 2  # give feature-branch a chance to (wrongly) fire
+
+    # master gets all-branches + master-only (2); feature gets nothing
+    expect(database[:jobs].where(project_id: project_id).count).to eq 2
+    expect(database[:jobs].where(project_id: project_id, key: 'all-branches').count).to eq 1
     expect(database[:jobs].where(project_id: project_id, key: 'master-only').count).to eq 1
   end
 

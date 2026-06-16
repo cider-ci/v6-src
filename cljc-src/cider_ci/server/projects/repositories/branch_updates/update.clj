@@ -109,7 +109,8 @@
         (future
           (doseq [branch changed]
             (when-let [commit-id (:current_commit_id branch)]
-              (auto-trigger/trigger-for-commit! (get-ds) repo-id commit-id))))))))
+              (auto-trigger/trigger-for-commit!
+                (get-ds) repo-id commit-id (:name branch)))))))))
 
 
 ;### Debug ####################################################################

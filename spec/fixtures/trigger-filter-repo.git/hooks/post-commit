@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+#
+# Edit this file in ~/.git-templates/hooks/post-commit and
+# then run `git init`.
+
+require 'open3'
+require 'pathname'
+require 'shellwords'
+#require 'pry'
+
+def exec! cmd
+  Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
+    stdin.close()
+    out = stdout.read
+    err = stderr.read
+    exit_status = wait_thr.value
+    unless exit_status.success?
+      abort out + err
+    else
+      out
+    end
+  end
+end
+
+@message_body = exec! 'git log -n1 --format=%B'
+@wd = Pathname.new(Dir.pwd)
+@dir_name = @wd.split.last.to_s
+
+def escalade_commit
+  super_dir = @wd.split.first
+  Dir.chdir(super_dir.to_s) do
+    exec! "git add #{@dir_name}"
+    exec! "git commit -m " + Shellwords.escape(@message_body)
+  end
+end
+
+def push_commit
+  cmd = "git push" \
+    + (@message_body =~ /\W+#force\W+/ ? " --force" : "" ) \
+    + " --recurse-submodules=on-demand"
+  exec! cmd
+end
+
+def push_force_commit
+  cmd = "git push" \
+    + " --force"
+    + " --recurse-submodules=on-demand"
+  exec! cmd
+end
+
+
+
+push_commit if @message_body =~ /\W+#psh\W+/
+push_force_commit if @message_body =~ /\W+#pshf\W+/
+escalade_commit if @message_body =~ /\W+#ec\W+/
+
+

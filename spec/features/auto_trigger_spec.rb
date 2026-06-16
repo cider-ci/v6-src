@@ -17,8 +17,9 @@ feature 'Auto-trigger' do
       git_url: git_url
     )
 
-    # Give the repository-state daemon time to pick up the new repository
-    sleep 2
+    # Force the server's in-memory repository state to include the new repo
+    reload_server_repository_state
+    sleep 1
   end
 
   scenario 'branch update auto-triggers jobs from cider-ci.yml' do

@@ -1,0 +1,8 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = /var/folders/sf/qbwv9zyn06v85j3jgvhf3ysc0000gn/T/tmp.8kjQPzM7iK/work

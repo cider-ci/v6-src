@@ -3,8 +3,22 @@
     [cider-ci.server.jobs.decompose :as decompose]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as repo-shared]
+    [clojure.string :as str]
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [info warn]]))
+
+
+(defn- matches-pattern? [pattern branch-name]
+  (when-not (str/blank? pattern)
+    (some? (re-find (re-pattern pattern) branch-name))))
+
+(defn- should-trigger? [{:keys [spec]} branch-name]
+  (let [trigger (get spec :trigger)]
+    (or (nil? trigger)
+        (let [include (get-in trigger [:branch :include_match])]
+          (if (str/blank? include)
+            true
+            (matches-pattern? include branch-name))))))
 
 
 (defn- read-job-configs [repo commit-id]
@@ -37,16 +51,17 @@
              new-task-id]))))))
 
 
-(defn trigger-for-commit! [ds project-id commit-id]
+(defn trigger-for-commit! [ds project-id commit-id branch-name]
   (try
     (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
       (let [job-configs (read-job-configs repo commit-id)]
         (doseq [job-config job-configs]
-          (try
-            (jdbc/with-transaction [tx ds]
-              (create-job-with-tasks! tx project-id commit-id job-config))
-            (catch Exception e
-              (warn "Failed to auto-trigger job" (:key job-config)
-                    "for" project-id commit-id ":" (.getMessage e)))))))
+          (when (should-trigger? job-config branch-name)
+            (try
+              (jdbc/with-transaction [tx ds]
+                (create-job-with-tasks! tx project-id commit-id job-config))
+              (catch Exception e
+                (warn "Failed to auto-trigger job" (:key job-config)
+                      "for" project-id commit-id "on" branch-name ":" (.getMessage e))))))))
     (catch Exception e
-      (warn "Auto-trigger failed for" project-id commit-id ":" (.getMessage e)))))
+      (warn "Auto-trigger failed for" project-id commit-id "on" branch-name ":" (.getMessage e)))))

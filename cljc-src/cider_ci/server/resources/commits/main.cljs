@@ -3,9 +3,10 @@
     ["date-fns" :as date-fns]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.http.client.main :as http-client]
-    [cider-ci.server.routes :refer [path]]
+    [cider-ci.server.routes :refer [path navigate!]]
     [cider-ci.server.state :as state]
     [cljs.pprint :refer [pprint]]
+    [clojure.string :as str]
     [reagent.core :as reagent]))
 
 
@@ -16,6 +17,19 @@
 
 (defn- fetch-data []
   (http-client/route-cached-fetch _data* :reload true :reload-delay 15000))
+
+
+(defn- current-filters []
+  (let [qp (-> @state/routing* :query-params)]
+    {:project (or (:project qp) "")
+     :branch  (or (:branch qp) "")}))
+
+
+(defn- apply-filters [project branch]
+  (let [qp (cond-> {}
+              (not (str/blank? project)) (assoc :project project)
+              (not (str/blank? branch))  (assoc :branch branch))]
+    (navigate! (path :commits {} qp))))
 
 
 (defn- state-cls [s]
@@ -78,6 +92,41 @@
        [icons/create]]]]))
 
 
+(defn- filter-bar []
+  (let [filters (current-filters)
+        project* (reagent/atom (:project filters))
+        branch*  (reagent/atom (:branch filters))]
+    (fn []
+      [:form.row.g-2.mb-3.align-items-end
+       {:on-submit (fn [e]
+                     (.preventDefault e)
+                     (apply-filters @project* @branch*))}
+       [:div.col-auto
+        [:label.form-label.small.text-muted "Project"]
+        [:input.form-control.form-control-sm
+         {:type        "text"
+          :placeholder "project-id"
+          :value       @project*
+          :on-change   #(reset! project* (.. % -target -value))}]]
+       [:div.col-auto
+        [:label.form-label.small.text-muted "Branch (regex)"]
+        [:input.form-control.form-control-sm
+         {:type        "text"
+          :placeholder "^master$"
+          :value       @branch*
+          :on-change   #(reset! branch* (.. % -target -value))}]]
+       [:div.col-auto
+        [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
+       (when (or (not (str/blank? (:project filters)))
+                 (not (str/blank? (:branch filters))))
+         [:div.col-auto
+          [:button.btn.btn-sm.btn-outline-secondary
+           {:type     "button"
+            :on-click #(do (reset! project* "") (reset! branch* "")
+                           (apply-filters "" ""))}
+           "Clear"]])])))
+
+
 (defn- commits-table [commits]
   (if (empty? commits)
     [:p.text-muted.mt-3 "No branch-head commits found."]
@@ -94,6 +143,7 @@
   [:div.page.commits
    [state/hidden-routing-state-component :did-change fetch-data]
    [:h2.mb-3 [icons/commits] " Commits"]
+   [filter-bar]
    (if-not (seq @data*)
      [:div "Loading..."]
      [commits-table (:commits @data*)])

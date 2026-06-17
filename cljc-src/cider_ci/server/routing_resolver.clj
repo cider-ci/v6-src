@@ -1,5 +1,6 @@
 (ns cider-ci.server.routing-resolver
   (:require
+    [cider-ci.server.resources.admin.executors :as admin-executors]
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.executors.handler :as executors]
@@ -24,7 +25,9 @@
     ))
 
 (def route-resource-table
-  {:admin-gpg-key             #'admin-gpg-keys/handler
+  {:admin-executor            #'admin-executors/handler
+   :admin-executors           #'admin-executors/handler
+   :admin-gpg-key             #'admin-gpg-keys/handler
    :admin-gpg-keys            #'admin-gpg-keys/handler
    :executor-sync             #'executors/handler
    :executor-trial            #'executors/handler

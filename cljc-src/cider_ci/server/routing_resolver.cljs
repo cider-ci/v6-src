@@ -1,5 +1,6 @@
 (ns cider-ci.server.routing-resolver
   (:require
+    [cider-ci.server.resources.admin.executors :as admin-executors]
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.init.page :as init]
     [cider-ci.server.resources.commits.main :as commits]
@@ -21,7 +22,9 @@
     ))
 
 (def route-page-table
-  {:admin-gpg-key  admin-gpg-keys/components
+  {:admin-executor  admin-executors/components
+   :admin-executors admin-executors/components
+   :admin-gpg-key  admin-gpg-keys/components
    :admin-gpg-keys admin-gpg-keys/components
    :root root/components
    :init init/components

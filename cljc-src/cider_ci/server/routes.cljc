@@ -71,7 +71,14 @@
           :auth-http-unsafe #{:admin}}]
     ["/:gpg-key-id" {:name :admin-gpg-key
                      :auth-http-safe #{:admin}
-                     :auth-http-unsafe #{:admin}}]]])
+                     :auth-http-unsafe #{:admin}}]]
+   ["/executors"
+    ["/" {:name :admin-executors
+          :auth-http-safe #{:admin}
+          :auth-http-unsafe #{:admin}}]
+    ["/:executor-id" {:name :admin-executor
+                      :auth-http-safe #{:admin}
+                      :auth-http-unsafe #{:admin}}]]])
 
 (def executor
   ["/executor"

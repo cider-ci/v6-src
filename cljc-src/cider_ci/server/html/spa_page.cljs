@@ -71,6 +71,11 @@
    [:> bs/NavDropdown.Item
     {:href (path :user {:user-id (-> @state/user* :id)})}
     "My account"]
+   (when (:is_admin user)
+     [:<>
+      [:> bs/NavDropdown.Divider]
+      [:> bs/NavDropdown.Item {:href (path :admin-executors)} "Executors"]
+      [:> bs/NavDropdown.Item {:href (path :admin-gpg-keys)} "GPG Keys"]])
    [:> bs/NavDropdown.Item
     {:class "btn btn-warning"
      :on-click sign-out}

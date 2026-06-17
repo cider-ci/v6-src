@@ -20,4 +20,5 @@
 (defn users [] [FontAwesomeIcon {:icon (.-faUsers solids) :className ""}])
 (defn user-admin [] [FontAwesomeIcon {:icon (.-faUserGear solids) :className ""}])
 (defn create [] [FontAwesomeIcon {:icon (.-faCirclePlus solids) :className ""}])
+(defn server [] [FontAwesomeIcon {:icon (.-faServer solids) :className ""}])
 (defn sign-in [] [FontAwesomeIcon {:icon (.-faRightToBracket solids) :className ""}])

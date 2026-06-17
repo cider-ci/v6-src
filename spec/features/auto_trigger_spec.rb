@@ -12,9 +12,10 @@ feature 'Auto-trigger' do
     set_session_cookie @admin
 
     database[:repositories].insert(
-      id:      project_id,
-      name:    'Demo Project',
-      git_url: git_url
+      id:                            project_id,
+      name:                          'Demo Project',
+      git_url:                       git_url,
+      branch_trigger_max_commit_age: nil
     )
 
     # Force the server's in-memory repository state to include the new repo

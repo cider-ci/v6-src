@@ -49,6 +49,17 @@
              new-task-id]))))))
 
 
+(defn- commit-within-age? [ds commit-id max-age]
+  (if (str/blank? max-age)
+    true
+    (let [result (jdbc/execute-one! ds
+                   ["SELECT committer_date IS NULL
+                       OR committer_date >= NOW() - CAST(? AS INTERVAL) AS within_age
+                     FROM commits WHERE id = ?"
+                    max-age (str commit-id)])]
+      (not (false? (:within_age result))))))
+
+
 (defn- job-should-trigger? [{:keys [spec]} branch-name]
   (let [trigger (get spec :trigger)]
     (or (nil? trigger)
@@ -59,9 +70,10 @@
 
 
 (defn trigger-for-commit! [ds project-id commit-id branch-name
-                            & {:keys [repo-include repo-exclude]
-                               :or   {repo-include "^.*$" repo-exclude ""}}]
-  (when (repo-allows-branch? repo-include repo-exclude branch-name)
+                            & {:keys [repo-include repo-exclude repo-max-age]
+                               :or   {repo-include "^.*$" repo-exclude "" repo-max-age nil}}]
+  (when (and (repo-allows-branch? repo-include repo-exclude branch-name)
+             (commit-within-age? ds commit-id repo-max-age))
     (try
       (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
         (let [job-configs (read-job-configs repo commit-id)]

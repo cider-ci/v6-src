@@ -1,5 +1,5 @@
 CREATE TABLE executors (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id         uuid PRIMARY KEY DEFAULT uuidv7(),
   name       text NOT NULL UNIQUE,
   token_hash text NOT NULL UNIQUE,
   token_part text NOT NULL,

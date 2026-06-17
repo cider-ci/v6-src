@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Session: `claude --resume 505d7acb-9903-4e95-8611-90b4b415ab84`
+
 ## Project Overview
 
 CIDER-CI v6 is a CI/CD server application. The backend is Clojure (JVM/http-kit), the frontend is ClojureScript (React/Reagent), and integration tests use Ruby/RSpec with Capybara and Selenium WebDriver (Firefox).
@@ -172,3 +174,9 @@ PostgreSQL. Migrations are plain SQL files in `resources/migrations/` (numbered 
 mise plugin install geckodriver https://github.com/DrTom/asdf-geckodriver.git
 mise plugin install firefox https://github.com/DrTom/asdf-firefox.git
 ```
+
+# Notes
+
+Claude session
+
+    claude-zhdk --resume 505d7acb-9903-4e95-8611-90b4b415ab84

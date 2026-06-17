@@ -2,7 +2,7 @@
 -- Tree-keyed deduplication is deferred until job execution is implemented.
 
 CREATE TABLE jobs (
-  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          uuid        PRIMARY KEY DEFAULT uuidv7(),
   project_id  text        NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
   commit_id   text        NOT NULL,
   key         text        NOT NULL,

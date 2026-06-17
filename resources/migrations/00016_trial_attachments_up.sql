@@ -1,5 +1,5 @@
 CREATE TABLE trial_attachments (
-  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  id           UUID        PRIMARY KEY DEFAULT uuidv7(),
   trial_id     UUID        NOT NULL REFERENCES trials(id),
   path         TEXT        NOT NULL,
   content_type TEXT        NOT NULL DEFAULT 'application/octet-stream',

@@ -2,7 +2,7 @@
 -- gpg_keys ------------------------------------------------------------------
 
 CREATE TABLE gpg_keys (
-  id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
+  id uuid DEFAULT uuidv7() NOT NULL PRIMARY KEY,
   fingerprint text NOT NULL,
   name text NOT NULL,
   ascii_key text NOT NULL,

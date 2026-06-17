@@ -1,5 +1,5 @@
 CREATE TABLE users (
-  id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
+  id uuid DEFAULT uuidv7() NOT NULL PRIMARY KEY,
   login text CHECK (login ~ '^[A-Za-z]+[A-Za-z0-9]+$'::text),
   name text,
   is_admin boolean DEFAULT false NOT NULL,
@@ -15,7 +15,7 @@ CREATE UNIQUE INDEX login_users ON users USING btree (lower(login::text));
 -- email_addresses ---------------------------------------------------------------------
 
 CREATE TABLE email_addresses (
-  id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
+  id uuid DEFAULT uuidv7() NOT NULL PRIMARY KEY,
   email_address text NOT NULL CHECK (email_address::text ~* '\S+.*@.*\S+'::text),
   user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
   is_primary boolean DEFAULT false NOT NULL ,
@@ -40,7 +40,7 @@ CREATE TABLE passwords (
 -- sessions -------------------------------------------------------------------
 
 CREATE TABLE sessions (
-  id uuid DEFAULT public.uuid_generate_v4() NOT NULL PRIMARY KEY,
+  id uuid DEFAULT uuidv7() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE,
   token_digest text NOT NULL,
   data jsonb,

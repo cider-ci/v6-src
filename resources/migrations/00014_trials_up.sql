@@ -1,9 +1,9 @@
 CREATE TABLE trials (
-  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  id            uuid        PRIMARY KEY DEFAULT uuidv7(),
   task_id       uuid        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   executor_id   uuid,
   state         text        NOT NULL DEFAULT 'pending',
-  token         uuid        NOT NULL DEFAULT gen_random_uuid(),
+  token         uuid        NOT NULL DEFAULT uuidv7(),
   error         text,
   result        jsonb,
   started_at    timestamptz,

@@ -7,8 +7,8 @@ CREATE TABLE repositories (
     public_view_permission boolean DEFAULT false,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    update_notification_token uuid DEFAULT uuid_generate_v4(),
-    proxy_id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    update_notification_token uuid DEFAULT uuidv7(),
+    proxy_id uuid DEFAULT uuidv7() NOT NULL,
     branch_trigger_include_match text DEFAULT '^.*$'::text NOT NULL,
     branch_trigger_exclude_match text DEFAULT ''::text NOT NULL,
     remote_api_endpoint character varying,
@@ -48,7 +48,7 @@ CREATE TRIGGER update_updated_at_column_of_repositories BEFORE UPDATE ON reposit
 -------------------------------------------------------------------------------
 
 CREATE TABLE repository_events (
-    id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     repository_id text,
     event text,
     created_at timestamp with time zone DEFAULT now() NOT NULL
@@ -153,7 +153,7 @@ CREATE TRIGGER update_updated_at_column_of_commits BEFORE UPDATE ON commits FOR 
 -------------------------------------------------------------------------------
 
 CREATE TABLE branches (
-    id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     repository_id text NOT NULL,
     name character varying NOT NULL,
     current_commit_id character varying(40) NOT NULL,
@@ -193,7 +193,7 @@ CREATE TRIGGER update_updated_at_column_of_branches BEFORE UPDATE ON branches FO
 --- branch_update_events ------------------------------------------------------
 
 CREATE TABLE branch_update_events (
-    id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     branch_id uuid NOT NULL,
     tree_id character varying(40) NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
@@ -244,7 +244,7 @@ CREATE TRIGGER create_branch_update_event AFTER INSERT OR UPDATE ON branches FOR
 --- tree_id things ------------------------------------------------------------
 
 CREATE TABLE tree_id_notifications (
-    id uuid DEFAULT uuid_generate_v4() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     tree_id character varying(40) NOT NULL,
     branch_id uuid,
     job_id uuid,

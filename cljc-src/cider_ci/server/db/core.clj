@@ -47,10 +47,10 @@
     :default (or (some-> db-name-key env)
                  (some-> :pgdatabase env)
                  "cider_ci_v6")]
-   [nil (long-opt-for-key db-port-key) "Database port, falls back to PGPORT or 5432"
+   [nil (long-opt-for-key db-port-key) "Database port, falls back to PGPORT or 5418"
     :default (or (some-> db-port-key env Integer/parseInt)
                  (some-> :pgport env Integer/parseInt)
-                 5432)
+                 5418)
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be an integer between 0 and 65536"]]
    [nil (long-opt-for-key db-host-key) "Database host, falls back to PGHOST | localhost"

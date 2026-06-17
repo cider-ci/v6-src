@@ -6,7 +6,7 @@ def db_name
 end
 
 def db_port
-  Integer(ENV['DB_PORT'].presence || ENV['PGPORT'].presence || 5432)
+  Integer(ENV['DB_PORT'].presence || ENV['PGPORT'].presence || 5418)
 end
 
 def db_con_str

@@ -39,12 +39,15 @@
                           j.commit_id,
                           j.project_id
                    FROM trials t
-                   JOIN tasks tsk ON tsk.id = t.task_id
-                   JOIN jobs j    ON j.id   = tsk.job_id
+                   JOIN tasks    tsk ON tsk.id = t.task_id
+                   JOIN jobs     j   ON j.id   = tsk.job_id
+                   JOIN executors e  ON e.id   = ?::uuid
                    WHERE t.state = 'pending'
+                     AND tsk.traits <@ e.traits
+                     AND tsk.load <= ?
                    LIMIT ?
                    FOR UPDATE OF t SKIP LOCKED"
-                  limit])]
+                  (:id executor) available-load limit])]
     (doseq [trial trials]
       (jdbc/execute-one! tx
         ["UPDATE trials
@@ -134,6 +137,9 @@
 
 
 (defn- handle-sync [tx executor body]
+  (jdbc/execute-one! tx
+    ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
+     (:id executor)])
   (let [available-load (or (:available_load body) 1.0)
         to-execute     (dispatch-trials tx executor available-load)]
     {:status 200

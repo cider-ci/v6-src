@@ -30,6 +30,18 @@
         (throw e)))))
 
 
+(defn- task-traits-literal [task-spec]
+  (let [traits (:traits task-spec)]
+    (if (map? traits)
+      (str "{"
+           (->> traits
+                (filter (comp true? val))
+                (map (comp name key))
+                (str/join ","))
+           "}")
+      "{}")))
+
+
 (defn- create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
   (let [new-job-id (java.util.UUID/randomUUID)
         result     (jdbc/execute-one! tx
@@ -42,8 +54,11 @@
       (doseq [task-spec (decompose/decompose spec)]
         (let [new-task-id (java.util.UUID/randomUUID)]
           (jdbc/execute-one! tx
-            ["INSERT INTO tasks (id, job_id, name, state, spec) VALUES (?, ?, ?, 'pending', ?)"
-             new-task-id new-job-id (:name task-spec) task-spec])
+            ["INSERT INTO tasks (id, job_id, name, state, spec, traits, load)
+              VALUES (?, ?, ?, 'pending', ?, CAST(? AS text[]), ?)"
+             new-task-id new-job-id (:name task-spec) task-spec
+             (task-traits-literal task-spec)
+             (double (or (:load task-spec) 1.0))])
           (jdbc/execute-one! tx
             ["INSERT INTO trials (task_id, state) VALUES (?, 'pending')"
              new-task-id]))))))

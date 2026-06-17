@@ -8,6 +8,10 @@
   (:require
     [cider-ci.server.projects.repositories.git.commits :as git-commits]
     [cider-ci.server.projects.repositories.sql.commits :as sql.commits]
+    [cider-ci.utils.git-gpg :as git-gpg]
+    [cider-ci.utils.system :as system]
+    [next.jdbc :as jdbc]
+    [next.jdbc.result-set :as jdbc-rs]
     [next.jdbc.sql :refer [insert! query]]
     ))
 
@@ -18,12 +22,30 @@
     (insert! tx :submodules
              (assoc submodule :commit_id id))))
 
+(defn- verify-and-store-gpg-fingerprint! [tx params repository-path]
+  (when (:signature params)
+    (let [id (:id params)
+          trusted-keys (jdbc/execute! tx
+                         [(str "SELECT ascii_key FROM gpg_keys "
+                               "WHERE user_id IS NULL "
+                               "OR user_id IN ("
+                               "  SELECT user_id FROM email_addresses "
+                               "  WHERE lower(email_address) IN (lower(?), lower(?)))")
+                          (:author_email params) (:committer_email params)]
+                         {:builder-fn jdbc-rs/as-unqualified-lower-maps})
+          cat-file-commit (:out (system/exec! ["git" "cat-file" "-p" id]
+                                              {:dir repository-path}))]
+      (when-let [fp (->> trusted-keys
+                         (map :ascii_key)
+                         (some #(git-gpg/valid-signature-fingerprint cat-file-commit %)))]
+        (sql.commits/update! tx {:signature_fingerprint fp} ["id = ?" id])))))
+
 (defn- create [tx id repository-path]
   (let [params (git-commits/get id repository-path)
         commit (sql.commits/create! tx params)]
     (insert-submodules tx id repository-path)
-    commit
-    ))
+    (verify-and-store-gpg-fingerprint! tx params repository-path)
+    commit))
 
 ;### arcs ######################################################################
 

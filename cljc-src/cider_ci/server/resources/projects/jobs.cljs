@@ -119,6 +119,15 @@
 
 ;;; Job detail page (route :project-job)
 
+(defn- trial-duration [trial]
+  (when (and (:started_at trial) (:finished_at trial))
+    (let [ms (- (js/Date. (:finished_at trial))
+                (js/Date. (:started_at trial)))
+          s  (.round js/Math (/ ms 1000))]
+      (if (>= s 60)
+        (str (.floor js/Math (/ s 60)) "m " (mod s 60) "s")
+        (str s "s")))))
+
 (defn- task-row [t]
   ^{:key (:id t)}
   [:tr
@@ -128,10 +137,16 @@
    [:td
     (for [trial (:trials t)]
       ^{:key (:id trial)}
-      [:a {:href   (str "/trials/" (:id trial) "/attachments/log")
-           :target "_blank"
-           :class  "me-2"}
-       "Log"])]])
+      [:div.mb-1
+       [state-badge (:state trial)]
+       [:a {:href   (str "/trials/" (:id trial) "/attachments/log")
+            :target "_blank"
+            :class  "ms-2"}
+        "Log"]
+       (when-let [dur (trial-duration trial)]
+         [:span.text-muted.small.ms-2 dur])
+       (when-let [err (:error trial)]
+         [:div.text-danger.small.mt-1 err])])]])
 
 
 (defn- tasks-panel [tasks]
@@ -140,7 +155,7 @@
    (if (seq tasks)
      [:table.table.table-sm
       [:thead
-       [:tr [:th "Name"] [:th "State"] [:th "Created"] [:th "Log"]]]
+       [:tr [:th "Name"] [:th "State"] [:th "Created"] [:th "Trials"]]]
       [:tbody
        (for [t tasks] [task-row t])]]
      [:p.text-muted "No tasks for this job."])])

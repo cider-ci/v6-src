@@ -84,7 +84,7 @@
 
 (defn- get-trials-for-task [task-id]
   (jdbc-sql/query (get-ds)
-    (-> (sql/select :id :state :started_at :finished_at)
+    (-> (sql/select :id :state :started_at :finished_at :error)
         (sql/from :trials)
         (sql/where [:= :task_id task-id])
         (sql/order-by [:created_at :asc])

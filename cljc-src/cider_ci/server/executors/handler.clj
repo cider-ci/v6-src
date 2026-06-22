@@ -97,6 +97,23 @@
          new-state job-id]))))
 
 
+(defn- advance-to-executing [tx task-id]
+  (let [updated (jdbc/execute-one! tx
+                  ["UPDATE tasks SET state = 'executing', updated_at = now()
+                    WHERE id = ? AND state = 'pending'"
+                   task-id])]
+    (when (pos? (:next.jdbc/update-count updated))
+      (let [task (first (jdbc-sql/query tx
+                          (-> (sql/select :job_id)
+                              (sql/from :tasks)
+                              (sql/where [:= :id task-id])
+                              sql-format)))]
+        (jdbc/execute-one! tx
+          ["UPDATE jobs SET state = 'executing', updated_at = now()
+            WHERE id = ? AND state = 'pending'"
+           (:job_id task)])))))
+
+
 (defn- propagate-from-trial [tx trial-id]
   (let [trial      (first (jdbc-sql/query tx
                             (-> (sql/select :task_id)
@@ -111,11 +128,14 @@
                          sql-format))
         states     (map :state all-trials)
         new-state  (terminal-new-state states)]
-    (when new-state
-      (jdbc/execute-one! tx
-        ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"
-         new-state task-id])
-      (propagate-from-task tx task-id))))
+    (if new-state
+      (do
+        (jdbc/execute-one! tx
+          ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"
+           new-state task-id])
+        (propagate-from-task tx task-id))
+      (when (some #(= "executing" %) states)
+        (advance-to-executing tx task-id)))))
 
 
 (defn- handle-trial-attachment-put [tx trial-id attachment-path request]

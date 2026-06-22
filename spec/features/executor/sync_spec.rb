@@ -47,6 +47,21 @@ feature 'Executor Sync' do
     @token = create_executor!
   end
 
+  scenario 'PATCH trial to executing propagates state up to task and job' do
+    visit "/projects/#{EXECUTOR_PROJECT_ID}/commits/#{EXECUTOR_HEAD_COMMIT}/jobs"
+    find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+
+    resp = api_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
+    sync_data = JSON.parse(resp.body)
+    trial = sync_data['trials_to_execute'].first
+
+    resp = api_call(:patch, "/executor/trials/#{trial['id']}", { state: 'executing' }, @token)
+    expect(resp.code.to_i).to eq(200)
+
+    expect(database[:tasks].where(id: trial['task_id']).first[:state]).to eq 'executing'
+    expect(database[:jobs].where(id: trial['job_id']).first[:state]).to eq 'executing'
+  end
+
   scenario 'executor syncs a trial and reports it passed' do
     # Trigger a job via the browser
     visit "/projects/#{EXECUTOR_PROJECT_ID}/commits/#{EXECUTOR_HEAD_COMMIT}/jobs"

@@ -23,6 +23,17 @@
   (-> @state/routing* :path-params :project-id))
 
 
+(defn- state-badge [s]
+  (let [cls (case s
+              "passed"    "bg-success"
+              "failed"    "bg-danger"
+              "executing" "bg-primary"
+              "pending"   "bg-secondary"
+              "aborted"   "bg-warning"
+              "bg-secondary")]
+    [:span.badge {:class cls} s]))
+
+
 (defn- relative-time [s]
   (when-let [d (presence s)]
     (date-fns/formatDistance (js/Date. d) (js/Date.) (clj->js {:addSuffix true}))))
@@ -42,7 +53,7 @@
       [:<>
        [:table.table.table-sm.table-hover.commits
         [:thead
-         [:tr [:th "Commit"] [:th "Date"] [:th "Author"] [:th "Signed"] [:th "Subject"]]]
+         [:tr [:th "Commit"] [:th "Date"] [:th "Author"] [:th "Signed"] [:th "Jobs"] [:th "Subject"]]]
         [:tbody
          (for [c commits]
            ^{:key (:id c)}
@@ -53,7 +64,16 @@
             [:td [:small (or (relative-time (:committer_date c)) "—")]]
             [:td (:author_name c)]
             [:td [signature-cell (:signature_fingerprint c)]]
-            [:td.text-truncate {:style {:max-width "32em"}} (:subject c)]])]]
+            [:td
+             (if (seq (:jobs c))
+               (for [j (:jobs c)]
+                 ^{:key (:id j)}
+                 [:a.me-1 {:href (path :project-job {:project-id (project-id)
+                                                      :commit-id  (:id c)
+                                                      :job-id     (:id j)})}
+                  [state-badge (:state j)]])
+               [:span.text-muted "—"])]
+            [:td.text-truncate {:style {:max-width "28em"}} (:subject c)]])]]
        (when (>= (count commits) limit)
          [:p.text-muted.small (str "Showing the most recent " limit " commits.")])])))
 

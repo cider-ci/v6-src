@@ -15,20 +15,22 @@
       (sql/where [:= :name branch-name])))
 
 
-(defn- recent-commits-sql [branch-id]
-  (-> (sql/select
-        [:c.id      :id]
-        [:c.subject :subject]
-        [:c.author_name    :author_name]
-        [:c.author_email   :author_email]
-        [:c.committer_date :committer_date]
-        [:c.signature_fingerprint :signature_fingerprint])
-      (sql/from [:branches_commits :bc])
-      (sql/join [:commits :c] [:= :c.id :bc.commit_id])
-      (sql/where [:= :bc.branch_id branch-id])
-      (sql/order-by [:c.committer_date :desc :nulls-last]
-                    [:c.created_at :desc])
-      (sql/limit commits-limit)))
+(defn- recent-commits-sql [branch-id project-id]
+  ["SELECT c.id, c.subject, c.author_name, c.author_email,
+           c.committer_date, c.signature_fingerprint,
+           (SELECT json_agg(json_build_object(
+                              'id',    j.id::text,
+                              'key',   j.key,
+                              'state', j.state)
+                            ORDER BY j.created_at DESC)
+            FROM jobs j
+            WHERE j.commit_id = c.id AND j.project_id = ?) AS jobs
+    FROM branches_commits bc
+    JOIN commits c ON c.id = bc.commit_id
+    WHERE bc.branch_id = ?
+    ORDER BY c.committer_date DESC NULLS LAST, c.created_at DESC
+    LIMIT ?"
+   project-id branch-id commits-limit])
 
 
 (defn handler [{{{project-id  :project-id
@@ -37,7 +39,7 @@
   (if-let [branch (jdbc/execute-one!
                     tx (sql-format (branch-sql project-id branch-name)))]
     (let [commits (jdbc/execute!
-                    tx (sql-format (recent-commits-sql (:id branch))))]
+                    tx (recent-commits-sql (:id branch) project-id))]
       {:body (assoc branch
                     :project_id project-id
                     :commits commits

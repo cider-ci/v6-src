@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'securerandom'
 
 feature 'Branch detail page' do
 
@@ -96,6 +97,28 @@ feature 'Branch detail page' do
   scenario 'unknown branch returns 404' do
     visit "/projects/#{@project_id}/branches/does-not-exist"
     expect(page).to have_content 'Request ERROR 404'
+  end
+
+  scenario 'shows job state badges for commits that have jobs' do
+    cid = 'c' * 40
+    insert_commit(cid, 'Tested commit')
+    branch_id = database[:branches].insert(
+      repository_id: @project_id, name: 'main', current_commit_id: cid
+    )
+    branch_id = database[:branches].where(repository_id: @project_id, name: 'main').first[:id]
+    database[:branches_commits].insert(branch_id: branch_id, commit_id: cid)
+
+    job_id = SecureRandom.uuid
+    database[:jobs].insert(
+      id: job_id, project_id: @project_id, commit_id: cid,
+      key: 'test-job', name: 'Test Job', state: 'passed'
+    )
+
+    visit "/projects/#{@project_id}/branches/main"
+
+    within('table.commits') do
+      expect(page).to have_css '.badge', text: 'passed'
+    end
   end
 
   scenario 'handles branch names with slashes (catch-all wildcard)' do

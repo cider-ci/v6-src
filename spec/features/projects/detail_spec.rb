@@ -61,4 +61,15 @@ feature 'Project detail page' do
     expect(page).to have_content 'No branches yet'
   end
 
+  scenario 'admin can edit project settings' do
+    visit "/projects/#{@project_id}"
+    find('button', text: 'Edit settings').click
+
+    fill_in 'Name', with: 'Renamed Project'
+    click_button 'Save'
+
+    expect(page).to have_content 'Renamed Project'
+    expect(page).not_to have_content 'Demo Repository'
+  end
+
 end

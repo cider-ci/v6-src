@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.project
   (:require
     [cider-ci.server.projects.repositories.state.db :refer [db*] :rename {db* repo-state-db*}]
+    [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]))
@@ -50,9 +51,44 @@
       {:status 200 :body {:id project-id}}
       {:status 404 :body "Project not found"})))
 
+(defn- patch-handler [tx project-id body]
+  (let [name     (some-> body :name str/trim)
+        git-url  (some-> body :git_url str/trim)
+        include  (get body :branch_trigger_include_match)
+        exclude  (get body :branch_trigger_exclude_match)
+        max-age  (some-> body :branch_trigger_max_commit_age str/trim)
+        interval (some-> body :remote_fetch_interval str/trim)]
+    (when (str/blank? name)
+      (throw (ex-info "Name is required" {:status 422})))
+    (when (str/blank? git-url)
+      (throw (ex-info "Git URL is required" {:status 422})))
+    (when (and (some? max-age) (str/blank? max-age))
+      (throw (ex-info "branch_trigger_max_commit_age must not be blank" {:status 422})))
+    (try
+      (let [updates (cond-> {:name name :git_url git-url}
+                      (some? include)  (assoc :branch_trigger_include_match include)
+                      (some? exclude)  (assoc :branch_trigger_exclude_match exclude)
+                      (some? max-age)  (assoc :branch_trigger_max_commit_age max-age)
+                      (some? interval) (assoc :remote_fetch_interval interval))
+            updated (jdbc/execute-one! tx
+                      (sql-format
+                        (-> (sql/update :repositories)
+                            (sql/set updates)
+                            (sql/where [:= :id project-id])
+                            (sql/returning :id))))]
+        (if updated
+          {:status 200 :body {:id project-id}}
+          {:status 404 :body "Project not found"}))
+      (catch java.sql.SQLException e
+        (if (= "23505" (.getSQLState e))
+          (throw (ex-info "Git URL already used by another project" {:status 422}))
+          (throw e))))))
+
 (defn handler [{{{project-id :project-id} :path-params} :route
                 tx :tx
-                request-method :request-method}]
+                request-method :request-method
+                body :body}]
   (case request-method
     :get    (get-handler tx project-id)
+    :patch  (patch-handler tx project-id body)
     :delete (delete-handler tx project-id)))

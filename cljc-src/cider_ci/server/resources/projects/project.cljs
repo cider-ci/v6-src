@@ -15,6 +15,8 @@
 
 (def data* (reagent/reaction (get @_data* (:route @state/routing*))))
 
+(defonce editing?* (reagent/atom false))
+
 
 (defn- fetch-data [& _]
   (http-client/route-cached-fetch _data* :reload true :reload-delay 500))
@@ -38,9 +40,56 @@
                                          "x-csrf-token" (anti-csrf/token)}}))
       (.then on-success)))
 
+(defn- edit-form []
+  (let [form* (reagent/atom {:name                          (:name @data*)
+                              :git_url                       (:git_url @data*)
+                              :branch_trigger_include_match  (:branch_trigger_include_match @data*)
+                              :branch_trigger_exclude_match  (:branch_trigger_exclude_match @data*)
+                              :branch_trigger_max_commit_age (:branch_trigger_max_commit_age @data*)
+                              :remote_fetch_interval         (:remote_fetch_interval @data*)})]
+    (fn []
+      [:form.mt-3.border.rounded.p-3
+       {:on-submit (fn [e]
+                     (.preventDefault e)
+                     (-> (js/fetch (path :project {:project-id (project-id)})
+                                   (clj->js {:method "PATCH"
+                                              :credentials "same-origin"
+                                              :headers {"accept"       "application/json"
+                                                        "content-type" "application/json"
+                                                        "x-csrf-token" (anti-csrf/token)}
+                                              :body (js/JSON.stringify (clj->js @form*))}))
+                         (.then (fn [r]
+                                  (when (.-ok r)
+                                    (reset! editing?* false)
+                                    (fetch-data))))))}
+       [:h5 "Edit Settings"]
+       (for [[field label] [[:name "Name"]
+                             [:git_url "Git URL"]
+                             [:branch_trigger_include_match "Include branches matching"]
+                             [:branch_trigger_exclude_match "Exclude branches matching"]
+                             [:branch_trigger_max_commit_age "Max commit age"]
+                             [:remote_fetch_interval "Fetch interval"]]]
+         ^{:key field}
+         [:div.mb-3
+          [:label.form-label {:for (name field)} label]
+          [:input.form-control
+           {:type      "text"
+            :id        (name field)
+            :value     (get @form* field "")
+            :on-change #(swap! form* assoc field (.. % -target -value))}]])
+       [:div.d-flex.gap-2
+        [:button.btn.btn-primary {:type :submit} "Save"]
+        [:button.btn.btn-secondary
+         {:type     "button"
+          :on-click #(reset! editing?* false)}
+         "Cancel"]]])))
+
 (defn- admin-actions []
   (when (-> @state/user* :is_admin)
     [:div.mt-3.d-flex.gap-2
+     [:button.btn.btn-sm.btn-outline-secondary
+      {:on-click #(swap! editing?* not)}
+      [:i.fas.fa-edit] " Edit settings"]
      [:form {:on-submit (fn [e]
                           (.preventDefault e)
                           (fetch-request "POST"
@@ -123,6 +172,7 @@
       [:h2 [icons/projects] " " (or (:name @data*) (:id @data*))]
       [project-metadata]
       [admin-actions]
+      (when @editing?* [edit-form])
       [:h3.mt-4 "Branches"]
       [branches-table]
       (when @state/debug?*

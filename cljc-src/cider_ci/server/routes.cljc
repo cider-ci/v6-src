@@ -108,6 +108,11 @@
    ["/" {:name :commits
          :auth-http-safe #{:public}}]])
 
+(def jobs-dashboard
+  ["/jobs"
+   ["/" {:name :jobs
+         :auth-http-safe #{:user}}]])
+
 (def routes
   [["/" {:name :root
          :auth-http-unsafe #{}
@@ -127,7 +132,8 @@
                  :auth-http-unsafe #{:public}
                  :auth-http-safe #{:public}}]
    users
-   workspace])
+   workspace
+   jobs-dashboard])
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"}))

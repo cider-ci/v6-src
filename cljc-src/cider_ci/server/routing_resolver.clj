@@ -3,6 +3,7 @@
     [cider-ci.server.resources.admin.executors :as admin-executors]
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.commits.main :as commits]
+    [cider-ci.server.resources.jobs.main :as jobs-dashboard]
     [cider-ci.server.executors.handler :as executors]
     [cider-ci.server.resources.init.http :as init]
     [cider-ci.server.resources.projects.blob :as project-blob]
@@ -35,6 +36,7 @@
    :trial-attachment          #'trials/handler
    :init                      #'init/handler
    :commits                   #'commits/handler
+   :jobs                      #'jobs-dashboard/handler
    :project  #'project/handler
    :project-blob #'project-blob/handler
    :project-branch #'project-branch/handler

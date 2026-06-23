@@ -22,3 +22,4 @@
 (defn create [] [FontAwesomeIcon {:icon (.-faCirclePlus solids) :className ""}])
 (defn server [] [FontAwesomeIcon {:icon (.-faServer solids) :className ""}])
 (defn sign-in [] [FontAwesomeIcon {:icon (.-faRightToBracket solids) :className ""}])
+(defn jobs [] [FontAwesomeIcon {:icon (.-faListCheck solids) :className ""}])

@@ -93,6 +93,8 @@
     [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :commits)} [icons/commits] " Commits"]]
     [:> bs/Nav.Item
+     [:> bs/Nav.Link {:href (path :jobs)} [icons/jobs] " Jobs"]]
+    [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :projects)} [icons/projects] " Projects"]]
     [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :users)} [icons/users] " Users"]]]

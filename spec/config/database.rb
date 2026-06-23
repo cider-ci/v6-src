@@ -23,7 +23,7 @@ def db_con_str
 end
 
 def database
-  @database ||= Sequel.connect(db_con_str)
+  $database ||= Sequel.connect(db_con_str)
 end
 
 def clean_db

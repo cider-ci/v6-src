@@ -5,6 +5,8 @@
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state]
+   [cljs.core.async :refer [go-loop <! chan]]
+   [cljs.core.async :as async]
    [cljs.pprint :refer [pprint]]
    [reagent.core :as reagent]))
 
@@ -13,9 +15,36 @@
 
 (def data* (reagent/reaction (get @_data* (:route @state/routing*))))
 
+(def terminal-states #{"passed" "failed" "aborted" "defective"})
+
+(defonce _job-fetch-id* (atom nil))
+
 
 (defn- fetch-data [& _]
   (http-client/route-cached-fetch _data* :reload true :reload-delay 10000))
+
+
+(defn- start-job-polling! [& _]
+  (let [route (:route @state/routing*)
+        my-id (random-uuid)]
+    (reset! _job-fetch-id* my-id)
+    (go-loop []
+      (let [ch              (chan)
+            already-loaded? (some? (get @_data* route))
+            _               (http-client/request {:url                     route
+                                                  :chan                     ch
+                                                  :modal-on-response-error (not already-loaded?)})
+            resp            (<! ch)]
+          (when (= (:route @state/routing*) route)
+            (when (< (:status resp) 300)
+              (swap! _data* assoc route (:body resp)))
+            (when (= @_job-fetch-id* my-id)
+              (let [s     (-> @data* :state)
+                    delay (if (= "executing" s) 3000 10000)]
+                (when-not (terminal-states s)
+                  (<! (async/timeout delay))
+                  (when (= @_job-fetch-id* my-id)
+                    (recur))))))))))
 
 
 (defn- project-id []
@@ -175,7 +204,7 @@
 
 (defn- job-detail-page []
   [:div.page.job
-   [state/hidden-routing-state-component :did-change #(fetch-data)]
+   [state/hidden-routing-state-component :did-change start-job-polling!]
    (if-not (seq @data*)
      [:div "Loading..."]
      (let [job   @data*

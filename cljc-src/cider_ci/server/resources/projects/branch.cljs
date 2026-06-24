@@ -45,6 +45,55 @@
     [:span.text-muted "—"]))
 
 
+(defn- overall-state [jobs]
+  (let [states (set (map :state jobs))]
+    (cond
+      (some states ["failed" "defective"]) "failed"
+      (some #{"executing"} states)         "executing"
+      (some #{"pending"} states)           "pending"
+      (some #{"aborted"} states)           "aborted"
+      (seq jobs)                           "passed"
+      :else                                nil)))
+
+
+(defn- status-border [s]
+  (case s
+    "passed"    "border-success"
+    "failed"    "border-danger"
+    "executing" "border-primary"
+    "pending"   "border-secondary"
+    "aborted"   "border-warning"
+    "border-secondary"))
+
+
+(defn- tip-commit-panel []
+  (let [b    @data*
+        tc   (:tip_commit b)
+        jobs (or (:jobs tc) [])
+        s    (overall-state jobs)]
+    (when tc
+      [:div.card.mb-4 {:class (str "border-2 " (status-border s))}
+       [:div.card-header.d-flex.align-items-center.gap-2
+        (when s [state-badge s])
+        [:a {:href (path :project-commit {:project-id (project-id) :commit-id (:id tc)})}
+         [:code.small (subs (:id tc) 0 8)]]
+        [:span.text-muted.text-truncate {:style {:max-width "40em"}} (:subject tc)]]
+       [:div.card-body.py-2
+        (if (seq jobs)
+          [:div.d-flex.flex-wrap.gap-2
+           (for [j jobs]
+             ^{:key (:id j)}
+             [:a.text-decoration-none
+              {:href (path :project-job {:project-id (project-id)
+                                         :commit-id  (:id tc)
+                                         :job-id     (:id j)})}
+              [state-badge (:state j)]
+              [:span.ms-1.small.text-body (:name j)]])]
+          [:span.text-muted "No jobs for this commit. "
+           [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (:id tc)})}
+            "Trigger a job →"]])]])))
+
+
 (defn- commits-table []
   (let [commits (:commits @data*)
         limit   (:commits_limit @data*)]
@@ -89,12 +138,7 @@
          [:a {:href (path :project {:project-id (project-id)})}
           [icons/projects] " " (project-id)]]
         [:h2 [:i.fas.fa-code-branch] " " (:name b)]
-        (when-let [cid (:current_commit_id b)]
-          [:p
-           "Current commit: "
-           [:a {:href (path :project-commit
-                            {:project-id (project-id) :commit-id cid})}
-            [:code (subs cid 0 8)]]])
+        [tip-commit-panel]
         [:h3.mt-4 "Recent commits"]
         [commits-table]
         (when @state/debug?*

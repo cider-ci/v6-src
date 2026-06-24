@@ -15,6 +15,22 @@
       (sql/where [:= :name branch-name])))
 
 
+(defn- tip-commit-sql [project-id commit-id]
+  ["SELECT c.id, c.subject, c.author_name, c.committer_date,
+           (SELECT json_agg(json_build_object(
+                              'id',    j.id::text,
+                              'key',   j.key,
+                              'name',  j.name,
+                              'state', j.state)
+                            ORDER BY j.created_at ASC)
+            FROM jobs j
+            WHERE j.commit_id = c.id AND j.project_id = ?)
+            AS jobs
+    FROM commits c
+    WHERE c.id = ?"
+   project-id commit-id])
+
+
 (defn- recent-commits-sql [branch-id project-id]
   ["SELECT c.id, c.subject, c.author_name, c.author_email,
            c.committer_date, c.signature_fingerprint,
@@ -38,10 +54,12 @@
                 tx :tx}]
   (if-let [branch (jdbc/execute-one!
                     tx (sql-format (branch-sql project-id branch-name)))]
-    (let [commits (jdbc/execute!
-                    tx (recent-commits-sql (:id branch) project-id))]
+    (let [commits    (jdbc/execute! tx (recent-commits-sql (:id branch) project-id))
+          tip-commit (when-let [cid (:current_commit_id branch)]
+                       (jdbc/execute-one! tx (tip-commit-sql project-id cid)))]
       {:body (assoc branch
-                    :project_id project-id
-                    :commits commits
+                    :project_id    project-id
+                    :tip_commit    tip-commit
+                    :commits       commits
                     :commits_limit commits-limit)})
     {:status 404 :body "Branch not found"}))

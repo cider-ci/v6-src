@@ -57,8 +57,9 @@ feature 'Branch detail page' do
     visit "/projects/#{@project_id}/branches/main"
 
     expect(page).to have_content 'main'
-    expect(page).to have_content 'Current commit'
-    expect(page).to have_content cid2[0, 8]
+    within('.card') do
+      expect(page).to have_content cid2[0, 8]
+    end
     within('table.commits') do
       expect(page).to have_content 'First commit'
       expect(page).to have_content 'Second commit'
@@ -119,6 +120,66 @@ feature 'Branch detail page' do
     within('table.commits') do
       expect(page).to have_css '.badge', text: 'passed'
     end
+  end
+
+  scenario 'tip-commit panel shows job badges for the current commit' do
+    cid = 'd' * 40
+    insert_commit(cid, 'Add feature')
+    branch_id = database[:branches].insert(
+      repository_id: @project_id, name: 'main', current_commit_id: cid
+    )
+    branch_id = database[:branches].where(repository_id: @project_id, name: 'main').first[:id]
+    database[:branches_commits].insert(branch_id: branch_id, commit_id: cid)
+
+    job_id = SecureRandom.uuid
+    database[:jobs].insert(
+      id: job_id, project_id: @project_id, commit_id: cid,
+      key: 'ci', name: 'CI', state: 'passed'
+    )
+
+    visit "/projects/#{@project_id}/branches/main"
+
+    within('.card') do
+      expect(page).to have_css '.badge', text: 'passed'
+      expect(page).to have_content 'CI'
+      expect(page).to have_link(href: "/projects/#{@project_id}/commits/#{cid}/jobs/#{job_id}")
+    end
+  end
+
+  scenario 'tip-commit panel shows trigger link when no jobs exist' do
+    cid = 'e' * 40
+    insert_commit(cid, 'Initial commit')
+    branch_id = database[:branches].insert(
+      repository_id: @project_id, name: 'main', current_commit_id: cid
+    )
+    branch_id = database[:branches].where(repository_id: @project_id, name: 'main').first[:id]
+    database[:branches_commits].insert(branch_id: branch_id, commit_id: cid)
+
+    visit "/projects/#{@project_id}/branches/main"
+
+    within('.card') do
+      expect(page).to have_link 'Trigger a job →'
+      expect(page).not_to have_css '.badge'
+    end
+  end
+
+  scenario 'tip-commit panel border reflects worst job state' do
+    cid = 'f' * 40
+    insert_commit(cid, 'Failing commit')
+    branch_id = database[:branches].insert(
+      repository_id: @project_id, name: 'main', current_commit_id: cid
+    )
+    branch_id = database[:branches].where(repository_id: @project_id, name: 'main').first[:id]
+    database[:branches_commits].insert(branch_id: branch_id, commit_id: cid)
+
+    database[:jobs].insert(
+      project_id: @project_id, commit_id: cid,
+      key: 'ci', name: 'CI', state: 'failed'
+    )
+
+    visit "/projects/#{@project_id}/branches/main"
+
+    expect(page).to have_css '.card.border-danger', wait: 5
   end
 
   scenario 'handles branch names with slashes (catch-all wildcard)' do

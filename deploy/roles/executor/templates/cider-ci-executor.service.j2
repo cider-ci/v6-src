@@ -1,0 +1,18 @@
+[Unit]
+Description=Cider-CI Executor
+After=network.target
+
+[Service]
+User={{ cider_ci_user }}
+Group={{ cider_ci_group }}
+WorkingDirectory={{ ci_executor_dir }}
+EnvironmentFile=/etc/cider-ci/executor.env
+ExecStart=/usr/bin/java -Xmx{{ ci_executor_java_xmx }} -jar {{ ci_executor_dir }}/cider-ci.jar executor
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cider-ci-executor
+
+[Install]
+WantedBy=multi-user.target

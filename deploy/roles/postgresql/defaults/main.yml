@@ -1,0 +1,7 @@
+---
+pg_version: 18
+pg_port: 5432
+
+ci_db_name: cider_ci_v6
+ci_db_user: cider-ci
+# ci_db_password: set in vault

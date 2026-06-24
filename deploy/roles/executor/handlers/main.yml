@@ -1,0 +1,9 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Restart cider-ci-executor
+  ansible.builtin.service:
+    name: cider-ci-executor
+    state: restarted

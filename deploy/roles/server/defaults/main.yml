@@ -1,0 +1,17 @@
+---
+# Path to the pre-built uberjar on the Ansible control machine.
+# Build with: clj -T:build-leihs uber  (or however the project builds)
+# ci_server_jar_path: /path/to/cider-ci.jar   # required — no default
+
+ci_server_dir: "{{ cider_ci_base_dir }}/server"
+ci_server_http_port: 3838
+ci_server_http_bind: "0.0.0.0"
+ci_server_http_threads: 4
+
+ci_server_db_name: "{{ ci_db_name }}"
+ci_server_db_port: "{{ pg_port }}"
+ci_server_db_host: localhost
+ci_server_db_user: "{{ ci_db_user }}"
+# ci_server_db_password: "{{ ci_db_password }}"  — inherits from postgresql role defaults
+
+ci_server_java_xmx: 512m

@@ -1,0 +1,92 @@
+---
+- name: Create cider-ci group
+  ansible.builtin.group:
+    name: "{{ cider_ci_group }}"
+    system: yes
+
+- name: Create cider-ci user (service user running the executor process)
+  ansible.builtin.user:
+    name: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    system: yes
+    shell: /usr/sbin/nologin
+    home: "{{ cider_ci_base_dir }}"
+    create_home: no
+
+- name: Create exec-user group
+  ansible.builtin.group:
+    name: "{{ ci_executor_exec_user }}"
+
+- name: Create exec-user (runs trial scripts; unprivileged)
+  ansible.builtin.user:
+    name: "{{ ci_executor_exec_user }}"
+    group: "{{ ci_executor_exec_user }}"
+    shell: /bin/bash
+    home: "/home/{{ ci_executor_exec_user }}"
+    generate_ssh_key: yes
+
+- name: Configure git for exec-user
+  ansible.builtin.command: |
+    git config --global user.email "{{ ci_executor_exec_user }}@{{ inventory_hostname }}"
+    git config --global user.name "{{ ci_executor_exec_user }}"
+  become_user: "{{ ci_executor_exec_user }}"
+  changed_when: false
+
+- name: Create executor directory
+  ansible.builtin.file:
+    path: "{{ ci_executor_dir }}"
+    state: directory
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0750'
+
+- name: Create executor working directory
+  ansible.builtin.file:
+    path: "{{ ci_executor_dir }}/tmp"
+    state: directory
+    owner: "{{ ci_executor_exec_user }}"
+    group: "{{ ci_executor_exec_user }}"
+    mode: '0750'
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: /etc/cider-ci
+    state: directory
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0750'
+
+- name: Deploy executor jar
+  ansible.builtin.copy:
+    src: "{{ ci_executor_jar_path }}"
+    dest: "{{ ci_executor_dir }}/cider-ci.jar"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+  notify: Restart cider-ci-executor
+
+- name: Write executor environment file
+  ansible.builtin.template:
+    src: cider-ci-executor.env.j2
+    dest: /etc/cider-ci/executor.env
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+  notify: Restart cider-ci-executor
+
+- name: Install executor systemd unit
+  ansible.builtin.template:
+    src: cider-ci-executor.service.j2
+    dest: /etc/systemd/system/cider-ci-executor.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart cider-ci-executor
+
+- name: Enable and start cider-ci-executor
+  ansible.builtin.service:
+    name: cider-ci-executor
+    state: started
+    enabled: yes

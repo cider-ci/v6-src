@@ -1,0 +1,7 @@
+---
+# Common variables — override in host_vars/ or inventory group_vars/
+# Secrets belong in an Ansible Vault file, not here.
+
+cider_ci_user: cider-ci
+cider_ci_group: cider-ci
+cider_ci_base_dir: /opt/cider-ci

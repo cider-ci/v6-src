@@ -1,0 +1,10 @@
+---
+# Path to the pre-built uberjar on the Ansible control machine (same jar as server).
+# ci_executor_jar_path: /path/to/cider-ci.jar   # required — no default
+
+ci_executor_dir: "{{ cider_ci_base_dir }}/executor"
+ci_executor_server_url: "http://localhost:3838"
+# ci_executor_token: set in vault (the bearer token created via admin UI)
+ci_executor_max_load: 4
+ci_executor_exec_user: ci-exec-user
+ci_executor_java_xmx: 256m

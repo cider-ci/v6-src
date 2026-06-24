@@ -1,0 +1,55 @@
+---
+- name: Install python3-psycopg2 (for Ansible postgresql modules)
+  ansible.builtin.apt:
+    name: python3-psycopg2
+    state: present
+
+- name: Add PGDG apt signing key
+  ansible.builtin.get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /usr/share/keyrings/pgdg.asc
+    mode: '0644'
+    force: false
+
+- name: Add PGDG apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main"
+    state: present
+    update_cache: yes
+
+- name: Install PostgreSQL {{ pg_version }}
+  ansible.builtin.apt:
+    name:
+      - postgresql-{{ pg_version }}
+      - postgresql-client-{{ pg_version }}
+    state: present
+
+- name: Configure PostgreSQL port
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/{{ pg_version }}/main/postgresql.conf
+    regexp: '^#?port\s*='
+    line: "port = {{ pg_port }}"
+  notify: Restart postgresql
+
+- name: Ensure PostgreSQL is started and enabled
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create database role {{ ci_db_user }}
+  community.postgresql.postgresql_user:
+    name: "{{ ci_db_user }}"
+    password: "{{ ci_db_password }}"
+    role_attr_flags: LOGIN
+    login_unix_socket: /var/run/postgresql
+    port: "{{ pg_port }}"
+  become_user: postgres
+
+- name: Create database {{ ci_db_name }}
+  community.postgresql.postgresql_db:
+    name: "{{ ci_db_name }}"
+    owner: "{{ ci_db_user }}"
+    login_unix_socket: /var/run/postgresql
+    port: "{{ pg_port }}"
+  become_user: postgres

@@ -1,0 +1,6 @@
+[cider_ci_server]
+# cider-ci.example.com
+
+[cider_ci_executors]
+# executor-01.example.com
+# executor-02.example.com

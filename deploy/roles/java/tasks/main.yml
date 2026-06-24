@@ -1,0 +1,5 @@
+---
+- name: Install OpenJDK 21 (headless)
+  ansible.builtin.apt:
+    name: openjdk-21-jre-headless
+    state: present

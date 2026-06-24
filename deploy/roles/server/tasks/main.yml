@@ -1,0 +1,96 @@
+---
+- name: Create cider-ci group
+  ansible.builtin.group:
+    name: "{{ cider_ci_group }}"
+    system: yes
+
+- name: Create cider-ci user
+  ansible.builtin.user:
+    name: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    system: yes
+    shell: /usr/sbin/nologin
+    home: "{{ cider_ci_base_dir }}"
+    create_home: no
+
+- name: Create server directory
+  ansible.builtin.file:
+    path: "{{ ci_server_dir }}"
+    state: directory
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0750'
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: /etc/cider-ci
+    state: directory
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0750'
+
+- name: Create git repositories directory
+  ansible.builtin.file:
+    path: "{{ ci_server_dir }}/repositories"
+    state: directory
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0750'
+
+- name: Deploy server jar
+  ansible.builtin.copy:
+    src: "{{ ci_server_jar_path }}"
+    dest: "{{ ci_server_dir }}/cider-ci.jar"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+  notify: Restart cider-ci-server
+
+- name: Write server environment file
+  ansible.builtin.template:
+    src: cider-ci-server.env.j2
+    dest: /etc/cider-ci/server.env
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+  notify: Restart cider-ci-server
+
+- name: Install server systemd unit
+  ansible.builtin.template:
+    src: cider-ci-server.service.j2
+    dest: /etc/systemd/system/cider-ci-server.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart cider-ci-server
+
+- name: Flush handlers to apply service file before migration
+  ansible.builtin.meta: flush_handlers
+
+- name: Run database migrations
+  ansible.builtin.command:
+    cmd: >
+      /usr/bin/java -jar {{ ci_server_dir }}/cider-ci.jar server db migrate
+  environment:
+    PGHOST: "{{ ci_server_db_host }}"
+    PGPORT: "{{ ci_server_db_port }}"
+    PGDATABASE: "{{ ci_server_db_name }}"
+    PGUSER: "{{ ci_server_db_user }}"
+    PGPASSWORD: "{{ ci_server_db_password | default(ci_db_password) }}"
+  become_user: "{{ cider_ci_user }}"
+  register: db_migrate_result
+  changed_when: "'Migrating' in db_migrate_result.stdout"
+
+- name: Enable and start cider-ci-server
+  ansible.builtin.service:
+    name: cider-ci-server
+    state: started
+    enabled: yes
+
+- name: Wait for server to be ready
+  ansible.builtin.wait_for:
+    host: "{{ ci_server_http_bind if ci_server_http_bind != '0.0.0.0' else 'localhost' }}"
+    port: "{{ ci_server_http_port }}"
+    timeout: 60

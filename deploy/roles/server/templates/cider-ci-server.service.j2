@@ -1,0 +1,19 @@
+[Unit]
+Description=Cider-CI Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+User={{ cider_ci_user }}
+Group={{ cider_ci_group }}
+WorkingDirectory={{ ci_server_dir }}
+EnvironmentFile=/etc/cider-ci/server.env
+ExecStart=/usr/bin/java -Xmx{{ ci_server_java_xmx }} -jar {{ ci_server_dir }}/cider-ci.jar server run
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cider-ci-server
+
+[Install]
+WantedBy=multi-user.target

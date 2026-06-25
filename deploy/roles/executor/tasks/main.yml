@@ -25,12 +25,19 @@
     home: "/home/{{ ci_executor_exec_user }}"
     generate_ssh_key: yes
 
-- name: Configure git for exec-user
-  ansible.builtin.command: |
-    git config --global user.email "{{ ci_executor_exec_user }}@{{ inventory_hostname }}"
-    git config --global user.name "{{ ci_executor_exec_user }}"
+- name: Configure git email for exec-user
+  community.general.git_config:
+    name: user.email
+    value: "{{ ci_executor_exec_user }}@{{ inventory_hostname }}"
+    scope: global
   become_user: "{{ ci_executor_exec_user }}"
-  changed_when: false
+
+- name: Configure git name for exec-user
+  community.general.git_config:
+    name: user.name
+    value: "{{ ci_executor_exec_user }}"
+    scope: global
+  become_user: "{{ ci_executor_exec_user }}"
 
 - name: Create executor directory
   ansible.builtin.file:

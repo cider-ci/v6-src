@@ -1,0 +1,6 @@
+---
+ansible_user: root
+
+ci_db_password: cider-ci-local
+ci_server_jar_path: "{{ playbook_dir }}/../target/cider-ci.jar"
+ci_executor_jar_path: "{{ playbook_dir }}/../target/cider-ci.jar"

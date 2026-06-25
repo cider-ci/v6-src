@@ -1,0 +1,3 @@
+---
+ci_executor_server_url: "http://10.211.55.33:3838"
+# ci_executor_token: obtain from admin UI after first server deploy

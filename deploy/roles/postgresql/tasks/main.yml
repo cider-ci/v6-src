@@ -4,18 +4,21 @@
     name: python3-psycopg2
     state: present
 
-- name: Add PGDG apt signing key
-  ansible.builtin.get_url:
-    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    dest: /usr/share/keyrings/pgdg.asc
-    mode: '0644'
-    force: false
-
-- name: Add PGDG apt repository
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/pgdg.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main"
+- name: Add PGDG apt repository (deb822 format)
+  ansible.builtin.deb822_repository:
+    name: pgdg
+    types: deb
+    uris: https://apt.postgresql.org/pub/repos/apt
+    suites: trixie-pgdg
+    components: main
+    signed_by: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     state: present
+  register: pgdg_repo
+
+- name: Update apt cache after adding PGDG repo
+  ansible.builtin.apt:
     update_cache: yes
+  when: pgdg_repo.changed
 
 - name: Install PostgreSQL {{ pg_version }}
   ansible.builtin.apt:

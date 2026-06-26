@@ -26,8 +26,9 @@
                runner# (future (info "daemon " ~daemon-name " started")
                                (loop []
                                  (when-not @done#
-                                   (catcher/snatch {:throwable Throwable} ~@body)
-                                   (Thread/sleep (Math/ceil (* ~secs-pause 1000)))
+                                   (catcher/snatch {:throwable Throwable}
+                                     ~@body
+                                     (Thread/sleep (long (Math/ceil (* ~secs-pause 1000)))))
                                    (recur))))]
            (reset! ~stop (fn []
                            (reset! done# true)

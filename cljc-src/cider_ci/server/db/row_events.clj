@@ -28,8 +28,8 @@
            (when-let [last-row (-> table-name last-processed-row-query
                                    (sql-format)
                                    (#(jdbc/execute-one! (get-ds) %)))]
-             (snatch {} (row-handler last-row))
-             last-row))))
+             (let [ok? (snatch {:return-expr false} (row-handler last-row) true)]
+               (when ok? last-row))))))
 
 
 
@@ -59,16 +59,19 @@
 (defn process-new-rows [table-name state-atom row-handler]
   (swap! state-atom
          (fn [last-processed-row]
-           (or (-> (process-new-rows-query table-name last-processed-row)
-                   (sql-format :inline false)
-                   (->> (jdbc/execute! (get-ds))
-                        (map (fn [row] (snatch {} (row-handler row)) row))
-                        last))
+           (or (->> (-> (process-new-rows-query table-name last-processed-row)
+                        (sql-format :inline false))
+                    (jdbc/execute! (get-ds))
+                    (reduce (fn [last-ok row]
+                              (let [ok? (snatch {:return-expr false} (row-handler row) true)]
+                                (if ok? row last-ok)))
+                            nil))
                last-processed-row))))
 
 (defn process
   [table-name state-atom row-handler]
   (locking state-atom
     (if-not @state-atom
-      (process-last-row table-name state-atom row-handler)
+      (do (info "process-last-row for" table-name)
+          (process-last-row table-name state-atom row-handler))
       (process-new-rows table-name state-atom row-handler))))

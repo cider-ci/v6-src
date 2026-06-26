@@ -40,7 +40,7 @@
         reference (if (and last-fetched-at last-error-at)
                     (tick/max last-fetched-at last-error-at)
                     (or last-fetched-at last-error-at))]
-    (cond (contains? ["fetching" "waiting"]
+    (cond (contains? #{"fetching" "waiting"}
                      (:state fetch-and-update)) false
           (:pending? fetch-and-update) false
           (not reference) true

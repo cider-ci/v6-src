@@ -4,6 +4,7 @@
     [cider-ci.server.projects.repositories.state.main :as state]))
 
 (defn handler [{{{project-id :project-id} :path-params} :route}]
+  (state/update-repositories)
   (if-let [repository (-> (state/get-db) :repositories (get (keyword project-id)))]
     (do (fetch-and-update repository)
         {:status 202 :body {:status "pending"}})

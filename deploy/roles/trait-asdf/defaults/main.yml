@@ -1,0 +1,6 @@
+---
+# Gepinnt auf 0.14.1 — NICHT erhöhen ohne Plugin-Kompatibilitätstest.
+# Das ist das letzte Shell-Script-basierte asdf-Release; neuere Versionen
+# brechen die Plugin-Sourcing-Kette.
+ci_executor_trait_asdf_version: "0.14.1"
+ci_executor_trait_asdf_dir: "/home/{{ ci_executor_exec_user }}/.asdf/asdf-{{ ci_executor_trait_asdf_version }}"

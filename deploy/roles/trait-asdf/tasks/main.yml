@@ -1,0 +1,60 @@
+---
+- name: Install asdf build dependencies
+  ansible.builtin.apt:
+    name:
+      - autoconf
+      - bison
+      - build-essential
+      - libdb-dev
+      - libffi-dev
+      - libgdbm-dev
+      - libgdbm6
+      - libgmp-dev
+      - libncurses5-dev
+      - libreadline6-dev
+      - libssl-dev
+      - libyaml-dev
+      - patch
+      - rustc
+      - unzip
+      - uuid-dev
+      - zip
+      - zlib1g-dev
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Create asdf home directory
+  ansible.builtin.file:
+    path: "/home/{{ ci_executor_exec_user }}/.asdf"
+    state: directory
+    owner: "{{ ci_executor_exec_user }}"
+    group: "{{ ci_executor_exec_user }}"
+    mode: '0755'
+
+- name: Create asdf plugins directory
+  ansible.builtin.file:
+    path: "/home/{{ ci_executor_exec_user }}/.asdf/plugins"
+    state: directory
+    owner: "{{ ci_executor_exec_user }}"
+    group: "{{ ci_executor_exec_user }}"
+    mode: '0755'
+
+- name: Download and unpack asdf {{ ci_executor_trait_asdf_version }}
+  ansible.builtin.unarchive:
+    src: "https://github.com/asdf-vm/asdf/archive/refs/tags/v{{ ci_executor_trait_asdf_version }}.tar.gz"
+    remote_src: yes
+    dest: "/home/{{ ci_executor_exec_user }}/.asdf"
+    owner: root
+    group: "{{ ci_executor_exec_user }}"
+    creates: "{{ ci_executor_trait_asdf_dir }}/asdf.sh"
+
+- name: Install asdf profile.d snippet
+  ansible.builtin.copy:
+    dest: /etc/profile.d/cider-ci-trait-asdf.sh
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      source {{ ci_executor_trait_asdf_dir }}/asdf.sh
+      source {{ ci_executor_trait_asdf_dir }}/completions/asdf.bash

@@ -1,0 +1,86 @@
+---
+- name: Ensure cider-ci base dir is traversable by system users (e.g. postgres)
+  ansible.builtin.file:
+    path: "{{ cider_ci_base_dir }}"
+    state: directory
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0751'
+
+- name: Add PGDG apt repository (deb822 format)
+  ansible.builtin.deb822_repository:
+    name: "pgdg-trait-pg{{ ci_executor_trait_postgresql_version_major }}"
+    types: deb
+    uris: https://apt.postgresql.org/pub/repos/apt
+    suites: "{{ ansible_distribution_release }}-pgdg"
+    components: main
+    signed_by: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+  register: pgdg_trait_repo
+
+- name: Update apt cache after adding PGDG repo
+  ansible.builtin.apt:
+    update_cache: yes
+  when: pgdg_trait_repo.changed
+
+- name: Install PostgreSQL {{ ci_executor_trait_postgresql_version_major }}
+  ansible.builtin.apt:
+    name:
+      - "postgresql-{{ ci_executor_trait_postgresql_version_major }}"
+      - "postgresql-client-{{ ci_executor_trait_postgresql_version_major }}"
+      - libpq-dev
+    state: present
+
+- name: Create trait config directory
+  ansible.builtin.file:
+    path: "{{ ci_executor_trait_postgresql_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy init script
+  ansible.builtin.template:
+    src: init.sh.j2
+    dest: "{{ ci_executor_trait_postgresql_config_dir }}/init.sh"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy post script
+  ansible.builtin.template:
+    src: post.sh.j2
+    dest: "{{ ci_executor_trait_postgresql_config_dir }}/post.sh"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install postgresql env vars profile.d snippet
+  ansible.builtin.copy:
+    dest: "/etc/profile.d/cider-ci-trait-postgresql-{{ ci_executor_trait_postgresql_version_major }}.sh"
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      export PG{{ ci_executor_trait_postgresql_version_major }}USER='{{ ci_executor_trait_postgresql_exec_user }}'
+      export PG{{ ci_executor_trait_postgresql_version_major }}PORT='{{ ci_executor_trait_postgresql_port }}'
+      export PG{{ ci_executor_trait_postgresql_version_major }}PASSWORD='{{ ci_executor_trait_postgresql_exec_user_password }}'
+      export PG{{ ci_executor_trait_postgresql_version_major }}DATABASE='{{ ci_executor_trait_postgresql_exec_user }}'
+
+- name: Install trait postgresql systemd service
+  ansible.builtin.template:
+    src: cider-ci-trait-postgresql.service.j2
+    dest: "/etc/systemd/system/{{ ci_executor_trait_postgresql_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start trait postgresql service
+  ansible.builtin.service:
+    name: "{{ ci_executor_trait_postgresql_service_name }}"
+    state: started
+    enabled: yes

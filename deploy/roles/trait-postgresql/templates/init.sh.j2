@@ -1,0 +1,23 @@
+#!/bin/bash
+# {{ ansible_managed }}
+set -e
+
+DATA_DIR={{ ci_executor_trait_postgresql_data_dir }}
+BIN_DIR={{ ci_executor_trait_postgresql_bin_dir }}
+
+rm -rf "$DATA_DIR"
+
+"$BIN_DIR/initdb" \
+  -E UTF8 \
+  --auth-host=md5 \
+  --auth-local=peer \
+  --username=postgres \
+  "$DATA_DIR"
+
+sed -i "s/^#*port\s*=.*/port = {{ ci_executor_trait_postgresql_port }}/" \
+  "$DATA_DIR/postgresql.conf"
+
+sed -i "s/^#*max_connections\s*=.*/max_connections = {{ ci_executor_trait_postgresql_max_connections }}/" \
+  "$DATA_DIR/postgresql.conf"
+
+echo "unix_socket_directories = '/var/run/postgresql'" >> "$DATA_DIR/postgresql.conf"

@@ -16,3 +16,11 @@
 
     - role: executor
       tags: [executor]
+
+    - role: trait-asdf
+      when: ci_executor_trait_asdf | default(false)
+      tags: [trait-asdf]
+
+    - role: trait-postgresql
+      when: ci_executor_trait_postgresql | default(false)
+      tags: [trait-postgresql]

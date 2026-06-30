@@ -1,0 +1,10 @@
+---
+ci_executor_trait_postgresql_version_major: 15
+ci_executor_trait_postgresql_port: "54{{ ci_executor_trait_postgresql_version_major }}"
+ci_executor_trait_postgresql_exec_user: "{{ ci_executor_exec_user }}"
+ci_executor_trait_postgresql_exec_user_password: "{{ ci_executor_exec_user }}"
+ci_executor_trait_postgresql_max_connections: 500
+ci_executor_trait_postgresql_data_dir: "/tmp/cider-ci-trait-postgresql-{{ ci_executor_trait_postgresql_version_major }}"
+ci_executor_trait_postgresql_config_dir: "/opt/cider-ci/traits/postgresql-{{ ci_executor_trait_postgresql_version_major }}"
+ci_executor_trait_postgresql_bin_dir: "/usr/lib/postgresql/{{ ci_executor_trait_postgresql_version_major }}/bin"
+ci_executor_trait_postgresql_service_name: "cider-ci-trait-postgresql-{{ ci_executor_trait_postgresql_version_major }}"

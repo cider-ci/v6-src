@@ -1,0 +1,22 @@
+#!/bin/bash
+# {{ ansible_managed }}
+
+PORT={{ ci_executor_trait_postgresql_port }}
+
+until pg_isready -p "$PORT" -q; do sleep 1; done
+
+psql -p "$PORT" -U postgres -c \
+  "CREATE ROLE root SUPERUSER CREATEDB LOGIN;" \
+  2>/dev/null || true
+
+psql -p "$PORT" -U postgres -c \
+  "CREATE DATABASE root OWNER root;" \
+  2>/dev/null || true
+
+psql -p "$PORT" -U postgres -c \
+  "CREATE ROLE \"{{ ci_executor_trait_postgresql_exec_user }}\" SUPERUSER CREATEDB LOGIN PASSWORD '{{ ci_executor_trait_postgresql_exec_user_password }}';" \
+  2>/dev/null || true
+
+psql -p "$PORT" -U postgres -c \
+  "CREATE DATABASE \"{{ ci_executor_trait_postgresql_exec_user }}\" OWNER \"{{ ci_executor_trait_postgresql_exec_user }}\";" \
+  2>/dev/null || true

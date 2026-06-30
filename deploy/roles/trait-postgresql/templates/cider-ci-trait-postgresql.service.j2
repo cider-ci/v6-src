@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Cider-CI PostgreSQL {{ ci_executor_trait_postgresql_version_major }} Trait (ephemeral)
+After=network.target
+
+[Service]
+Type=forking
+User=postgres
+Group=postgres
+Environment=PGDATA={{ ci_executor_trait_postgresql_data_dir }}
+OOMScoreAdjust=-1000
+
+ExecStartPre={{ ci_executor_trait_postgresql_config_dir }}/init.sh
+ExecStart={{ ci_executor_trait_postgresql_bin_dir }}/pg_ctl start -D {{ ci_executor_trait_postgresql_data_dir }} -s -w -t 300
+ExecStartPost={{ ci_executor_trait_postgresql_config_dir }}/post.sh
+ExecStop={{ ci_executor_trait_postgresql_bin_dir }}/pg_ctl stop -D {{ ci_executor_trait_postgresql_data_dir }} -s -m fast
+
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target

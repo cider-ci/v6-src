@@ -9,7 +9,7 @@
     name: pgdg
     types: deb
     uris: https://apt.postgresql.org/pub/repos/apt
-    suites: trixie-pgdg
+    suites: "{{ ansible_distribution_release }}-pgdg"
     components: main
     signed_by: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     state: present

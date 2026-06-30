@@ -1,0 +1,3 @@
+---
+ci_executor_trait_asdf: true
+ci_executor_trait_postgresql: true

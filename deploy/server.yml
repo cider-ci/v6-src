@@ -19,3 +19,6 @@
 
     - role: server
       tags: [server]
+
+    - role: reverse-proxy
+      tags: [reverse-proxy]

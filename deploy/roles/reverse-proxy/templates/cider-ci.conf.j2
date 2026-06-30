@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+<VirtualHost *:80>
+    ProxyPreserveHost On
+    AllowEncodedSlashes NoDecode
+
+    ProxyPass        / http://localhost:{{ ci_reverse_proxy_backend_port }}/ nocanon retry=0
+    ProxyPassReverse / http://localhost:{{ ci_reverse_proxy_backend_port }}/
+
+    ErrorLog  ${APACHE_LOG_DIR}/cider-ci_error.log
+    CustomLog ${APACHE_LOG_DIR}/cider-ci_access.log combined
+</VirtualHost>

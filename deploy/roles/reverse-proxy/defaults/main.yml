@@ -1,0 +1,2 @@
+---
+ci_reverse_proxy_backend_port: "{{ ci_server_http_port }}"

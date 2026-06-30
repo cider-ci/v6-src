@@ -1,0 +1,45 @@
+---
+- name: Install apache2
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Enable proxy modules
+  community.general.apache2_module:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - proxy
+    - proxy_http
+    - headers
+    - rewrite
+  notify: Reload apache2
+
+- name: Disable default site
+  ansible.builtin.command:
+    cmd: a2dissite 000-default
+    removes: /etc/apache2/sites-enabled/000-default.conf
+  notify: Reload apache2
+
+- name: Deploy cider-ci vhost config
+  ansible.builtin.template:
+    src: cider-ci.conf.j2
+    dest: /etc/apache2/sites-available/cider-ci.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload apache2
+
+- name: Enable cider-ci site
+  ansible.builtin.command:
+    cmd: a2ensite cider-ci
+    creates: /etc/apache2/sites-enabled/cider-ci.conf
+  notify: Reload apache2
+
+- name: Ensure apache2 is started and enabled
+  ansible.builtin.service:
+    name: apache2
+    state: started
+    enabled: yes

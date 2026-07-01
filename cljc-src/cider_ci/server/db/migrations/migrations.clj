@@ -36,6 +36,10 @@
         :down (partial exec-resource-sql! "migrations/00016_trial_attachments_down.sql")}
     17 {:up (partial exec-resource-sql! "migrations/00017_jobs_unique_key_up.sql")
         :down (partial exec-resource-sql! "migrations/00017_jobs_unique_key_down.sql")}
+    18 {:up (partial exec-resource-sql! "migrations/00018_pgcrypto_up.sql")
+        :down (partial exec-resource-sql! "migrations/00018_pgcrypto_down.sql")}
+    19 {:up (partial exec-resource-sql! "migrations/00019_trial_attachments_cascade_up.sql")
+        :down (partial exec-resource-sql! "migrations/00019_trial_attachments_cascade_down.sql")}
     ))
 
 (defn available []

@@ -92,6 +92,15 @@
     - Reload systemd
     - Restart cider-ci-executor
 
+- name: Write default executor traits file
+  ansible.builtin.copy:
+    dest: /etc/cider-ci/traits
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+    content: "bash\n"
+    force: no
+
 - name: Enable and start cider-ci-executor
   ansible.builtin.service:
     name: cider-ci-executor

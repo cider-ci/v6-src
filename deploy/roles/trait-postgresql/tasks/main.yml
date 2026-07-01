@@ -76,6 +76,11 @@
     mode: '0644'
   notify: Reload systemd
 
+- name: Register postgresql trait in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "postgresql"
+
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
 

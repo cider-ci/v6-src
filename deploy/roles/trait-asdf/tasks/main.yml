@@ -58,3 +58,8 @@
     content: |
       source {{ ci_executor_trait_asdf_dir }}/asdf.sh
       source {{ ci_executor_trait_asdf_dir }}/completions/asdf.bash
+
+- name: Register asdf trait in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "asdf"

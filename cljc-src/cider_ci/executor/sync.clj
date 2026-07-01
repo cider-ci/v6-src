@@ -2,8 +2,20 @@
   (:require
     [cider-ci.executor.trials :as trials]
     [cheshire.core :as json]
+    [clojure.string :as str]
     [org.httpkit.client :as http-client]
     [taoensso.timbre :refer [info warn]]))
+
+
+(def ^:private traits-file "/etc/cider-ci/traits")
+
+(defn- read-traits []
+  (try
+    (->> (str/split-lines (slurp traits-file))
+         (map str/trim)
+         (remove str/blank?))
+    (catch Exception _
+      ["bash"])))
 
 
 (defn- do-sync! [{:keys [server-url token max-load] :as opts}]
@@ -14,6 +26,7 @@
                              "Content-Type"  "application/json"
                              "Accept"        "application/json"}
                    :body    (json/generate-string {:available_load (double max-load)
+                                                   :traits         (read-traits)
                                                    :trials         []})
                    :timeout 10000})]
       (if (= 200 (:status resp))

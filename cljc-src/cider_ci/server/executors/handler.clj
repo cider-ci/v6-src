@@ -156,10 +156,18 @@
     {:status 201 :body {:path attachment-path}}))
 
 
+(defn- traits-literal [traits]
+  (str "{" (str/join "," traits) "}"))
+
+
 (defn- handle-sync [tx executor body]
-  (jdbc/execute-one! tx
-    ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
-     (:id executor)])
+  (if-let [traits (seq (:traits body))]
+    (jdbc/execute-one! tx
+      ["UPDATE executors SET last_seen_at = now(), updated_at = now(), traits = CAST(? AS text[]) WHERE id = ?"
+       (traits-literal traits) (:id executor)])
+    (jdbc/execute-one! tx
+      ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
+       (:id executor)]))
   (let [available-load (or (:available_load body) 1.0)
         to-execute     (dispatch-trials tx executor available-load)]
     {:status 200

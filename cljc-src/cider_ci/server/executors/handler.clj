@@ -1,6 +1,5 @@
 (ns cider-ci.server.executors.handler
   (:require
-    [cider-ci.server.projects.repositories.shared :as repo-shared]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -29,7 +28,7 @@
                    sql-format))))))
 
 
-(defn- dispatch-trials [tx executor available-load]
+(defn- dispatch-trials [tx executor available-load server-base-url]
   (let [limit  (max 1 (int (or available-load 1.0)))
         trials (jdbc/execute! tx
                  ["SELECT t.id, t.token, t.task_id,
@@ -63,7 +62,7 @@
              :job_id     (str (:job_id t))
              :commit_id  (:commit_id t)
              :project_id (:project_id t)
-             :git_url    (str "file://" (repo-shared/repository-fs-path (:project_id t)))
+             :git_url    (str server-base-url "/projects/" (:project_id t) "/git")
              :patch_path (str "/executor/trials/" (:id t))})
           trials)))
 
@@ -160,7 +159,7 @@
   (str "{" (str/join "," traits) "}"))
 
 
-(defn- handle-sync [tx executor body]
+(defn- handle-sync [tx executor body server-base-url]
   (if-let [traits (seq (:traits body))]
     (jdbc/execute-one! tx
       ["UPDATE executors SET last_seen_at = now(), updated_at = now(), traits = CAST(? AS text[]) WHERE id = ?"
@@ -169,7 +168,7 @@
       ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
        (:id executor)]))
   (let [available-load (or (:available_load body) 1.0)
-        to-execute     (dispatch-trials tx executor available-load)]
+        to-execute     (dispatch-trials tx executor available-load server-base-url)]
     {:status 200
      :body   {:trials_to_execute      to-execute
               :trials_being_processed []}}))
@@ -203,14 +202,18 @@
                 request-method :request-method
                 body           :body
                 headers        :headers
+                scheme         :scheme
+                server-name    :server-name
+                server-port    :server-port
                 {{:keys [trial-id attachment-path]} :path-params} :route
                 :as request}]
-  (let [auth-header (get headers "authorization")]
+  (let [auth-header      (get headers "authorization")
+        server-base-url  (str (name (or scheme :http)) "://" server-name ":" server-port)]
     (if-let [executor (find-executor tx auth-header)]
       (case route-name
         :executor-sync
         (case request-method
-          :post (handle-sync tx executor body)
+          :post (handle-sync tx executor body server-base-url)
           {:status 405 :body "Method not allowed"})
 
         :executor-trial

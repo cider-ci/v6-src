@@ -30,21 +30,13 @@
 
 (defn- as-yaml [data]
   (try
-    (let [result (yaml/dump (clj->js data) #js {:indent 2})]
-      (js/console.log "as-yaml ok, length:" (.-length result))
-      result)
-    (catch :default e
-      (js/console.error "as-yaml failed:" e)
-      nil)))
+    (yaml/dump (clj->js data) #js {:indent 2})
+    (catch :default _ nil)))
 
 (defn- highlight-yaml [yaml-str]
   (try
-    (let [result (-> (.highlight hljs yaml-str #js {:language "yaml"}) .-value)]
-      (js/console.log "highlight-yaml ok, length:" (.-length result))
-      result)
-    (catch :default e
-      (js/console.error "highlight-yaml failed:" e)
-      nil)))
+    (-> (.highlight hljs yaml-str #js {:language "yaml"}) .-value)
+    (catch :default _ nil)))
 
 (defn- code-block [initial-html]
   (let [state #js {:node nil :html initial-html}]
@@ -67,8 +59,7 @@
   [:div.page.configuration
    [state/hidden-routing-state-component :did-change #(fetch-data)]
    (if-not (some? @data*)
-     (do (js/console.log "configuration: data* is nil, showing Loading...")
-         [:div "Loading..."])
+     [:div "Loading..."]
      [:<>
       [:nav.mb-3
        [:a {:href (path :project {:project-id (project-id)})}

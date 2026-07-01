@@ -13,69 +13,64 @@
     )
 
   (:import
-    [java.io File InputStreamReader DataInputStream]
-    [java.lang Process ProcessBuilder]
+    [java.io DataInputStream]
+    [java.lang ProcessBuilder]
     ))
 
 ;;; http git ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn build-response [process]
-  (loop [pout (-> process .getInputStream DataInputStream.)
-         response {}
-         line (.readLine pout)]
-    (if-not (and line (not (re-matches #"^\s*$" line)))
-      (assoc response :body pout)
-      (let [[k v] (clojure.string/split line #":\s+" 2)]
-        (recur pout
-               (if (re-matches #"(?i)^status" k)
-                 (let [status (-> v (clojure.string/split #"\s+" 2) first Integer/parseInt)]
-                   (assoc response :status status))
-                 (assoc-in response [:headers k] v))
-               (.readLine pout))))))
+  (let [pout (-> process .getInputStream DataInputStream.)
+        response (loop [response {}
+                        line (.readLine pout)]
+                   (if-not (and line (not (re-matches #"^\s*$" line)))
+                     response
+                     (let [[k v] (clojure.string/split line #":\s+" 2)]
+                       (recur
+                         (if (re-matches #"(?i)^status" k)
+                           (let [status (-> v (clojure.string/split #"\s+" 2) first Integer/parseInt)]
+                             (assoc response :status status))
+                           (assoc-in response [:headers k] v))
+                         (.readLine pout)))))
+        body (.readAllBytes pout)]
+    (assoc response :body body)))
 
-(defn project [project-id tx]
-  (->> (-> (sql/select :*)
-           (sql/from :projects)
-           (sql/where [:= :id project-id])
-           sql-format)
-       (jdbc/execute-one! tx)))
+(defn- repository-exists? [project-id tx]
+  (some? (jdbc/execute-one! tx
+           (-> (sql/select :id)
+               (sql/from :repositories)
+               (sql/where [:= :id project-id])
+               sql-format))))
 
 (defn http-handler [{request-method :request-method
                      remote-addr :remote-addr
-                     {project-id :project-id
-                      repository-path :repository-path} :route-params
+                     {{:keys [project-id repository-path]} :path-params} :route
                      query-string :query-string
                      tx :tx
                      :as request}]
-  (let [env {"GIT_PROJECT_ROOT" (.toString (path {:project-id project-id}))
-             "PATH_INFO" repository-path
-             "GIT_HTTP_EXPORT_ALL" "true"
-             "REMOTE_USER" (or (-> request :authenticated-entity :primary_email_address)
-                               "unknown user")
-             "REMOTE_ADDR" (or remote-addr "localhost")
-             "CONTENT_TYPE" (get-in request [:headers "content-type"])
-             "QUERY_STRING" query-string
-             "REQUEST_METHOD" (clojure.string/upper-case (str request-method))}
-        process-builder (ProcessBuilder. (into-array String ["git" "http-backend"]))
-        _ (.redirectErrorStream process-builder true)
-        process-environment (.environment process-builder)
-        _ (.clear process-environment)
-        _ (doseq [[k v] env] (when v (.put process-environment k v)))
-        process (.start process-builder)
-        _ (when-let [is (:body request)]
-            (let [os (.getOutputStream process)]
-              (future (try (.transferTo is os)
-                           (finally (.close is) (.close os))))))
-        project (project project-id tx)
-        response (if project
-                   (build-response process)
-                   {:status 404
-                    :body "no such project"})]
-    (when (#{:post :delete :put :patch} request-method)
-      (->> (-> (sql/update :projects)
-               (sql/set {:repository_updated_at :%now})
-               (sql/where [:= :id project-id])
-               sql-format)
-           (jdbc/execute! tx)))
-    response))
+  (if-not (repository-exists? project-id tx)
+    {:status 404 :body "no such repository"}
+    (let [content-length (get-in request [:headers "content-length"])
+          env {"GIT_PROJECT_ROOT" (.toString (path {:project-id project-id}))
+               "PATH_INFO" (str "/" repository-path)
+               "GIT_HTTP_EXPORT_ALL" "true"
+               "REMOTE_USER" (or (-> request :authenticated-entity :primary_email_address)
+                                 "unknown user")
+               "REMOTE_ADDR" (or remote-addr "localhost")
+               "CONTENT_TYPE" (get-in request [:headers "content-type"])
+               "CONTENT_LENGTH" content-length
+               "HTTP_CONTENT_ENCODING" (get-in request [:headers "content-encoding"])
+               "GIT_PROTOCOL" (get-in request [:headers "git-protocol"])
+               "QUERY_STRING" query-string
+               "REQUEST_METHOD" (clojure.string/upper-case (str request-method))}
+          process-builder (ProcessBuilder. (into-array String ["git" "http-backend"]))
+          process-environment (.environment process-builder)
+          _ (.clear process-environment)
+          _ (doseq [[k v] env] (when v (.put process-environment k v)))
+          process (.start process-builder)
+          _ (when-let [is (:body request)]
+              (let [os (.getOutputStream process)]
+                (future (try (.transferTo is os)
+                             (finally (.close is) (.close os))))))]
+      (build-response process))))
 

@@ -18,6 +18,10 @@
          :auth-http-unsafe #{:admin}}]
     ["/fetch" {:name :project-fetch
                :auth-http-unsafe #{:admin}}]
+    ["/git/*repository-path" {:name             :project-git
+                              :bypass-spa        true
+                              :auth-http-safe    #{:public}
+                              :auth-http-unsafe  #{:public}}]
     ["/commits/:commit-id"
      ["" {:name :project-commit
           :auth-http-safe #{:user}}]

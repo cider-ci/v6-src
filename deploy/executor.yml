@@ -24,3 +24,11 @@
     - role: trait-postgresql
       when: ci_executor_trait_postgresql | default(false)
       tags: [trait-postgresql]
+
+    - role: trait-stress-ng
+      when: ci_executor_trait_stress_ng | default(false)
+      tags: [trait-stress-ng]
+
+    - role: trait-git
+      when: ci_executor_trait_git | default(false)
+      tags: [trait-git]

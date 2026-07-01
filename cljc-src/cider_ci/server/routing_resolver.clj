@@ -9,6 +9,7 @@
     [cider-ci.server.resources.projects.blob :as project-blob]
     [cider-ci.server.resources.projects.branch :as project-branch]
     [cider-ci.server.resources.projects.commit :as project-commit]
+    [cider-ci.server.resources.projects.configuration :as project-configuration]
     [cider-ci.server.resources.projects.fetch :as project-fetch]
     [cider-ci.server.resources.projects.jobs :as project-jobs]
     [cider-ci.server.resources.projects.main :as projects]
@@ -41,6 +42,7 @@
    :project-blob #'project-blob/handler
    :project-branch #'project-branch/handler
    :project-commit #'project-commit/handler
+   :project-commit-configuration #'project-configuration/handler
    :project-fetch #'project-fetch/handler
    :project-jobs       #'project-jobs/handler
    :project-job        #'project-jobs/handler

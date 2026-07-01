@@ -21,6 +21,8 @@
     ["/commits/:commit-id"
      ["" {:name :project-commit
           :auth-http-safe #{:user}}]
+     ["/configuration" {:name :project-commit-configuration
+                        :auth-http-safe #{:user}}]
      ["/blob/*blob-path" {:name :project-blob
                           :auth-http-safe #{:user}}]
      ["/jobs"

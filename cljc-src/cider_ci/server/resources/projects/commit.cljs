@@ -101,6 +101,9 @@
                                          :commit-id  (:id c)
                                          :blob-path  "cider-ci.yml"})}
           [:i.fas.fa-file-code] " cider-ci.yml"]
+         [:a {:href (path :project-commit-configuration {:project-id (project-id)
+                                                         :commit-id  (:id c)})}
+          [:i.fas.fa-code-branch] " Configuration"]
          [:a {:href (path :project-jobs {:project-id (project-id)
                                          :commit-id  (:id c)})}
           [:i.fas.fa-play-circle] " Jobs"]]

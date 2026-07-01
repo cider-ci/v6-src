@@ -175,16 +175,18 @@
 
 
 (defn- handle-trial-patch [tx trial-id body]
-  (let [new-state  (:state body)
-        error-msg  (:error body)
-        trial-uuid (java.util.UUID/fromString trial-id)]
+  (let [new-state       (:state body)
+        error-msg       (:error body)
+        scripts-results (:scripts_results body)
+        trial-uuid      (java.util.UUID/fromString trial-id)]
     (when-not new-state
       (throw (ex-info "Missing state" {:status 400})))
     (let [terminal? #{"passed" "failed" "defective" "aborted"}
           set-map   (cond-> {:state new-state :updated_at [:raw "now()"]}
                       (#{"executing"} new-state)   (assoc :started_at  [:raw "now()"])
                       (terminal? new-state)         (assoc :finished_at [:raw "now()"])
-                      error-msg                     (assoc :error error-msg))
+                      error-msg                     (assoc :error error-msg)
+                      scripts-results               (assoc :result [:lift {:scripts scripts-results}]))
           result    (jdbc/execute-one! tx
                       (-> (sql/update :trials)
                           (sql/set set-map)

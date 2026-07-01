@@ -76,6 +76,8 @@
               "executing" "bg-primary"
               "pending"   "bg-secondary"
               "aborted"   "bg-warning"
+              "skipped"   "bg-light text-dark"
+              "defective" "bg-dark"
               "bg-secondary")]
     [:span.badge {:class cls} s]))
 
@@ -157,6 +159,21 @@
         (str (.floor js/Math (/ s 60)) "m " (mod s 60) "s")
         (str s "s")))))
 
+(defn- script-result-entry [trial-id [key result]]
+  (let [key-str (name key)]
+    ^{:key key-str}
+    [:div.d-flex.align-items-baseline.gap-2.small.mt-1.ms-3
+     [:code key-str]
+     [state-badge (:state result)]
+     (when-let [exit (:exit_status result)]
+       [:span.text-muted (str "exit " exit)])
+     [:a {:href   (str "/trials/" trial-id "/attachments/scripts/" key-str)
+          :target "_blank"}
+      "Log"]
+     (when-let [err (:error result)]
+       [:span.text-danger err])]))
+
+
 (defn- task-row [t]
   ^{:key (:id t)}
   [:tr
@@ -166,16 +183,15 @@
    [:td
     (for [trial (:trials t)]
       ^{:key (:id trial)}
-      [:div.mb-1
-       [state-badge (:state trial)]
-       [:a {:href   (str "/trials/" (:id trial) "/attachments/log")
-            :target "_blank"
-            :class  "ms-2"}
-        "Log"]
-       (when-let [dur (trial-duration trial)]
-         [:span.text-muted.small.ms-2 dur])
-       (when-let [err (:error trial)]
-         [:div.text-danger.small.mt-1 err])])]])
+      [:div.mb-2
+       [:div.d-flex.align-items-baseline.gap-2
+        [state-badge (:state trial)]
+        (when-let [dur (trial-duration trial)]
+          [:span.text-muted.small dur])
+        (when-let [err (:error trial)]
+          [:span.text-danger.small err])]
+       (for [entry (-> trial :result :scripts seq)]
+         [script-result-entry (:id trial) entry])])]])
 
 
 (defn- tasks-panel [tasks]

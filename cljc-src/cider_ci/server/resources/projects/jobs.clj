@@ -85,7 +85,7 @@
 
 (defn- get-trials-for-task [task-id]
   (jdbc-sql/query (get-ds)
-    (-> (sql/select :id :state :started_at :finished_at :error)
+    (-> (sql/select :id :state :started_at :finished_at :error :result)
         (sql/from :trials)
         (sql/where [:= :task_id task-id])
         (sql/order-by [:created_at :asc])
@@ -121,7 +121,7 @@
       (jdbc/execute! tx
         ["UPDATE trials t
           SET state = 'pending', executor_id = NULL, dispatched_at = NULL,
-              started_at = NULL, finished_at = NULL, error = NULL, updated_at = now()
+              started_at = NULL, finished_at = NULL, error = NULL, result = NULL, updated_at = now()
           FROM tasks tsk
           WHERE t.task_id = tsk.id AND tsk.job_id = ?
             AND t.state NOT IN ('pending', 'passed')"

@@ -1,9 +1,10 @@
 (ns cider-ci.executor.trials
   (:require
+    [cider-ci.executor.scripts :as scripts]
     [cheshire.core :as json]
     [org.httpkit.client :as http-client]
     [taoensso.timbre :refer [info warn]])
-  (:import [java.io File FileOutputStream]))
+  (:import [java.io File FileInputStream]))
 
 
 (defn- put-attachment! [{:keys [id] :as _trial} {:keys [server-url token]} attachment-name content-type content]
@@ -31,31 +32,6 @@
     resp))
 
 
-(defn- run-scripts! [work-dir task-spec log-file]
-  (let [scripts  (:scripts task-spec)
-        env-vars (:environment_variables task-spec)]
-    (loop [[[_ script] & rest-scripts] (seq scripts)]
-      (if-not script
-        "passed"
-        (let [body        (:body script)
-              script-file (File. ^String work-dir "cider-ci-task.sh")]
-          (spit script-file body)
-          (.setExecutable script-file true)
-          (let [pb        (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
-                            (.directory (File. ^String work-dir))
-                            (.redirectErrorStream true)
-                            (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file)))
-                _         (when env-vars
-                            (let [env (.environment pb)]
-                              (doseq [[k v] env-vars]
-                                (.put env (name k) (str v)))))
-                proc      (.start pb)
-                exit-code (.waitFor proc)]
-            (if (zero? exit-code)
-              (recur rest-scripts)
-              "failed")))))))
-
-
 (defn- delete-dir! [^File dir]
   (when (.exists dir)
     (doseq [^File f (.listFiles dir)]
@@ -65,38 +41,45 @@
     (.delete dir)))
 
 
+(defn- upload-script-logs! [trial opts script-results]
+  (doseq [[key-str result] script-results]
+    (when-let [^File log-file (:log-file result)]
+      (when (.exists log-file)
+        (put-attachment! trial opts (str "scripts/" key-str) "text/plain"
+                         (FileInputStream. log-file))
+        (.delete log-file)))))
+
+
+(defn- strip-log-files [script-results]
+  (into {} (for [[k v] script-results] [k (dissoc v :log-file)])))
+
+
 (defn execute! [{:keys [id git_url commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
-  (let [work-dir (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))
-        log-file (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id ".log"))]
+  (let [work-dir (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))]
     (try
       (patch-trial! trial opts "executing" {})
 
-      ;; Clone repo to working directory
       (let [clone-proc (-> (ProcessBuilder. ["git" "clone" git_url (.getAbsolutePath work-dir)])
                            .start)]
         (when-not (zero? (.waitFor clone-proc))
           (throw (ex-info "git clone failed" {:git-url git_url}))))
 
-      ;; Checkout the exact commit
       (let [co-proc (-> (ProcessBuilder. ["git" "checkout" commit_id])
                         (.directory work-dir)
                         .start)]
         (when-not (zero? (.waitFor co-proc))
           (throw (ex-info "git checkout failed" {:commit-id commit_id}))))
 
-      ;; Run scripts, capturing output to log-file
-      (let [result (run-scripts! (.getAbsolutePath work-dir) task_spec log-file)]
-        (info "Trial" id "finished with" result)
-        (put-attachment! trial opts "log" "text/plain" (java.io.FileInputStream. log-file))
-        (patch-trial! trial opts result {}))
+      (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec)]
+        (info "Trial" id "finished with" trial-state)
+        (upload-script-logs! trial opts scripts)
+        (patch-trial! trial opts trial-state
+                      {:scripts_results (strip-log-files scripts)}))
 
       (catch Exception e
         (warn "Trial" id "failed with exception:" (.getMessage e))
-        (when (.exists log-file)
-          (put-attachment! trial opts "log" "text/plain" (java.io.FileInputStream. log-file)))
         (patch-trial! trial opts "defective" {:error (.getMessage e)}))
 
       (finally
-        (delete-dir! work-dir)
-        (.delete log-file)))))
+        (delete-dir! work-dir)))))

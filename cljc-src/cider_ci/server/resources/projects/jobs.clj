@@ -2,6 +2,7 @@
   (:require
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.jobs.decompose :as decompose]
+    [cider-ci.server.jobs.generate :as generate]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as shared]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -47,7 +48,7 @@
       (if-not job-entry
         {:status 404 :body "Job not found in configuration"}
         (let [created-by (get-in session [:user :id])
-              full-spec  (:full-spec job-entry)
+              full-spec  (generate/expand project-id commit-id (:full-spec job-entry))
               task-specs (decompose/decompose full-spec)
               new-job-id (java.util.UUID/randomUUID)]
           (jdbc/with-transaction [tx (get-ds)]

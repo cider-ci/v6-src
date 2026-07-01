@@ -32,7 +32,8 @@
 
 
 (defn- run-scripts! [work-dir task-spec log-file]
-  (let [scripts (:scripts task-spec)]
+  (let [scripts  (:scripts task-spec)
+        env-vars (:environment_variables task-spec)]
     (loop [[[_ script] & rest-scripts] (seq scripts)]
       (if-not script
         "passed"
@@ -40,11 +41,15 @@
               script-file (File. ^String work-dir "cider-ci-task.sh")]
           (spit script-file body)
           (.setExecutable script-file true)
-          (let [proc      (-> (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
-                              (.directory (File. ^String work-dir))
-                              (.redirectErrorStream true)
-                              (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file))
-                              .start)
+          (let [pb        (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
+                            (.directory (File. ^String work-dir))
+                            (.redirectErrorStream true)
+                            (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file)))
+                _         (when env-vars
+                            (let [env (.environment pb)]
+                              (doseq [[k v] env-vars]
+                                (.put env (name k) (str v)))))
+                proc      (.start pb)
                 exit-code (.waitFor proc)]
             (if (zero? exit-code)
               (recur rest-scripts)

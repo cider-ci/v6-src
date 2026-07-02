@@ -3,6 +3,7 @@
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
    [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state]
    [cljs.core.async :refer [go-loop <! chan]]
@@ -191,7 +192,9 @@
         (when-let [err (:error trial)]
           [:span.text-danger.small err])]
        (for [entry (-> trial :result :scripts seq)]
-         [script-result-entry (:id trial) entry])])]])
+         [script-result-entry (:id trial) entry])
+       (when-let [dag (scripts-dag/scripts-dag (:spec t) (-> trial :result :scripts))]
+         [:div.mt-2 dag])])]])
 
 
 (defn- tasks-panel [tasks]

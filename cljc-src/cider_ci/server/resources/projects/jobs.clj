@@ -101,7 +101,7 @@
     (let [tasks (mapv (fn [t]
                         (assoc t :trials (get-trials-for-task (:id t))))
                       (jdbc-sql/query (get-ds)
-                        (-> (sql/select :id :name :state :created_at)
+                        (-> (sql/select :id :name :state :created_at :spec)
                             (sql/from :tasks)
                             (sql/where [:= :job_id (:id job)])
                             (sql/order-by [:created_at :asc])

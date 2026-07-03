@@ -12,6 +12,17 @@
     :else                        "defective"))
 
 
+(defn- normalize-start-when
+  "Handles both legacy map format {\"cond-name\": {:script_key ...}} and
+   array format [{:script_key ...}] — returns a seq of condition maps."
+  [start-when]
+  (cond
+    (nil? start-when)        []
+    (map? start-when)        (vals start-when)
+    (sequential? start-when) start-when
+    :else                    []))
+
+
 (defn- start-when-satisfied? [{:keys [script_key states]} script-results]
   (let [required  (set (map name (or states ["passed"])))
         dep-state (get-in script-results [(name script_key) :state])]
@@ -20,7 +31,7 @@
 
 (defn- can-start? [_key spec script-results]
   (every? #(start-when-satisfied? % script-results)
-          (:start_when spec)))
+          (normalize-start-when (:start_when spec))))
 
 
 (defn- terminal-state? [s]
@@ -33,7 +44,7 @@
                 dep-state (get-in script-results [(name script_key) :state])]
             (and (terminal-state? dep-state)
                  (not (contains? required dep-state)))))
-        (:start_when spec)))
+        (normalize-start-when (:start_when spec))))
 
 
 (defn- run-one! [key-str spec env-vars work-dir]
@@ -41,7 +52,7 @@
     (let [log-file    (File. (System/getProperty "java.io.tmpdir")
                              (str "cider-ci-script-" key-str ".log"))
           script-file (File. ^String work-dir (str "cider-ci-" key-str ".sh"))]
-      (spit script-file (:body spec))
+      (spit script-file (or (:body spec) ""))
       (.setExecutable script-file true)
       (let [pb (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
                  (.directory (File. ^String work-dir))

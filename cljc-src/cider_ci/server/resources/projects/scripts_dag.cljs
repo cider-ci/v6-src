@@ -24,6 +24,14 @@
    "pending"   "#6c757d"})
 
 
+(defn- normalize-start-when [start-when]
+  (cond
+    (nil? start-when)        []
+    (map? start-when)        (vals start-when)
+    (sequential? start-when) start-when
+    :else                    []))
+
+
 (defn- build-graph [scripts]
   (let [g (new (.. dagre -graphlib -Graph))]
     (.setGraph g #js {:rankdir "LR" :nodesep 30 :ranksep 60 :marginx 20 :marginy 16})
@@ -31,8 +39,9 @@
     (doseq [[k _] scripts]
       (.setNode g (name k) #js {:width node-w :height node-h}))
     (doseq [[k spec] scripts
-            :when (seq (:start_when spec))
-            {:keys [script_key states]} (:start_when spec)]
+            :let [sw (normalize-start-when (:start_when spec))]
+            :when (seq sw)
+            {:keys [script_key states]} sw]
       (.setEdge g
                 (str script_key)
                 (name k)
@@ -52,7 +61,7 @@
    script-results: map of script-key → {:state ...} from trial :result"
   [task-spec script-results]
   (let [scripts  (seq (:scripts task-spec))
-        has-deps (some #(seq (:start_when (second %))) scripts)]
+        has-deps (some #(seq (normalize-start-when (:start_when (second %)))) scripts)]
     (when (and (>= (count scripts) 2) has-deps)
       (let [g          (build-graph scripts)
             gi         (.graph g)

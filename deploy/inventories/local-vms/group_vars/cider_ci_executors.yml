@@ -1,5 +1,5 @@
 ---
 ci_executor_server_url: "http://10.211.55.33:3838"
-ci_executor_token: "57f0b058-8e4b-4f0f-bd90-1974741b7186"
+ci_executor_token: "0e46a79f-1de9-492f-a92a-a8af6cab69f7"
 
 # Traits are configured per host in host_vars/<hostname>.yml

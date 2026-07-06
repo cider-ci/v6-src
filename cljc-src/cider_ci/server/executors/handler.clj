@@ -69,10 +69,26 @@
 
 (def ^:private terminal-states #{"passed" "failed" "defective" "aborted"})
 
-(defn- terminal-new-state [states]
+(defn- task-state-from-trials
+  "Task passes as soon as ANY trial passes (resilience semantics).
+   Task fails/defective only when all trials are terminal and none passed."
+  [states]
+  (cond
+    (empty? states)                            "defective"
+    (some #{"passed"} states)                  "passed"
+    (some #{"executing" "dispatching"} states) "executing"
+    (some #{"pending"} states)                 "pending"
+    (every? #{"defective"} states)             "defective"
+    (some #{"failed"} states)                  "failed"
+    :else                                      "defective"))
+
+(defn- job-state-from-tasks
+  "Job passes only when ALL tasks pass. Returns nil when not yet decided."
+  [states]
   (cond
     (not-every? terminal-states states) nil
-    (every? #(= "passed" %) states)     "passed"
+    (every? #{"passed"} states)         "passed"
+    (some #{"defective"} states)        "defective"
     :else                               "failed"))
 
 
@@ -83,58 +99,43 @@
                                (sql/where [:= :id task-id])
                                sql-format)))
         job-id    (:job_id task)
-        all-tasks (jdbc-sql/query tx
-                    (-> (sql/select :state)
-                        (sql/from :tasks)
-                        (sql/where [:= :job_id job-id])
-                        sql-format))
-        states    (map :state all-tasks)
-        new-state (terminal-new-state states)]
-    (when new-state
+        states    (map :state (jdbc-sql/query tx
+                                (-> (sql/select :state)
+                                    (sql/from :tasks)
+                                    (sql/where [:= :job_id job-id])
+                                    sql-format)))]
+    (when-let [new-state (job-state-from-tasks states)]
       (jdbc/execute-one! tx
         ["UPDATE jobs SET state = ?, updated_at = now() WHERE id = ?"
          new-state job-id]))))
 
 
-(defn- advance-to-executing [tx task-id]
-  (let [updated (jdbc/execute-one! tx
-                  ["UPDATE tasks SET state = 'executing', updated_at = now()
-                    WHERE id = ? AND state = 'pending'"
-                   task-id])]
-    (when (pos? (:next.jdbc/update-count updated))
-      (let [task (first (jdbc-sql/query tx
-                          (-> (sql/select :job_id)
-                              (sql/from :tasks)
-                              (sql/where [:= :id task-id])
-                              sql-format)))]
-        (jdbc/execute-one! tx
-          ["UPDATE jobs SET state = 'executing', updated_at = now()
-            WHERE id = ? AND state = 'pending'"
-           (:job_id task)])))))
-
-
 (defn- propagate-from-trial [tx trial-id]
-  (let [trial      (first (jdbc-sql/query tx
-                            (-> (sql/select :task_id)
-                                (sql/from :trials)
-                                (sql/where [:= :id trial-id])
-                                sql-format)))
-        task-id    (:task_id trial)
-        all-trials (jdbc-sql/query tx
-                     (-> (sql/select :state)
-                         (sql/from :trials)
-                         (sql/where [:= :task_id task-id])
-                         sql-format))
-        states     (map :state all-trials)
-        new-state  (terminal-new-state states)]
-    (if new-state
-      (do
-        (jdbc/execute-one! tx
-          ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"
-           new-state task-id])
-        (propagate-from-task tx task-id))
-      (when (some #(= "executing" %) states)
-        (advance-to-executing tx task-id)))))
+  (let [trial     (first (jdbc-sql/query tx
+                           (-> (sql/select :task_id)
+                               (sql/from :trials)
+                               (sql/where [:= :id trial-id])
+                               sql-format)))
+        task-id   (:task_id trial)
+        states    (map :state (jdbc-sql/query tx
+                                (-> (sql/select :state)
+                                    (sql/from :trials)
+                                    (sql/where [:= :task_id task-id])
+                                    sql-format)))
+        new-state (task-state-from-trials states)]
+    (jdbc/execute-one! tx
+      ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"
+       new-state task-id])
+    (cond
+      (= new-state "executing")
+      (jdbc/execute-one! tx
+        ["UPDATE jobs SET state = 'executing', updated_at = now()
+          WHERE id = (SELECT job_id FROM tasks WHERE id = ?)
+            AND state = 'pending'"
+         task-id])
+
+      (terminal-states new-state)
+      (propagate-from-task tx task-id))))
 
 
 (defn- handle-trial-attachment-put [tx trial-id attachment-path request]

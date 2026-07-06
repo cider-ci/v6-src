@@ -71,27 +71,31 @@
 
 (defn- task-state-from-trials
   "Task passes as soon as ANY trial passes (resilience semantics).
-   Task fails/defective only when all trials are terminal and none passed.
-   Task aborted only when ALL trials are aborted (explicit stop, no retry)."
+   Task aborted when all trials are aborted (no retry).
+   Task aborting when any trial is aborting and none passed/failed/defective yet.
+   Task fails/defective only when all trials are terminal and none passed."
   [states]
   (cond
-    (empty? states)                            "defective"
-    (some #{"passed"} states)                  "passed"
-    (some #{"executing" "dispatching"} states) "executing"
-    (some #{"pending"} states)                 "pending"
-    (every? #{"aborted"} states)               "aborted"
-    (every? #{"defective"} states)             "defective"
-    (some #{"failed"} states)                  "failed"
-    :else                                      "defective"))
+    (empty? states)                              "defective"
+    (some #{"passed"} states)                    "passed"
+    (some #{"executing" "dispatching"} states)   "executing"
+    (some #{"aborting"} states)                  "aborting"
+    (some #{"pending"} states)                   "pending"
+    (every? #{"aborted"} states)                 "aborted"
+    (every? #{"defective"} states)               "defective"
+    (some #{"failed"} states)                    "failed"
+    :else                                        "defective"))
 
 (defn- job-state-from-tasks
   "Job passes only when ALL tasks pass. Returns nil when not yet decided."
   [states]
   (cond
-    (not-every? terminal-states states) nil
-    (every? #{"passed"} states)         "passed"
-    (some #{"defective"} states)        "defective"
-    :else                               "failed"))
+    (not-every? terminal-states states)  nil
+    (every? #{"passed"} states)          "passed"
+    (every? #{"aborted"} states)         "aborted"
+    (some #{"defective"} states)         "defective"
+    (some #{"aborted"} states)           "failed"
+    :else                                "failed"))
 
 
 (defn- propagate-from-task [tx task-id]

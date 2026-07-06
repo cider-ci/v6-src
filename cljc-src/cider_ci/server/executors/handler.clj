@@ -71,13 +71,15 @@
 
 (defn- task-state-from-trials
   "Task passes as soon as ANY trial passes (resilience semantics).
-   Task fails/defective only when all trials are terminal and none passed."
+   Task fails/defective only when all trials are terminal and none passed.
+   Task aborted only when ALL trials are aborted (explicit stop, no retry)."
   [states]
   (cond
     (empty? states)                            "defective"
     (some #{"passed"} states)                  "passed"
     (some #{"executing" "dispatching"} states) "executing"
     (some #{"pending"} states)                 "pending"
+    (every? #{"aborted"} states)               "aborted"
     (every? #{"defective"} states)             "defective"
     (some #{"failed"} states)                  "failed"
     :else                                      "defective"))
@@ -133,7 +135,9 @@
         prelim     (task-state-from-trials states)
         ;; If heading for a non-passing terminal state, create retry trials up to max_trials.
         ;; Also maintain eager_trials parallel trials while retries remain.
-        new-state  (if (and (terminal-states prelim) (not= prelim "passed"))
+        new-state  (if (and (terminal-states prelim)
+                           (not= prelim "passed")
+                           (not= prelim "aborted"))
                      (let [in-progress (count (filter #{"pending" "dispatching" "executing"} states))
                            total       (count states)
                            to-create   (max 0 (min (- eager in-progress) (- max-trials total)))]

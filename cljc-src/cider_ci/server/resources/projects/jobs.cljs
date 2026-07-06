@@ -175,26 +175,57 @@
        [:span.text-danger err])]))
 
 
+(defn- retry-task! [task-id]
+  (-> (js/fetch (path :project-job-task-retry {:project-id (project-id)
+                                               :commit-id  (commit-id)
+                                               :job-id     (job-id)
+                                               :task-id    task-id})
+                (clj->js {:method      "POST"
+                           :credentials "same-origin"
+                           :headers     {"content-type" "application/json"
+                                         "accept"       "application/json"
+                                         "x-csrf-token" (anti-csrf/token)}}))
+      (.then (fn [_] (fetch-data)))))
+
+
+(defn- trial-config-badges [spec]
+  (let [eager (or (:eager_trials spec) 1)
+        max-t (or (:max_trials spec) 2)]
+    [:<>
+     (when (> eager 1)
+       [:span.badge.bg-secondary.ms-1 (str eager "× eager")])
+     (when (> max-t 2)
+       [:span.badge.bg-light.text-dark.border.ms-1 (str "max " max-t)])]))
+
+
 (defn- task-row [t]
-  ^{:key (:id t)}
-  [:tr
-   [:td [:code (:name t)]]
-   [:td [state-badge (:state t)]]
-   [:td [:span.text-muted (str (:created_at t))]]
-   [:td
-    (for [trial (:trials t)]
-      ^{:key (:id trial)}
-      [:div.mb-2
-       [:div.d-flex.align-items-baseline.gap-2
-        [state-badge (:state trial)]
-        (when-let [dur (trial-duration trial)]
-          [:span.text-muted.small dur])
-        (when-let [err (:error trial)]
-          [:span.text-danger.small err])]
-       (for [entry (-> trial :result :scripts seq)]
-         [script-result-entry (:id trial) entry])
-       (when-let [dag (scripts-dag/scripts-dag (:spec t) (-> trial :result :scripts))]
-         [:div.mt-2 dag])])]])
+  (let [retryable? (#{"failed" "defective" "aborted"} (:state t))]
+    ^{:key (:id t)}
+    [:tr
+     [:td
+      [:code (:name t)]
+      [trial-config-badges (:spec t)]]
+     [:td
+      [state-badge (:state t)]
+      (when retryable?
+        [:button.btn.btn-sm.btn-outline-secondary.ms-2
+         {:on-click #(retry-task! (:id t))}
+         [:i.fas.fa-rotate-right]])]
+     [:td [:span.text-muted (str (:created_at t))]]
+     [:td
+      (for [trial (:trials t)]
+        ^{:key (:id trial)}
+        [:div.mb-2
+         [:div.d-flex.align-items-baseline.gap-2
+          [state-badge (:state trial)]
+          (when-let [dur (trial-duration trial)]
+            [:span.text-muted.small dur])
+          (when-let [err (:error trial)]
+            [:span.text-danger.small err])]
+         (for [entry (-> trial :result :scripts seq)]
+           [script-result-entry (:id trial) entry])
+         (when-let [dag (scripts-dag/scripts-dag (:spec t) (-> trial :result :scripts))]
+           [:div.mt-2 dag])])]]))
 
 
 (defn- tasks-panel [tasks]

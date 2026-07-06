@@ -46,9 +46,10 @@
    :project-commit-configuration #'project-configuration/handler
    :project-fetch #'project-fetch/handler
    :project-git   #'project-git/http-handler
-   :project-jobs       #'project-jobs/handler
-   :project-job        #'project-jobs/handler
-   :project-job-retry  #'project-jobs/handler
+   :project-jobs            #'project-jobs/handler
+   :project-job             #'project-jobs/handler
+   :project-job-retry       #'project-jobs/handler
+   :project-job-task-retry  #'project-jobs/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler

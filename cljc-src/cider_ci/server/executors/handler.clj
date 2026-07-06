@@ -111,18 +111,39 @@
 
 
 (defn- propagate-from-trial [tx trial-id]
-  (let [trial     (first (jdbc-sql/query tx
-                           (-> (sql/select :task_id)
-                               (sql/from :trials)
-                               (sql/where [:= :id trial-id])
+  (let [trial      (first (jdbc-sql/query tx
+                            (-> (sql/select :task_id)
+                                (sql/from :trials)
+                                (sql/where [:= :id trial-id])
+                                sql-format)))
+        task-id    (:task_id trial)
+        task       (first (jdbc-sql/query tx
+                            (-> (sql/select :spec)
+                                (sql/from :tasks)
+                                (sql/where [:= :id task-id])
+                                sql-format)))
+        spec       (:spec task)
+        eager      (or (:eager_trials spec) 1)
+        max-trials (or (:max_trials spec) 2)
+        states     (map :state (jdbc-sql/query tx
+                                 (-> (sql/select :state)
+                                     (sql/from :trials)
+                                     (sql/where [:= :task_id task-id])
+                                     sql-format)))
+        prelim     (task-state-from-trials states)
+        ;; If heading for a non-passing terminal state, create retry trials up to max_trials.
+        ;; Also maintain eager_trials parallel trials while retries remain.
+        new-state  (if (and (terminal-states prelim) (not= prelim "passed"))
+                     (let [in-progress (count (filter #{"pending" "dispatching" "executing"} states))
+                           total       (count states)
+                           to-create   (max 0 (min (- eager in-progress) (- max-trials total)))]
+                       (doseq [_ (range to-create)]
+                         (jdbc/execute-one! tx
+                           (-> (sql/insert-into :trials)
+                               (sql/values [{:task_id task-id}])
                                sql-format)))
-        task-id   (:task_id trial)
-        states    (map :state (jdbc-sql/query tx
-                                (-> (sql/select :state)
-                                    (sql/from :trials)
-                                    (sql/where [:= :task_id task-id])
-                                    sql-format)))
-        new-state (task-state-from-trials states)]
+                       (if (pos? to-create) "pending" prelim))
+                     prelim)]
     (jdbc/execute-one! tx
       ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"
        new-state task-id])

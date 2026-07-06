@@ -73,11 +73,15 @@
                                     :state      "pending"
                                     :spec       [:lift task-spec]}])
                       sql-format))
-                (jdbc/execute-one! tx
-                  (-> (sql/insert-into :trials)
-                      (sql/values [{:task_id new-task-id
-                                    :state   "pending"}])
-                      sql-format)))))
+                (let [eager    (or (:eager_trials task-spec) 1)
+                      max-t    (or (:max_trials task-spec) 2)
+                      n-trials (max 1 (min eager max-t))]
+                  (doseq [_ (range n-trials)]
+                    (jdbc/execute-one! tx
+                      (-> (sql/insert-into :trials)
+                          (sql/values [{:task_id new-task-id
+                                        :state   "pending"}])
+                          sql-format)))))))
           {:status 201 :body {:id    new-job-id
                               :key   job-key
                               :name  (:name job-entry)

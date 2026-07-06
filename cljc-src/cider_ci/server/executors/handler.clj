@@ -44,6 +44,14 @@
                    WHERE t.state = 'pending'
                      AND tsk.traits <@ e.traits
                      AND tsk.load <= ?
+                     AND (
+                       tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
+                       OR NOT EXISTS (
+                         SELECT 1 FROM trials t2
+                         WHERE t2.task_id = t.task_id
+                           AND t2.dispatched_at > now() - (tsk.spec->>'dispatch_storm_delay_seconds')::float * interval '1 second'
+                       )
+                     )
                    LIMIT ?
                    FOR UPDATE OF t SKIP LOCKED"
                   (:id executor) available-load limit])]
@@ -117,41 +125,47 @@
 
 
 (defn- propagate-from-trial [tx trial-id]
-  (let [trial      (first (jdbc-sql/query tx
-                            (-> (sql/select :task_id)
-                                (sql/from :trials)
-                                (sql/where [:= :id trial-id])
-                                sql-format)))
-        task-id    (:task_id trial)
-        task       (first (jdbc-sql/query tx
-                            (-> (sql/select :spec)
-                                (sql/from :tasks)
-                                (sql/where [:= :id task-id])
-                                sql-format)))
-        spec       (:spec task)
-        eager      (or (:eager_trials spec) 1)
-        max-trials (or (:max_trials spec) 2)
-        states     (map :state (jdbc-sql/query tx
-                                 (-> (sql/select :state)
-                                     (sql/from :trials)
-                                     (sql/where [:= :task_id task-id])
-                                     sql-format)))
-        prelim     (task-state-from-trials states)
-        ;; If heading for a non-passing terminal state, create retry trials up to max_trials.
-        ;; Also maintain eager_trials parallel trials while retries remain.
-        new-state  (if (and (terminal-states prelim)
-                           (not= prelim "passed")
-                           (not= prelim "aborted"))
-                     (let [in-progress (count (filter #{"pending" "dispatching" "executing"} states))
-                           total       (count states)
-                           to-create   (max 0 (min (- eager in-progress) (- max-trials total)))]
-                       (doseq [_ (range to-create)]
-                         (jdbc/execute-one! tx
-                           (-> (sql/insert-into :trials)
-                               (sql/values [{:task_id task-id}])
-                               sql-format)))
-                       (if (pos? to-create) "pending" prelim))
-                     prelim)]
+  (let [trial         (first (jdbc-sql/query tx
+                               (-> (sql/select :task_id)
+                                   (sql/from :trials)
+                                   (sql/where [:= :id trial-id])
+                                   sql-format)))
+        task-id       (:task_id trial)
+        task          (first (jdbc-sql/query tx
+                               (-> (sql/select :spec)
+                                   (sql/from :tasks)
+                                   (sql/where [:= :id task-id])
+                                   sql-format)))
+        spec          (:spec task)
+        satisfy-last? (= "satisfy-last" (:aggregate_state spec))
+        eager         (or (:eager_trials spec) 1)
+        max-trials    (or (:max_trials spec) 2)
+        states        (map :state (jdbc-sql/query tx
+                                    (-> (sql/select :state)
+                                        (sql/from :trials)
+                                        (sql/where [:= :task_id task-id])
+                                        (sql/order-by [:created_at :asc])
+                                        sql-format)))
+        ;; satisfy-last: task state = last trial's state (sequential semantics, no retry)
+        ;; default: any-pass semantics with retry up to max_trials
+        prelim        (if satisfy-last?
+                        (let [s (or (last states) "defective")]
+                          (case s "dispatching" "executing" s))
+                        (task-state-from-trials states))
+        new-state     (if (and (not satisfy-last?)
+                               (terminal-states prelim)
+                               (not= prelim "passed")
+                               (not= prelim "aborted"))
+                        (let [in-progress (count (filter #{"pending" "dispatching" "executing"} states))
+                              total       (count states)
+                              to-create   (max 0 (min (- eager in-progress) (- max-trials total)))]
+                          (doseq [_ (range to-create)]
+                            (jdbc/execute-one! tx
+                              (-> (sql/insert-into :trials)
+                                  (sql/values [{:task_id task-id}])
+                                  sql-format)))
+                          (if (pos? to-create) "pending" prelim))
+                        prelim)]
     (jdbc/execute-one! tx
       ["UPDATE tasks SET state = ?, updated_at = now() WHERE id = ?"
        new-state task-id])

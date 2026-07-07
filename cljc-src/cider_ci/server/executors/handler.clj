@@ -212,10 +212,17 @@
       ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
        (:id executor)]))
   (let [available-load (or (:available_load body) 1.0)
-        to-execute     (dispatch-trials tx executor available-load server-base-url)]
+        to-execute     (dispatch-trials tx executor available-load server-base-url)
+        to-abort       (mapv (comp str :id)
+                             (jdbc/execute! tx
+                               ["SELECT t.id FROM trials t
+                                 WHERE t.executor_id = ?::uuid
+                                   AND t.state = 'aborting'"
+                                (:id executor)]))]
     {:status 200
      :body   {:trials_to_execute      to-execute
-              :trials_being_processed []}}))
+              :trials_to_abort        to-abort
+              :trials_being_processed (or (:trials_being_processed body) [])}}))
 
 
 (defn- handle-trial-patch [tx trial-id body]

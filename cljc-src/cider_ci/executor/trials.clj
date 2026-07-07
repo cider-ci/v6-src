@@ -14,6 +14,12 @@
 (defn active-trial-ids [] (vec (keys @active-trials*)))
 (defn active-load [] (reduce + 0.0 (vals @active-trials*)))
 
+(defn abort-executing-trial!
+  "Signals abort for a running trial (kills its running script processes)."
+  [trial-id]
+  (when (contains? @active-trials* trial-id)
+    (info "Aborting trial" trial-id)
+    (scripts/abort-trial! trial-id)))
 
 (defn- put-attachment! [{:keys [id] :as _trial} {:keys [server-url token]} attachment-name content-type content]
   (let [url  (str server-url "/executor/trials/" id "/attachments/" attachment-name)
@@ -48,6 +54,16 @@
         (.delete f)))
     (.delete dir)))
 
+(defn sweep-working-dirs!
+  "Deletes stale cider-ci working dirs left over from a previous crashed executor."
+  []
+  (let [tmpdir (File. (System/getProperty "java.io.tmpdir"))]
+    (doseq [^File f (.listFiles tmpdir)
+            :when (and (.isDirectory f)
+                       (.startsWith (.getName f) "cider-ci-"))]
+      (info "Sweeping stale working dir:" (.getName f))
+      (delete-dir! f))))
+
 
 (defn- upload-script-logs! [trial opts script-results]
   (doseq [[key-str result] script-results]
@@ -75,7 +91,7 @@
 
       (git/prepare-working-dir! git_url commit_id work-dir)
 
-      (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars)]
+      (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id)]
         (info "Trial" id "finished with" trial-state)
         (upload-script-logs! trial opts scripts)
         (patch-trial! trial opts trial-state
@@ -86,6 +102,7 @@
         (patch-trial! trial opts "defective" {:error (.getMessage e)}))
 
       (finally
+        (scripts/clear-abort! id)
         (when port-env (ports/release! port-env))
         (swap! active-trials* dissoc id)
         (delete-dir! work-dir)))))

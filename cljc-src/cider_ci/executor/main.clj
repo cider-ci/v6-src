@@ -1,6 +1,7 @@
 (ns cider-ci.executor.main
   (:require
     [cider-ci.executor.sync :as sync]
+    [cider-ci.executor.trials :as trials]
     [cider-ci.shared.logging :as logging]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
@@ -29,6 +30,7 @@
       (error "No executor token provided. Use --token or set CIDER_CI_EXECUTOR_TOKEN.")
       (System/exit 1))
     (info "Starting executor, connecting to" (:server-url options))
+    (trials/sweep-working-dirs!)
     (sync/start! options)))
 
 

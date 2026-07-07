@@ -34,6 +34,8 @@
                              :timeout 10000})]
       (if (= 200 (:status resp))
         (let [body (json/parse-string (:body resp) true)]
+          (doseq [trial-id (:trials_to_abort body)]
+            (trials/abort-executing-trial! trial-id))
           (doseq [trial (:trials_to_execute body)]
             (future (trials/execute! trial opts))))
         (warn "Sync returned HTTP status" (:status resp) (:body resp))))

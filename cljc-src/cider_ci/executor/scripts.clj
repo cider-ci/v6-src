@@ -1,6 +1,26 @@
 (ns cider-ci.executor.scripts
-  (:import [java.io File]))
+  (:import [java.io File]
+           [java.util.concurrent TimeUnit]))
 
+
+;; Maps trial-id → set of running Processes (for timeout/abort).
+(defonce ^:private running-procs* (atom {}))
+;; Set of trial-ids that have been asked to abort.
+(defonce ^:private aborting-trials* (atom #{}))
+
+(defn abort-trial!
+  "Signals abort for trial-id and forcibly destroys all its running processes."
+  [trial-id]
+  (swap! aborting-trials* conj trial-id)
+  (doseq [^Process proc (get @running-procs* trial-id #{})]
+    (.destroyForcibly proc)))
+
+(defn clear-abort! [trial-id]
+  (swap! aborting-trials* disj trial-id)
+  (swap! running-procs* dissoc trial-id))
+
+(defn- aborting? [trial-id]
+  (contains? @aborting-trials* trial-id))
 
 (defn evaluate-states [states]
   (cond
@@ -47,26 +67,37 @@
         (normalize-start-when (:start_when spec))))
 
 
-(defn- run-one! [key-str spec env-vars work-dir]
+(defn- run-one! [trial-id key-str spec env-vars work-dir]
   (try
-    (let [log-file    (File. (System/getProperty "java.io.tmpdir")
+    (let [timeout-sec (or (:timeout spec) 600)
+          log-file    (File. (System/getProperty "java.io.tmpdir")
                              (str "cider-ci-script-" key-str ".log"))
           script-file (File. ^String work-dir (str "cider-ci-" key-str ".sh"))]
       (spit script-file (or (:body spec) ""))
       (.setExecutable script-file true)
-      (let [pb (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
-                 (.directory (File. ^String work-dir))
-                 (.redirectErrorStream true)
-                 (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file)))
-            _  (when env-vars
-                 (let [env (.environment pb)]
-                   (doseq [[k v] env-vars]
-                     (.put env (name k) (str v)))))
-            proc      (.start pb)
-            exit-code (.waitFor proc)]
-        {:state       (if (zero? exit-code) "passed" "failed")
-         :exit_status exit-code
-         :log-file    log-file}))
+      (let [pb   (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
+                   (.directory (File. ^String work-dir))
+                   (.redirectErrorStream true)
+                   (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file)))
+            _    (when env-vars
+                   (let [env (.environment pb)]
+                     (doseq [[k v] env-vars]
+                       (.put env (name k) (str v)))))
+            proc (.start pb)]
+        (swap! running-procs* update trial-id (fnil conj #{}) proc)
+        (try
+          (cond
+            (not (.waitFor proc timeout-sec TimeUnit/SECONDS))
+            (do (.destroyForcibly proc)
+                {:state "defective"
+                 :error (str "Script timed out after " timeout-sec "s")
+                 :log-file log-file})
+            :else
+            {:state       (if (zero? (.exitValue proc)) "passed" "failed")
+             :exit_status (.exitValue proc)
+             :log-file    log-file})
+          (finally
+            (swap! running-procs* update trial-id disj proc)))))
     (catch Exception e
       {:state "defective"
        :error (.getMessage e)})))
@@ -76,37 +107,38 @@
   "Executes all scripts in task-spec respecting start_when DAG.
    env-vars is the fully merged environment map (task env-vars + ports etc.).
    Returns {:trial-state \"passed\"|..., :scripts {\"key\" {:state ..., :log-file ...}}}"
-  [work-dir task-spec env-vars]
+  [work-dir task-spec env-vars trial-id]
   (let [scripts (seq (:scripts task-spec))]
     (if-not scripts
       {:trial-state "defective" :scripts {}}
       (loop [results (into {} (for [[k _] scripts] [(name k) {:state "pending"}]))]
-        ; 1. Skip unsatisfiable scripts (dep finished in wrong state)
-        (let [pending    (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)
-              to-skip    (filter #(unsatisfiable? (name (first %)) (second %) results) pending)
-              results    (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped") results to-skip)
-              ; 2. Find scripts that can start now
-              pending    (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)
-              startable  (filter #(can-start? (name (first %)) (second %) results) pending)]
-          (if (seq startable)
-            ; Launch all eligible scripts concurrently
-            (let [futs    (mapv (fn [[k spec]]
-                                  [(name k) (future (run-one! (name k) spec env-vars work-dir))])
-                                startable)
-                  results (reduce #(assoc-in %1 [(first %2) :state] "executing") results futs)
-                  results (reduce (fn [acc [key-str fut]] (assoc acc key-str @fut))
-                                  results futs)]
-              (recur results))
-            ; Nothing startable
-            (let [still-pending (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)]
-              (if (empty? still-pending)
-                ; All scripts done — compute trial state
-                (let [non-ignored-states (->> scripts
-                                              (remove #(get (second %) :ignore_state))
-                                              (map #(get-in results [(name (first %)) :state]))
-                                              (filter identity))]
-                  {:trial-state (evaluate-states non-ignored-states)
-                   :scripts     results})
-                ; Stuck (circular deps) — skip remaining pending
-                (recur (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped")
-                               results still-pending))))))))))
+        (if (aborting? trial-id)
+          ; Abort requested — skip all remaining pending scripts
+          (let [results (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped")
+                                results
+                                (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts))]
+            {:trial-state "aborted" :scripts results})
+          ; Normal execution
+          (let [pending   (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)
+                to-skip   (filter #(unsatisfiable? (name (first %)) (second %) results) pending)
+                results   (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped") results to-skip)
+                pending   (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)
+                startable (filter #(can-start? (name (first %)) (second %) results) pending)]
+            (if (seq startable)
+              (let [futs    (mapv (fn [[k spec]]
+                                    [(name k) (future (run-one! trial-id (name k) spec env-vars work-dir))])
+                                  startable)
+                    results (reduce #(assoc-in %1 [(first %2) :state] "executing") results futs)
+                    results (reduce (fn [acc [key-str fut]] (assoc acc key-str @fut))
+                                    results futs)]
+                (recur results))
+              (let [still-pending (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)]
+                (if (empty? still-pending)
+                  (let [non-ignored-states (->> scripts
+                                                (remove #(get (second %) :ignore_state))
+                                                (map #(get-in results [(name (first %)) :state]))
+                                                (filter identity))]
+                    {:trial-state (evaluate-states non-ignored-states)
+                     :scripts     results})
+                  (recur (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped")
+                                 results still-pending)))))))))))

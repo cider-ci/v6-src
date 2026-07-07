@@ -20,15 +20,18 @@
 
 (defn- do-sync! [{:keys [server-url token max-load] :as opts}]
   (try
-    (let [resp @(http-client/post
-                  (str server-url "/executor/sync")
-                  {:headers {"Authorization" (str "Bearer " token)
-                             "Content-Type"  "application/json"
-                             "Accept"        "application/json"}
-                   :body    (json/generate-string {:available_load (double max-load)
-                                                   :traits         (read-traits)
-                                                   :trials         []})
-                   :timeout 10000})]
+    (let [active-ids     (trials/active-trial-ids)
+          used-load      (trials/active-load)
+          available-load (max 0.0 (- (double max-load) used-load))
+          resp           @(http-client/post
+                            (str server-url "/executor/sync")
+                            {:headers {"Authorization" (str "Bearer " token)
+                                       "Content-Type"  "application/json"
+                                       "Accept"        "application/json"}
+                             :body    (json/generate-string {:available_load         available-load
+                                                             :traits                 (read-traits)
+                                                             :trials_being_processed active-ids})
+                             :timeout 10000})]
       (if (= 200 (:status resp))
         (let [body (json/parse-string (:body resp) true)]
           (doseq [trial (:trials_to_execute body)]

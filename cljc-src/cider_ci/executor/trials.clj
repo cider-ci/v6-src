@@ -6,6 +6,12 @@
     [taoensso.timbre :refer [info warn]])
   (:import [java.io File FileInputStream]))
 
+;; Maps trial-id (string) → load (double) for all actively running trials.
+(defonce ^:private active-trials* (atom {}))
+
+(defn active-trial-ids [] (vec (keys @active-trials*)))
+(defn active-load [] (reduce + 0.0 (vals @active-trials*)))
+
 
 (defn- put-attachment! [{:keys [id] :as _trial} {:keys [server-url token]} attachment-name content-type content]
   (let [url  (str server-url "/executor/trials/" id "/attachments/" attachment-name)
@@ -56,7 +62,9 @@
 
 (defn execute! [{:keys [id git_url commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
-  (let [work-dir (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))]
+  (let [trial-load (double (or (:load task_spec) 1.0))
+        work-dir   (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))]
+    (swap! active-trials* assoc id trial-load)
     (try
       (patch-trial! trial opts "executing" {})
 
@@ -82,4 +90,5 @@
         (patch-trial! trial opts "defective" {:error (.getMessage e)}))
 
       (finally
+        (swap! active-trials* dissoc id)
         (delete-dir! work-dir)))))

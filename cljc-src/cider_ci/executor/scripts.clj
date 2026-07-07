@@ -74,11 +74,10 @@
 
 (defn run-all!
   "Executes all scripts in task-spec respecting start_when DAG.
-   Scripts with no start_when run immediately in parallel.
+   env-vars is the fully merged environment map (task env-vars + ports etc.).
    Returns {:trial-state \"passed\"|..., :scripts {\"key\" {:state ..., :log-file ...}}}"
-  [work-dir task-spec]
-  (let [scripts  (seq (:scripts task-spec))
-        env-vars (:environment_variables task-spec)]
+  [work-dir task-spec env-vars]
+  (let [scripts (seq (:scripts task-spec))]
     (if-not scripts
       {:trial-state "defective" :scripts {}}
       (loop [results (into {} (for [[k _] scripts] [(name k) {:state "pending"}]))]

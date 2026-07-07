@@ -1,6 +1,7 @@
 (ns cider-ci.executor.trials
   (:require
     [cider-ci.executor.git :as git]
+    [cider-ci.executor.ports :as ports]
     [cider-ci.executor.scripts :as scripts]
     [cheshire.core :as json]
     [org.httpkit.client :as http-client]
@@ -64,14 +65,17 @@
 (defn execute! [{:keys [id git_url commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
   (let [trial-load (double (or (:load task_spec) 1.0))
-        work-dir   (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))]
+        work-dir   (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))
+        port-env   (when (seq (:ports task_spec))
+                     (ports/reserve! (:ports task_spec)))
+        env-vars   (merge (:environment_variables task_spec) port-env)]
     (swap! active-trials* assoc id trial-load)
     (try
       (patch-trial! trial opts "executing" {})
 
       (git/prepare-working-dir! git_url commit_id work-dir)
 
-      (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec)]
+      (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars)]
         (info "Trial" id "finished with" trial-state)
         (upload-script-logs! trial opts scripts)
         (patch-trial! trial opts trial-state
@@ -82,5 +86,6 @@
         (patch-trial! trial opts "defective" {:error (.getMessage e)}))
 
       (finally
+        (when port-env (ports/release! port-env))
         (swap! active-trials* dissoc id)
         (delete-dir! work-dir)))))

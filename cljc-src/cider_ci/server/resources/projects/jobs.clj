@@ -51,41 +51,46 @@
               full-spec  (generate/expand project-id commit-id (:full-spec job-entry))
               task-specs (decompose/decompose full-spec)
               new-job-id (java.util.UUID/randomUUID)]
-          (jdbc/with-transaction [tx (get-ds)]
-            (jdbc/execute-one! tx
-              (-> (sql/insert-into :jobs)
-                  (sql/values [{:id          new-job-id
-                                :project_id  project-id
-                                :commit_id   commit-id
-                                :jobs/key    job-key
-                                :jobs/name   (:name job-entry)
-                                :state       "pending"
-                                :spec        [:lift full-spec]
-                                :created_by  created-by}])
-                  sql-format))
-            (doseq [task-spec task-specs]
-              (let [new-task-id (java.util.UUID/randomUUID)]
-                (jdbc/execute-one! tx
-                  (-> (sql/insert-into :tasks)
-                      (sql/values [{:id         new-task-id
-                                    :job_id     new-job-id
-                                    :tasks/name (:name task-spec)
-                                    :state      "pending"
-                                    :spec       [:lift task-spec]}])
-                      sql-format))
-                (let [eager    (or (:eager_trials task-spec) 1)
-                      max-t    (or (:max_trials task-spec) 2)
-                      n-trials (max 1 (min eager max-t))]
-                  (doseq [_ (range n-trials)]
-                    (jdbc/execute-one! tx
-                      (-> (sql/insert-into :trials)
-                          (sql/values [{:task_id new-task-id
-                                        :state   "pending"}])
-                          sql-format)))))))
-          {:status 201 :body {:id    new-job-id
-                              :key   job-key
-                              :name  (:name job-entry)
-                              :state "pending"}})))))
+          (try
+            (jdbc/with-transaction [tx (get-ds)]
+              (jdbc/execute-one! tx
+                (-> (sql/insert-into :jobs)
+                    (sql/values [{:id          new-job-id
+                                  :project_id  project-id
+                                  :commit_id   commit-id
+                                  :jobs/key    job-key
+                                  :jobs/name   (:name job-entry)
+                                  :state       "pending"
+                                  :spec        [:lift full-spec]
+                                  :created_by  created-by}])
+                    sql-format))
+              (doseq [task-spec task-specs]
+                (let [new-task-id (java.util.UUID/randomUUID)]
+                  (jdbc/execute-one! tx
+                    (-> (sql/insert-into :tasks)
+                        (sql/values [{:id         new-task-id
+                                      :job_id     new-job-id
+                                      :tasks/name (:name task-spec)
+                                      :state      "pending"
+                                      :spec       [:lift task-spec]}])
+                        sql-format))
+                  (let [eager    (or (:eager_trials task-spec) 1)
+                        max-t    (or (:max_trials task-spec) 2)
+                        n-trials (max 1 (min eager max-t))]
+                    (doseq [_ (range n-trials)]
+                      (jdbc/execute-one! tx
+                        (-> (sql/insert-into :trials)
+                            (sql/values [{:task_id new-task-id
+                                          :state   "pending"}])
+                            sql-format)))))))
+            {:status 201 :body {:id    new-job-id
+                                :key   job-key
+                                :name  (:name job-entry)
+                                :state "pending"}}
+            (catch org.postgresql.util.PSQLException e
+              (if (= "23505" (.getSQLState e))
+                {:status 409 :body "A job with this key already exists for this commit"}
+                (throw e)))))))))
 
 (defn- get-trials-for-task [task-id]
   (jdbc-sql/query (get-ds)

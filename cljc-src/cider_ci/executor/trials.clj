@@ -1,5 +1,6 @@
 (ns cider-ci.executor.trials
   (:require
+    [cider-ci.executor.git :as git]
     [cider-ci.executor.scripts :as scripts]
     [cheshire.core :as json]
     [org.httpkit.client :as http-client]
@@ -68,16 +69,7 @@
     (try
       (patch-trial! trial opts "executing" {})
 
-      (let [clone-proc (-> (ProcessBuilder. ["git" "clone" git_url (.getAbsolutePath work-dir)])
-                           .start)]
-        (when-not (zero? (.waitFor clone-proc))
-          (throw (ex-info "git clone failed" {:git-url git_url}))))
-
-      (let [co-proc (-> (ProcessBuilder. ["git" "checkout" commit_id])
-                        (.directory work-dir)
-                        .start)]
-        (when-not (zero? (.waitFor co-proc))
-          (throw (ex-info "git checkout failed" {:commit-id commit_id}))))
+      (git/prepare-working-dir! git_url commit_id work-dir)
 
       (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec)]
         (info "Trial" id "finished with" trial-state)

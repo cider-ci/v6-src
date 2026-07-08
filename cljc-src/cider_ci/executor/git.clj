@@ -56,15 +56,49 @@
     cache))
 
 
+(defn- submodule-paths [^File work-dir]
+  (try
+    (let [pb   (doto (ProcessBuilder. ["git" "config" "--file" ".gitmodules"
+                                       "--get-regexp" "submodule\\..*\\.path"])
+                 (.directory work-dir)
+                 (.redirectErrorStream true))
+          proc (.start pb)
+          out  (slurp (.getInputStream proc))]
+      (.waitFor proc)
+      (->> (str/split-lines out)
+           (remove str/blank?)
+           (map #(second (str/split % #"\s+" 2)))))
+    (catch Exception _ [])))
+
+(defn- matches-pattern? [^String path ^String pattern]
+  (boolean (re-find (re-pattern pattern) path)))
+
+(defn- include-submodule? [path submodule-opts]
+  (let [{:keys [include_match exclude_match]} submodule-opts]
+    (and (or (nil? include_match) (matches-pattern? path include_match))
+         (or (nil? exclude_match) (not (matches-pattern? path exclude_match))))))
+
+(defn- init-submodules! [^File work-dir submodule-opts]
+  (when (.exists (File. work-dir ".gitmodules"))
+    (if (or (:include_match submodule-opts) (:exclude_match submodule-opts))
+      (let [paths   (submodule-paths work-dir)
+            matched (filter #(include-submodule? % submodule-opts) paths)]
+        (when (seq matched)
+          (info "Initialising" (count matched) "of" (count paths) "submodules (filtered)")
+          (doseq [path matched]
+            (run! ["git" "submodule" "update" "--init" path] work-dir))))
+      (do
+        (info "Initialising submodules")
+        (run! ["git" "submodule" "update" "--init" "--recursive"] work-dir)))))
+
+
 (defn prepare-working-dir!
   "Clones commit-id into work-dir via the local bare-clone cache.
-   Initialises submodules if .gitmodules is present."
-  [git-url commit-id ^File work-dir]
+   git-options may contain {:submodules {:include_match ... :exclude_match ...}}"
+  [git-url commit-id ^File work-dir git-options]
   (let [cache (ensure-cache! git-url commit-id)]
     (run! ["git" "clone" "--shared" "--no-checkout"
            (.getAbsolutePath cache) (.getAbsolutePath work-dir)] nil)
     (run! ["git" "checkout" commit-id] work-dir)
     (run! ["git" "remote" "set-url" "origin" git-url] work-dir)
-    (when (.exists (File. work-dir ".gitmodules"))
-      (info "Initialising submodules")
-      (run! ["git" "submodule" "update" "--init" "--recursive"] work-dir))))
+    (init-submodules! work-dir (:submodules git-options))))

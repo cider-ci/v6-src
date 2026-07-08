@@ -10,12 +10,15 @@
 (def ^:private traits-file "/etc/cider-ci/traits")
 
 (defn- read-traits []
-  (try
-    (->> (str/split-lines (slurp traits-file))
-         (map str/trim)
-         (remove str/blank?))
-    (catch Exception _
-      ["bash"])))
+  (or (when-let [env-traits (System/getenv "CIDER_CI_EXECUTOR_TRAITS")]
+        (let [ts (->> (str/split env-traits #",") (map str/trim) (remove str/blank?))]
+          (when (seq ts) ts)))
+      (try
+        (->> (str/split-lines (slurp traits-file))
+             (map str/trim)
+             (remove str/blank?))
+        (catch Exception _
+          ["Bash"]))))
 
 
 (defn- do-sync! [{:keys [server-url token max-load] :as opts}]

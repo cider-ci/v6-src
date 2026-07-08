@@ -1,6 +1,14 @@
 (ns cider-ci.executor.scripts
+  (:require [cider-ci.utils.duration :as duration])
   (:import [java.io File]
            [java.util.concurrent TimeUnit]))
+
+(defn- parse-timeout [t]
+  (cond
+    (nil? t)     600
+    (number? t)  (long t)
+    (string? t)  (long (duration/parse-string-to-seconds t))
+    :else        600))
 
 
 ;; Maps trial-id → set of running Processes (for timeout/abort).
@@ -95,7 +103,7 @@
 
 (defn- run-one! [trial-id key-str spec env-vars work-dir]
   (try
-    (let [timeout-sec (or (:timeout spec) 600)
+    (let [timeout-sec (parse-timeout (:timeout spec))
           log-file    (File. (System/getProperty "java.io.tmpdir")
                              (str "cider-ci-script-" key-str ".log"))
           script-file (File. ^String work-dir (str "cider-ci-" key-str ".sh"))]

@@ -114,4 +114,69 @@ feature 'Dispatcher' do
     expect(status).to eq 401
   end
 
+  scenario 'updates executor traits on sync' do
+    seed_executor(traits: [])
+
+    uri = URI("#{http_base_url}/executor/sync")
+    req = Net::HTTP::Post.new(uri)
+    req['Authorization'] = "Bearer #{token}"
+    req['Content-Type']  = 'application/json'
+    req['Accept']        = 'application/json'
+    req.body             = { available_load: 4.0, traits: ['Ruby', 'Bash'] }.to_json
+    Net::HTTP.start(uri.hostname, uri.port) { |h| h.request(req) }
+
+    executor = database[:executors].where(token_hash: token_hash).first
+    expect(executor[:traits]).to include('Ruby', 'Bash')
+  end
+
+  scenario 'dispatch_storm_delay_seconds blocks re-dispatch within the delay window' do
+    seed_executor(traits: [])
+
+    # A task with a 60-second re-dispatch delay
+    job_id = database[:jobs].insert(
+      project_id: project_id, commit_id: commit_id,
+      key: SecureRandom.hex(4), state: 'pending', name: 'storm delay job'
+    )
+    task_id = database.fetch(
+      "INSERT INTO tasks (job_id, name, state, traits, load, spec)
+       VALUES (?, 'storm task', 'pending', '{}', 1.0, '{\"dispatch_storm_delay_seconds\": 60}'::jsonb)
+       RETURNING id",
+      job_id
+    ).first[:id]
+    # Existing trial dispatched just now (within the delay window)
+    database[:trials].insert(task_id: task_id, state: 'dispatching',
+                              dispatched_at: Time.now.utc)
+    # New pending trial for the same task — should be held back
+    database[:trials].insert(task_id: task_id, state: 'pending')
+
+    status, body = executor_sync(token)
+
+    expect(status).to eq 200
+    expect(body['trials_to_execute']).to be_empty
+  end
+
+  scenario 'dispatch_storm_delay_seconds allows dispatch after the delay has elapsed' do
+    seed_executor(traits: [])
+
+    job_id = database[:jobs].insert(
+      project_id: project_id, commit_id: commit_id,
+      key: SecureRandom.hex(4), state: 'pending', name: 'storm delay elapsed job'
+    )
+    task_id = database.fetch(
+      "INSERT INTO tasks (job_id, name, state, traits, load, spec)
+       VALUES (?, 'storm task', 'pending', '{}', 1.0, '{\"dispatch_storm_delay_seconds\": 60}'::jsonb)
+       RETURNING id",
+      job_id
+    ).first[:id]
+    # Existing trial dispatched 2 minutes ago (outside the delay window)
+    database[:trials].insert(task_id: task_id, state: 'dispatching',
+                              dispatched_at: Time.now.utc - 120)
+    database[:trials].insert(task_id: task_id, state: 'pending')
+
+    status, body = executor_sync(token)
+
+    expect(status).to eq 200
+    expect(body['trials_to_execute'].length).to eq 1
+  end
+
 end

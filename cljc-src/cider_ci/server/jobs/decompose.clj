@@ -18,33 +18,46 @@
     (-> v (assoc :scripts {:main {:body (:body v)}}) (dissoc :body))
     :else v))
 
+(defn- apply-script-defaults [task-spec script-defaults]
+  (if (empty? script-defaults)
+    task-spec
+    (update task-spec :scripts
+            (fn [scripts]
+              (when scripts
+                (into {} (for [[k v] scripts]
+                           [k (merge script-defaults v)])))))))
+
 (declare collect-from-context)
 
-(defn- from-tasks-map [tasks inherited-defaults]
+(defn- from-tasks-map [tasks inherited-task-defaults script-defaults]
   (->> tasks
        (map (fn [[k v]]
               (let [norm (normalize-task-value v)]
-                (merge inherited-defaults
-                       norm
-                       {:name (or (:name norm) (name k))}))))))
+                (-> (merge inherited-task-defaults
+                           norm
+                           {:name (or (:name norm) (name k))})
+                    (apply-script-defaults script-defaults)))))))
 
-(defn collect-from-context [context inherited-defaults]
-  (let [task-defaults (merge inherited-defaults (:task_defaults context))
-        from-task     (when-let [t (:task context)]
-                        [(merge task-defaults
-                                (string->scripts t)
-                                {:name "main"})])
-        from-tasks    (when-let [ts (:tasks context)]
-                        (from-tasks-map ts task-defaults))
-        sub-contexts  (concat (:contexts context) (:subcontexts context))
-        from-contexts (mapcat #(collect-from-context % task-defaults) sub-contexts)]
+(defn collect-from-context [context inherited-task-defaults inherited-script-defaults]
+  (let [task-defaults   (merge inherited-task-defaults (:task_defaults context))
+        script-defaults (merge inherited-script-defaults (:script_defaults context))
+        from-task       (when-let [t (:task context)]
+                          [(-> (merge task-defaults
+                                      (string->scripts t)
+                                      {:name "main"})
+                               (apply-script-defaults script-defaults))])
+        from-tasks      (when-let [ts (:tasks context)]
+                          (from-tasks-map ts task-defaults script-defaults))
+        sub-contexts    (concat (:contexts context) (:subcontexts context))
+        from-contexts   (mapcat #(collect-from-context % task-defaults script-defaults) sub-contexts)]
     (concat from-task from-tasks from-contexts)))
 
 (defn decompose
   "Returns a vec of task maps from a job spec. Handles:
    - task: <body> shorthand → one task named 'main'
    - tasks: { key: spec } map
-   - context: { tasks: ..., contexts: [...] } recursive"
+   - context: { tasks: ..., contexts: [...] } recursive
+   - task_defaults / script_defaults inherited through nested contexts"
   [job-spec]
   (let [lifted (lift-to-context job-spec)]
-    (vec (collect-from-context (:context lifted) {}))))
+    (vec (collect-from-context (:context lifted) {} {}))))

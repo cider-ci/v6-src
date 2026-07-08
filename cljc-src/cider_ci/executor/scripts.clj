@@ -7,6 +7,8 @@
 (defonce ^:private running-procs* (atom {}))
 ;; Set of trial-ids that have been asked to abort.
 (defonce ^:private aborting-trials* (atom #{}))
+;; Maps exclusive-resource-name → Clojure agent (for serial execution per resource).
+(defonce ^:private exclusive-resource-agents* (atom {}))
 
 (defn abort-trial!
   "Signals abort for trial-id and forcibly destroys all its running processes."
@@ -65,6 +67,30 @@
             (and (terminal-state? dep-state)
                  (not (contains? required dep-state)))))
         (normalize-start-when (:start_when spec))))
+
+
+(declare run-one!)
+
+(defn- get-exclusive-agent! [resource-name]
+  (get (swap! exclusive-resource-agents*
+              (fn [m]
+                (if (get m resource-name)
+                  m
+                  (assoc m resource-name (agent nil :error-mode :continue)))))
+       resource-name))
+
+(defn- dispatch-script!
+  "Dispatches a single script execution. If exclusive_executor_resource is set,
+   serializes via a per-resource Clojure agent; otherwise runs in a future."
+  [trial-id key-str spec env-vars work-dir]
+  (if-let [resource-name (:exclusive_executor_resource spec)]
+    (let [p   (promise)
+          agt (get-exclusive-agent! resource-name)]
+      (send-off agt (fn [_]
+                      (deliver p (run-one! trial-id key-str spec env-vars work-dir))
+                      nil))
+      p)
+    (future (run-one! trial-id key-str spec env-vars work-dir))))
 
 
 (defn- run-one! [trial-id key-str spec env-vars work-dir]
@@ -126,7 +152,7 @@
                 startable (filter #(can-start? (name (first %)) (second %) results) pending)]
             (if (seq startable)
               (let [futs    (mapv (fn [[k spec]]
-                                    [(name k) (future (run-one! trial-id (name k) spec env-vars work-dir))])
+                                    [(name k) (dispatch-script! trial-id (name k) spec env-vars work-dir)])
                                   startable)
                     results (reduce #(assoc-in %1 [(first %2) :state] "executing") results futs)
                     results (reduce (fn [acc [key-str fut]] (assoc acc key-str @fut))

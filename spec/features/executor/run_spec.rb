@@ -72,7 +72,7 @@ feature 'Executor Run' do
 
     # Verify that log attachments were uploaded for the trial(s)
     expect(page).to have_link 'Log'
-    expect(database[:trial_attachments].where(path: 'log').count).to be >= 1
+    expect(database[:trial_attachments].where(path: 'scripts/main').count).to be >= 1
   end
 
 end

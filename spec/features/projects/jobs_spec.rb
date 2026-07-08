@@ -46,7 +46,7 @@ feature 'Jobs' do
 
   # Inserts a complete job+task+trial hierarchy directly into the DB.
   # Returns { job_id:, task_id:, trial_id:, commit_id: }.
-  def insert_job_hierarchy(state: 'failed', error: nil, with_timing: false)
+  def insert_job_hierarchy(state: 'failed', error: nil, with_timing: false, with_scripts: false)
     commit_id = 'd' * 40
     job_id    = SecureRandom.uuid
     task_id   = SecureRandom.uuid
@@ -67,6 +67,10 @@ feature 'Jobs' do
     trial_attrs[:started_at]  = Time.now.utc - 5 if with_timing
     trial_attrs[:finished_at] = Time.now.utc      if with_timing
     database[:trials].insert(trial_attrs)
+
+    if with_scripts
+      database.run("UPDATE trials SET result = '{\"scripts\":{\"main\":{\"state\":\"#{state}\"}}}'::jsonb WHERE id = '#{trial_id}'")
+    end
 
     { job_id: job_id, task_id: task_id, trial_id: trial_id, commit_id: commit_id }
   end
@@ -120,9 +124,9 @@ feature 'Jobs' do
   end
 
   scenario 'job detail shows Log link for each trial' do
-    h = insert_job_hierarchy
+    h = insert_job_hierarchy(with_scripts: true)
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}"
-    expect(page).to have_link 'Log', href: "/trials/#{h[:trial_id]}/attachments/log"
+    expect(page).to have_link 'Log', href: "/trials/#{h[:trial_id]}/attachments/scripts/main"
   end
 
   scenario 'job detail shows trial duration when trial has timing data' do

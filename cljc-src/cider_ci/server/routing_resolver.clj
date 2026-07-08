@@ -48,6 +48,7 @@
    :project-git   #'project-git/http-handler
    :project-jobs            #'project-jobs/handler
    :project-job             #'project-jobs/handler
+   :project-job-abort       #'project-jobs/handler
    :project-job-retry       #'project-jobs/handler
    :project-job-task-retry  #'project-jobs/handler
    :projects #'projects/handler

@@ -36,6 +36,8 @@
       ["/:job-id"
        ["" {:name :project-job
             :auth-http-safe #{:user}}]
+       ["/abort" {:name             :project-job-abort
+                  :auth-http-unsafe #{:user}}]
        ["/retry" {:name             :project-job-retry
                   :auth-http-unsafe #{:user}}]
        ["/tasks/:task-id/retry" {:name             :project-job-task-retry

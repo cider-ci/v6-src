@@ -117,6 +117,47 @@
                             sql-format)))]
       (assoc job :tasks tasks))))
 
+(defn- abort-job! [project-id job-id]
+  (let [job-uuid (java.util.UUID/fromString job-id)]
+    (when-not (first (jdbc-sql/query (get-ds)
+                       (-> (sql/select :id)
+                           (sql/from :jobs)
+                           (sql/where [:= :id job-uuid])
+                           (sql/where [:= :project_id project-id])
+                           sql-format)))
+      (throw (ex-info "Job not found" {:status 404})))
+    (jdbc/with-transaction [tx (get-ds)]
+      ;; Pending trials have no executor — abort them immediately.
+      (jdbc/execute! tx
+        ["UPDATE trials t SET state = 'aborted', updated_at = now()
+          FROM tasks tsk WHERE t.task_id = tsk.id AND tsk.job_id = ?
+            AND t.state = 'pending'"
+         job-uuid])
+      ;; Active trials (dispatching/executing) — signal the executor to abort.
+      (jdbc/execute! tx
+        ["UPDATE trials t SET state = 'aborting', updated_at = now()
+          FROM tasks tsk WHERE t.task_id = tsk.id AND tsk.job_id = ?
+            AND t.state IN ('dispatching', 'executing')"
+         job-uuid])
+      ;; Propagate aborting/aborted state up to tasks.
+      (jdbc/execute! tx
+        ["UPDATE tasks
+          SET state = CASE
+            WHEN EXISTS (SELECT 1 FROM trials WHERE task_id = tasks.id AND state = 'aborting')
+            THEN 'aborting'
+            ELSE 'aborted'
+          END,
+          updated_at = now()
+          WHERE job_id = ?
+            AND state NOT IN ('passed', 'failed', 'defective', 'aborted', 'aborting')"
+         job-uuid])
+      (jdbc/execute-one! tx
+        ["UPDATE jobs SET state = 'aborting', updated_at = now()
+          WHERE id = ? AND state NOT IN ('passed', 'failed', 'defective', 'aborted')"
+         job-uuid]))
+    {:status 200 :body {:status "aborting"}}))
+
+
 (defn- retry-job! [project-id job-id]
   (let [job-uuid (java.util.UUID/fromString job-id)]
     (when-not (first (jdbc-sql/query (get-ds)
@@ -183,6 +224,11 @@
       :get (if-let [result (get-job-with-tasks project-id job-id)]
              {:status 200 :body result}
              {:status 404 :body "Job not found"})
+      {:status 405 :body "Method not allowed"})
+
+    :project-job-abort
+    (case request-method
+      :post (abort-job! project-id job-id)
       {:status 405 :body "Method not allowed"})
 
     :project-job-retry

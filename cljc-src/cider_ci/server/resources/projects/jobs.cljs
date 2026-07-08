@@ -240,10 +240,10 @@
      [:p.text-muted "No tasks for this job."])])
 
 
-(defn- retry-job! []
-  (-> (js/fetch (path :project-job-retry {:project-id (project-id)
-                                          :commit-id  (commit-id)
-                                          :job-id     (job-id)})
+(defn- post-job-action! [route-kw]
+  (-> (js/fetch (path route-kw {:project-id (project-id)
+                                :commit-id  (commit-id)
+                                :job-id     (job-id)})
                 (clj->js {:method      "POST"
                            :credentials "same-origin"
                            :headers     {"content-type" "application/json"
@@ -251,14 +251,18 @@
                                          "x-csrf-token" (anti-csrf/token)}}))
       (.then (fn [_] (fetch-data)))))
 
+(defn- retry-job! [] (post-job-action! :project-job-retry))
+(defn- abort-job! [] (post-job-action! :project-job-abort))
+
 
 (defn- job-detail-page []
   [:div.page.job
    [state/hidden-routing-state-component :did-change start-job-polling!]
    (if-not (seq @data*)
      [:div "Loading..."]
-     (let [job   @data*
-           retry? (#{"failed" "defective" "aborted"} (:state job))]
+     (let [job      @data*
+           abortable? (#{"pending" "executing"} (:state job))
+           retryable? (#{"failed" "defective" "aborted"} (:state job))]
        [:<>
         [:nav.mb-3
          [:a {:href (path :project {:project-id (project-id)})}
@@ -272,7 +276,11 @@
          " / "
          [:code (:key job)]]
         [:h3 (:name job) " " [state-badge (:state job)]
-         (when retry?
+         (when abortable?
+           [:button.btn.btn-sm.btn-outline-warning.ms-2
+            {:on-click abort-job!}
+            [:i.fas.fa-stop] " Abort"])
+         (when retryable?
            [:button.btn.btn-sm.btn-outline-secondary.ms-2
             {:on-click retry-job!}
             [:i.fas.fa-rotate-right] " Retry"])]

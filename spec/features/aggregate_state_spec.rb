@@ -46,4 +46,16 @@ feature 'Aggregate State: default (any-pass with retry)' do
 
     expect(database[:tasks][id: task_id][:state]).to eq 'passed'
   end
+
+  scenario 'eager_trials=2 creates two new trials on first failure' do
+    job_id   = seed_job
+    task_id  = seed_task(job_id, spec: {'eager_trials' => 2, 'max_trials' => 4})
+    trial_id = seed_trial(task_id)
+
+    executor_api(:patch, "/executor/trials/#{trial_id}", {state: 'failed'})
+
+    # 1 failed + 2 new eager trials
+    expect(database[:trials].where(task_id: task_id).count).to eq 3
+    expect(database[:tasks][id: task_id][:state]).to eq 'pending'
+  end
 end

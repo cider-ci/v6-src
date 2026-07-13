@@ -1,5 +1,6 @@
 (ns cider-ci.server.executors.handler
   (:require
+    [cider-ci.server.executors.auth :as auth]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -7,25 +8,6 @@
     [next.jdbc.sql :as jdbc-sql]
     [taoensso.timbre :refer [warn]])
   (:import [java.io InputStream]))
-
-
-(defn- sha256 [^String s]
-  (format "%064x"
-    (BigInteger. 1
-      (.digest (java.security.MessageDigest/getInstance "SHA-256")
-               (.getBytes s "UTF-8")))))
-
-
-(defn- find-executor [tx auth-header]
-  (when (and auth-header (str/starts-with? auth-header "Bearer "))
-    (let [token      (subs auth-header 7)
-          token-hash (sha256 token)]
-      (first (jdbc-sql/query tx
-               (-> (sql/select :*)
-                   (sql/from :executors)
-                   (sql/where [:= :token_hash token-hash])
-                   (sql/where [:= :enabled true])
-                   sql-format))))))
 
 
 (defn- dispatch-trials [tx executor available-load server-base-url]
@@ -262,7 +244,7 @@
                 :as request}]
   (let [auth-header      (get headers "authorization")
         server-base-url  (str (name (or scheme :http)) "://" server-name ":" server-port)]
-    (if-let [executor (find-executor tx auth-header)]
+    (if-let [executor (auth/find-executor tx auth-header)]
       (case route-name
         :executor-sync
         (case request-method

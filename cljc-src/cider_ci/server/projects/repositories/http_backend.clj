@@ -5,6 +5,7 @@
 (ns cider-ci.server.projects.repositories.http-backend
   (:refer-clojure :exclude [str keyword])
   (:require
+    [cider-ci.server.executors.auth :as auth]
     [cider-ci.server.projects.repositories.shared :refer [path]]
     [cider-ci.utils.core :refer [keyword str presence]]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -46,10 +47,19 @@
                      remote-addr :remote-addr
                      {{:keys [project-id repository-path]} :path-params} :route
                      query-string :query-string
+                     headers :headers
                      tx :tx
                      :as request}]
-  (if-not (repository-exists? project-id tx)
+  (cond
+    (nil? (auth/find-executor tx (get headers "authorization")))
+    {:status 401
+     :headers {"WWW-Authenticate" "Bearer realm=\"cider-ci\""}
+     :body "Unauthorized: valid executor token required"}
+
+    (not (repository-exists? project-id tx))
     {:status 404 :body "no such repository"}
+
+    :else
     (let [content-length (get-in request [:headers "content-length"])
           env {"GIT_PROJECT_ROOT" (.toString (path {:project-id project-id}))
                "PATH_INFO" (str "/" repository-path)

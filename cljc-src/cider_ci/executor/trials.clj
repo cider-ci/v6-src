@@ -93,7 +93,7 @@
     (try
       (patch-trial! trial opts "executing" {})
 
-      (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec))
+      (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts))
 
       (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id)]
         (info "Trial" id "finished with" trial-state)

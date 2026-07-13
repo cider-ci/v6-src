@@ -40,16 +40,29 @@
              .start
              .waitFor)))
 
-(defn- ensure-cache! [git-url commit-id]
-  (let [cache (File. cache-root (sha1-hex git-url))]
+(defn- server-origin [git-url]
+  (let [uri (java.net.URI/create git-url)]
+    (str (.getScheme uri) "://" (.getAuthority uri))))
+
+(defn- auth-args [token git-url]
+  ;; Scope the Authorization header to the CIDER-CI server origin only.
+  ;; Using http.<url>.extraheader prevents the token from being sent to
+  ;; external hosts (e.g. GitHub submodules).
+  (if (and token git-url)
+    ["-c" (str "http." (server-origin git-url) "/.extraheader=Authorization: Bearer " token)]
+    []))
+
+(defn- ensure-cache! [git-url commit-id token]
+  (let [cache (File. cache-root (sha1-hex git-url))
+        auth  (auth-args token git-url)]
     (locking (repo-lock git-url)
       (when-not (.exists cache)
         (.mkdirs cache)
         (info "Initialising bare clone cache for" git-url)
-        (run! ["git" "clone" "--bare" git-url (.getAbsolutePath cache)] nil))
+        (run! (vec (concat ["git"] auth ["clone" "--bare" git-url (.getAbsolutePath cache)])) nil))
       (when-not (commit-present? cache commit-id)
         (info "Fetching" git-url "for commit" (subs commit-id 0 8))
-        (run! ["git" "fetch" "--force" "--tags" git-url "+refs/*:refs/*"] cache)
+        (run! (vec (concat ["git"] auth ["fetch" "--force" "--tags" git-url "+refs/*:refs/*"])) cache)
         (when-not (commit-present? cache commit-id)
           (throw (ex-info "Commit not found in repository after fetch"
                           {:git-url git-url :commit-id commit-id})))))
@@ -78,27 +91,29 @@
     (and (or (nil? include_match) (matches-pattern? path include_match))
          (or (nil? exclude_match) (not (matches-pattern? path exclude_match))))))
 
-(defn- init-submodules! [^File work-dir submodule-opts]
+(defn- init-submodules! [^File work-dir submodule-opts token git-url]
   (when (.exists (File. work-dir ".gitmodules"))
-    (if (or (:include_match submodule-opts) (:exclude_match submodule-opts))
-      (let [paths   (submodule-paths work-dir)
-            matched (filter #(include-submodule? % submodule-opts) paths)]
-        (when (seq matched)
-          (info "Initialising" (count matched) "of" (count paths) "submodules (filtered)")
-          (doseq [path matched]
-            (run! ["git" "submodule" "update" "--init" path] work-dir))))
-      (do
-        (info "Initialising submodules")
-        (run! ["git" "submodule" "update" "--init" "--recursive"] work-dir)))))
+    (let [auth (auth-args token git-url)]
+      (if (or (:include_match submodule-opts) (:exclude_match submodule-opts))
+        (let [paths   (submodule-paths work-dir)
+              matched (filter #(include-submodule? % submodule-opts) paths)]
+          (when (seq matched)
+            (info "Initialising" (count matched) "of" (count paths) "submodules (filtered)")
+            (doseq [path matched]
+              (run! (vec (concat ["git"] auth ["submodule" "update" "--init" path])) work-dir))))
+        (do
+          (info "Initialising submodules")
+          (run! (vec (concat ["git"] auth ["submodule" "update" "--init" "--recursive"])) work-dir))))))
 
 
 (defn prepare-working-dir!
   "Clones commit-id into work-dir via the local bare-clone cache.
-   git-options may contain {:submodules {:include_match ... :exclude_match ...}}"
-  [git-url commit-id ^File work-dir git-options]
-  (let [cache (ensure-cache! git-url commit-id)]
+   git-options may contain {:submodules {:include_match ... :exclude_match ...}}
+   token, when provided, is sent as a Bearer token on HTTP git operations."
+  [git-url commit-id ^File work-dir git-options token]
+  (let [cache (ensure-cache! git-url commit-id token)]
     (run! ["git" "clone" "--shared" "--no-checkout"
            (.getAbsolutePath cache) (.getAbsolutePath work-dir)] nil)
     (run! ["git" "checkout" commit-id] work-dir)
     (run! ["git" "remote" "set-url" "origin" git-url] work-dir)
-    (init-submodules! work-dir (:submodules git-options))))
+    (init-submodules! work-dir (:submodules git-options) token git-url)))

@@ -65,6 +65,21 @@
       (delete-dir! f))))
 
 
+(defn- upload-trial-attachments! [trial opts ^File work-dir task-spec]
+  (when-let [attachments (:trial_attachments task-spec)]
+    (let [work-path (.toPath work-dir)]
+      (doseq [[key-kw spec] attachments
+              :let [key-str      (name key-kw)
+                    pattern      (re-pattern (:include_match spec))
+                    content-type (or (:content_type spec) "application/octet-stream")]
+              ^File f (file-seq work-dir)
+              :when   (.isFile f)]
+        (let [rel-str (str (.relativize work-path (.toPath f)))]
+          (when (re-find pattern rel-str)
+            (put-attachment! trial opts (str key-str "/" rel-str)
+                             content-type (FileInputStream. f))))))))
+
+
 (defn- upload-script-logs! [trial opts script-results]
   (doseq [[key-str result] script-results]
     (when-let [^File log-file (:log-file result)]
@@ -98,6 +113,7 @@
       (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id)]
         (info "Trial" id "finished with" trial-state)
         (upload-script-logs! trial opts scripts)
+        (upload-trial-attachments! trial opts work-dir task_spec)
         (patch-trial! trial opts trial-state
                       {:scripts_results (strip-log-files scripts)}))
 

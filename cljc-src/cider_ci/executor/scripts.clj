@@ -1,5 +1,6 @@
 (ns cider-ci.executor.scripts
-  (:require [cider-ci.utils.duration :as duration])
+  (:require [clojure.string :as str]
+            [cider-ci.utils.duration :as duration])
   (:import [java.io File]
            [java.util.concurrent TimeUnit]))
 
@@ -77,6 +78,34 @@
         (normalize-start-when (:start_when spec))))
 
 
+(defn- env-str-map
+  "Normalises an env map to {string -> string} for ProcessBuilder and templates."
+  [env-map]
+  (into {} (map (fn [[k v]] [(name k) (str v)]) env-map)))
+
+
+(defn- apply-templates
+  "Fixpoint-iterates {{KEY}} substitution in the values of a string-keyed env map.
+   Unresolvable references are left as literal {{KEY}}. Stops after 10 passes."
+  [str-env]
+  (loop [cur str-env n 10]
+    (if (zero? n)
+      cur
+      (let [next (into {} (map (fn [[k v]]
+                                 [k (str/replace v #"\{\{(\w+)\}\}"
+                                                 (fn [[_ ref]] (get cur ref (str "{{" ref "}}"))))])
+                               cur))]
+        (if (= cur next) cur (recur next (dec n)))))))
+
+
+(defn- template-resource-name
+  "Applies single-pass {{KEY}} substitution to a resource name string."
+  [env-map rn]
+  (let [str-env (env-str-map env-map)]
+    (str/replace rn #"\{\{(\w+)\}\}"
+                 (fn [[_ k]] (get str-env k (str "{{" k "}}"))))))
+
+
 (declare run-one!)
 
 (defn- get-exclusive-agent! [resource-name]
@@ -89,11 +118,14 @@
 
 (defn- dispatch-script!
   "Dispatches a single script execution. If exclusive_executor_resource is set,
-   serializes via a per-resource Clojure agent; otherwise runs in a future."
+   serializes via a per-resource Clojure agent; otherwise runs in a future.
+   The resource name may contain {{KEY}} references resolved against the merged env."
   [trial-id key-str spec env-vars work-dir]
-  (if-let [resource-name (:exclusive_executor_resource spec)]
-    (let [p   (promise)
-          agt (get-exclusive-agent! resource-name)]
+  (if-let [raw-resource (:exclusive_executor_resource spec)]
+    (let [merged-env    (merge env-vars (:environment_variables spec))
+          resource-name (template-resource-name merged-env raw-resource)
+          p             (promise)
+          agt           (get-exclusive-agent! resource-name)]
       (send-off agt (fn [_]
                       (deliver p (run-one! trial-id key-str spec env-vars work-dir))
                       nil))
@@ -104,6 +136,11 @@
 (defn- run-one! [trial-id key-str spec env-vars work-dir]
   (try
     (let [timeout-sec (parse-timeout (:timeout spec))
+          ;; Merge script-level environment_variables on top of task-level env.
+          merged-env  (merge env-vars (:environment_variables spec))
+          ;; Normalise to {string->string}; apply {{KEY}} substitution when opted in.
+          final-env   (cond-> (env-str-map merged-env)
+                        (:template_environment_variables spec) apply-templates)
           log-file    (File. (System/getProperty "java.io.tmpdir")
                              (str "cider-ci-script-" key-str ".log"))
           script-file (File. ^String work-dir (str "cider-ci-" key-str ".sh"))]
@@ -113,10 +150,10 @@
                    (.directory (File. ^String work-dir))
                    (.redirectErrorStream true)
                    (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file)))
-            _    (when env-vars
+            _    (when (seq final-env)
                    (let [env (.environment pb)]
-                     (doseq [[k v] env-vars]
-                       (.put env (name k) (str v)))))
+                     (doseq [[k v] final-env]
+                       (.put env k v))))
             proc (.start pb)]
         (swap! running-procs* update trial-id (fnil conj #{}) proc)
         (try

@@ -38,6 +38,14 @@
                            {:name (or (:name norm) (name k))})
                     (apply-script-defaults script-defaults)))))))
 
+(defn- seq-of-contexts
+  "Returns a seq of context maps from a contexts value that may be either
+   a map (YAML dict with named sub-contexts) or a seq (YAML list)."
+  [cs]
+  (when cs
+    (if (map? cs) (vals cs) cs)))
+
+
 (defn collect-from-context [context inherited-task-defaults inherited-script-defaults]
   (let [task-defaults   (merge inherited-task-defaults (:task_defaults context))
         script-defaults (merge inherited-script-defaults (:script_defaults context))
@@ -48,7 +56,8 @@
                                (apply-script-defaults script-defaults))])
         from-tasks      (when-let [ts (:tasks context)]
                           (from-tasks-map ts task-defaults script-defaults))
-        sub-contexts    (concat (:contexts context) (:subcontexts context))
+        sub-contexts    (concat (seq-of-contexts (:contexts context))
+                                (seq-of-contexts (:subcontexts context)))
         from-contexts   (mapcat #(collect-from-context % task-defaults script-defaults) sub-contexts)]
     (concat from-task from-tasks from-contexts)))
 

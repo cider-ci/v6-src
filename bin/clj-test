@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+exec clj -M:test:cljc-paths -e "
+(require 'cider-ci.executor.scripts-test)
+(let [r (clojure.test/run-tests 'cider-ci.executor.scripts-test)]
+  (System/exit (if (pos? (+ (:fail r) (:error r))) 1 0)))
+"

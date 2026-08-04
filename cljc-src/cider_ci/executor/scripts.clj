@@ -12,7 +12,7 @@
     :else        600))
 
 
-;; Maps trial-id → set of running Processes (for timeout/abort).
+;; Maps trial-id → {key-str → Process} for all actively running scripts.
 (defonce ^:private running-procs* (atom {}))
 ;; Set of trial-ids that have been asked to abort.
 (defonce ^:private aborting-trials* (atom #{}))
@@ -23,7 +23,7 @@
   "Signals abort for trial-id and forcibly destroys all its running processes."
   [trial-id]
   (swap! aborting-trials* conj trial-id)
-  (doseq [^Process proc (get @running-procs* trial-id #{})]
+  (doseq [^Process proc (vals (get @running-procs* trial-id {}))]
     (.destroyForcibly proc)))
 
 (defn clear-abort! [trial-id]
@@ -155,7 +155,7 @@
                      (doseq [[k v] final-env]
                        (.put env k v))))
             proc (.start pb)]
-        (swap! running-procs* update trial-id (fnil conj #{}) proc)
+        (swap! running-procs* assoc-in [trial-id key-str] proc)
         (try
           (cond
             (not (.waitFor proc timeout-sec TimeUnit/SECONDS))
@@ -168,10 +168,32 @@
              :exit_status (.exitValue proc)
              :log-file    log-file})
           (finally
-            (swap! running-procs* update trial-id disj proc)))))
+            (swap! running-procs* update trial-id dissoc key-str)))))
     (catch Exception e
       {:state "defective"
        :error (.getMessage e)})))
+
+
+(defn- terminate-script! [trial-id key-str]
+  (when-let [^Process proc (get-in @running-procs* [trial-id key-str])]
+    (.destroyForcibly proc)))
+
+
+(defn- terminate-when-satisfied? [spec script-results]
+  (when-let [tw (:terminate_when spec)]
+    (every? #(start-when-satisfied? % script-results)
+            (normalize-start-when tw))))
+
+
+(defn- await-first
+  "Blocks until any entry in in-flight (non-empty {key-str → future|promise}) is
+   realized. Returns [key-str result]. Uses realized? to handle both futures
+   (normal scripts) and promises (exclusive_executor_resource scripts)."
+  [in-flight]
+  (loop []
+    (if-let [[k f] (some (fn [[k f]] (when (realized? f) [k f])) in-flight)]
+      [k @f]
+      (do (Thread/sleep 50) (recur)))))
 
 
 (defn run-all!
@@ -179,37 +201,55 @@
    env-vars is the fully merged environment map (task env-vars + ports etc.).
    Returns {:trial-state \"passed\"|..., :scripts {\"key\" {:state ..., :log-file ...}}}"
   [work-dir task-spec env-vars trial-id]
-  (let [scripts (seq (:scripts task-spec))]
+  (let [scripts     (seq (:scripts task-spec))
+        script-specs (into {} (map (fn [[k sv]] [(name k) sv]) (:scripts task-spec)))]
     (if-not scripts
       {:trial-state "defective" :scripts {}}
-      (loop [results (into {} (for [[k _] scripts] [(name k) {:state "pending"}]))]
-        (if (aborting? trial-id)
-          ; Abort requested — skip all remaining pending scripts
+      (loop [results  (into {} (for [[k _] scripts] [(name k) {:state "pending"}]))
+             in-flight {}]
+        (cond
+          ;; Abort: skip pending, drain in-flight (processes already killed), return aborted
+          (aborting? trial-id)
           (let [results (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped")
                                 results
                                 (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts))]
-            {:trial-state "aborted" :scripts results})
-          ; Normal execution
+            (if (seq in-flight)
+              (let [[k result] (await-first in-flight)]
+                (recur (assoc results k result) (dissoc in-flight k)))
+              {:trial-state "aborted" :scripts results}))
+
+          :else
           (let [pending   (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)
                 to-skip   (filter #(unsatisfiable? (name (first %)) (second %) results) pending)
                 results   (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped") results to-skip)
                 pending   (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)
                 startable (filter #(can-start? (name (first %)) (second %) results) pending)]
             (if (seq startable)
-              (let [futs    (mapv (fn [[k spec]]
-                                    [(name k) (dispatch-script! trial-id (name k) spec env-vars work-dir)])
-                                  startable)
-                    results (reduce #(assoc-in %1 [(first %2) :state] "executing") results futs)
-                    results (reduce (fn [acc [key-str fut]] (assoc acc key-str @fut))
-                                    results futs)]
-                (recur results))
-              (let [still-pending (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)]
-                (if (empty? still-pending)
-                  (let [non-ignored-states (->> scripts
-                                                (remove #(get (second %) :ignore_state))
-                                                (map #(get-in results [(name (first %)) :state]))
-                                                (filter identity))]
-                    {:trial-state (evaluate-states non-ignored-states)
-                     :scripts     results})
-                  (recur (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped")
-                                 results still-pending)))))))))))
+              ;; Dispatch all newly startable; mark "executing" immediately so dependents can see it
+              (let [new-futs (into {} (mapv (fn [[k spec]]
+                                              [(name k) (dispatch-script! trial-id (name k) spec env-vars work-dir)])
+                                            startable))
+                    results  (reduce #(assoc-in %1 [(first %2) :state] "executing") results new-futs)]
+                (recur results (merge in-flight new-futs)))
+
+              (if (seq in-flight)
+                ;; Check terminate_when for all in-flight scripts, then wait for the next one to finish
+                (let [_ (doseq [[k _] in-flight
+                                :let [spec (get script-specs k)]
+                                :when (terminate-when-satisfied? spec results)]
+                          (terminate-script! trial-id k))
+                      [done-k result] (await-first in-flight)]
+                  (recur (assoc results done-k result) (dissoc in-flight done-k)))
+
+                ;; Nothing in-flight: skip any deadlocked pending scripts, then compute final state
+                (let [still-pending (filter #(= "pending" (get-in results [(name (first %)) :state])) scripts)]
+                  (if (empty? still-pending)
+                    (let [non-ignored-states (->> scripts
+                                                  (remove #(get (second %) :ignore_state))
+                                                  (map #(get-in results [(name (first %)) :state]))
+                                                  (filter identity))]
+                      {:trial-state (evaluate-states non-ignored-states)
+                       :scripts     results})
+                    (recur (reduce #(assoc-in %1 [(name (first %2)) :state] "skipped")
+                                   results still-pending)
+                           in-flight)))))))))))

@@ -7,3 +7,8 @@ ci_executor_jar_path: "{{ playbook_dir }}/../target/cider-ci.jar"
 
 ci_admin_login: admin
 ci_admin_password: cider-ci-local
+
+# Needed by provision.yml which runs on the server host without loading roles
+ci_server_http_port: 3838
+ci_server_db_name: cider_ci_v6
+ci_executor_token: "0e46a79f-1de9-492f-a92a-a8af6cab69f7"

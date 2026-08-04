@@ -31,7 +31,7 @@
 
 - name: Create git repositories directory
   ansible.builtin.file:
-    path: "{{ ci_server_dir }}/repositories"
+    path: "{{ ci_server_dir }}/data/repositories"
     state: directory
     owner: "{{ cider_ci_user }}"
     group: "{{ cider_ci_group }}"

@@ -1,0 +1,37 @@
+---
+# Provision application-level resources after the server is running.
+# Run after server.yml: ansible-playbook -i inventories/local-vms provision.yml
+- hosts: cider_ci_server
+  become: yes
+
+  tasks:
+    - name: Create initial admin account
+      uri:
+        url: "http://localhost:{{ ci_server_http_port }}/init"
+        method: PUT
+        body_format: json
+        body:
+          initial_admin:
+            login: "{{ ci_admin_login }}"
+            password: "{{ ci_admin_password }}"
+        status_code: [200, 500]
+      failed_when: false
+
+    - name: Seed executor record and demo project
+      become_user: postgres
+      community.postgresql.postgresql_query:
+        db: "{{ ci_server_db_name }}"
+        query: |
+          INSERT INTO executors (name, token_hash, token_part, max_load, traits, enabled)
+          VALUES ('trixie2',
+                  encode(sha256(%(token)s::bytea), 'hex'),
+                  substring(%(token)s, 1, 8),
+                  4.0, '{bash}', true)
+          ON CONFLICT DO NOTHING;
+
+          INSERT INTO repositories (id, name, git_url)
+          VALUES ('cider-ci-demo-project', 'Demo Project',
+                  'https://github.com/cider-ci/cider-ci_demo-project-bash.git')
+          ON CONFLICT DO NOTHING;
+        named_args:
+          token: "{{ ci_executor_token }}"

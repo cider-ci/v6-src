@@ -44,7 +44,7 @@
     owner: "{{ cider_ci_user }}"
     group: "{{ cider_ci_group }}"
     mode: '0640'
-  notify: Restart cider-ci-server
+  register: jar_result
 
 - name: Write server environment file
   ansible.builtin.template:
@@ -53,7 +53,7 @@
     owner: root
     group: "{{ cider_ci_group }}"
     mode: '0640'
-  notify: Restart cider-ci-server
+  register: env_result
 
 - name: Install server systemd unit
   ansible.builtin.template:
@@ -62,12 +62,12 @@
     owner: root
     group: root
     mode: '0644'
-  notify:
-    - Reload systemd
-    - Restart cider-ci-server
+  register: unit_result
 
-- name: Flush handlers to apply service file before migration
-  ansible.builtin.meta: flush_handlers
+- name: Reload systemd daemon if unit file changed
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: unit_result.changed
 
 - name: Run database migrations
   ansible.builtin.command:
@@ -88,6 +88,12 @@
     name: cider-ci-server
     state: started
     enabled: yes
+
+- name: Restart cider-ci-server after changes
+  ansible.builtin.service:
+    name: cider-ci-server
+    state: restarted
+  when: jar_result.changed or env_result.changed or unit_result.changed or db_migrate_result.changed
 
 - name: Wait for server to be ready
   ansible.builtin.wait_for:

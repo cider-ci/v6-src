@@ -2,4 +2,4 @@
 trixie1 ansible_host=10.211.55.33
 
 [cider_ci_executors]
-trixie2 ansible_host=10.211.55.37
+trixie2 ansible_host=10.211.55.38

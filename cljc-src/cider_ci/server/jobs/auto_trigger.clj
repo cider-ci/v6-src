@@ -1,6 +1,7 @@
 (ns cider-ci.server.jobs.auto-trigger
   (:require
     [cider-ci.server.jobs.decompose :as decompose]
+    [cider-ci.server.jobs.generate :as generate]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as repo-shared]
     [clojure.string :as str]
@@ -43,15 +44,16 @@
 
 
 (defn- create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
-  (let [new-job-id (java.util.UUID/randomUUID)
+  (let [expanded   (generate/expand project-id (str commit-id) spec)
+        new-job-id (java.util.UUID/randomUUID)
         result     (jdbc/execute-one! tx
                      ["INSERT INTO jobs (id, project_id, commit_id, key, name, state, spec)
                        VALUES (?, ?, ?, ?, ?, 'pending', ?)
                        ON CONFLICT (project_id, commit_id, key) DO NOTHING"
-                      new-job-id project-id (str commit-id) key name spec])]
+                      new-job-id project-id (str commit-id) key name expanded])]
     (when (= 1 (:next.jdbc/update-count result))
       (info "Auto-triggered job" key "for" project-id commit-id)
-      (doseq [task-spec (decompose/decompose spec)]
+      (doseq [task-spec (decompose/decompose expanded)]
         (let [new-task-id (java.util.UUID/randomUUID)]
           (jdbc/execute-one! tx
             ["INSERT INTO tasks (id, job_id, name, state, spec, traits, load)

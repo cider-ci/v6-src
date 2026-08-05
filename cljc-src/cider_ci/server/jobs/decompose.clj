@@ -1,4 +1,5 @@
-(ns cider-ci.server.jobs.decompose)
+(ns cider-ci.server.jobs.decompose
+  (:require [cider-ci.utils.core :refer [deep-merge]]))
 
 (def ^:private context-keys
   [:task :tasks :task_defaults :script_defaults :contexts :subcontexts])
@@ -33,9 +34,9 @@
   (->> tasks
        (map (fn [[k v]]
               (let [norm (normalize-task-value v)]
-                (-> (merge inherited-task-defaults
-                           norm
-                           {:name (or (:name norm) (name k))})
+                (-> (deep-merge inherited-task-defaults
+                                norm
+                                {:name (or (:name norm) (name k))})
                     (apply-script-defaults script-defaults)))))))
 
 (defn- seq-of-contexts
@@ -47,12 +48,12 @@
 
 
 (defn collect-from-context [context inherited-task-defaults inherited-script-defaults]
-  (let [task-defaults   (merge inherited-task-defaults (:task_defaults context))
-        script-defaults (merge inherited-script-defaults (:script_defaults context))
+  (let [task-defaults   (deep-merge inherited-task-defaults (:task_defaults context))
+        script-defaults (deep-merge inherited-script-defaults (:script_defaults context))
         from-task       (when-let [t (:task context)]
-                          [(-> (merge task-defaults
-                                      (string->scripts t)
-                                      {:name "main"})
+                          [(-> (deep-merge task-defaults
+                                           (string->scripts t)
+                                           {:name "main"})
                                (apply-script-defaults script-defaults))])
         from-tasks      (when-let [ts (:tasks context)]
                           (from-tasks-map ts task-defaults script-defaults))

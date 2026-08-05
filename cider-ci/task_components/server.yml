@@ -1,0 +1,33 @@
+scripts:
+  server:
+    ignore_state: true
+    start_when:
+      db-migrated:
+        script_key: migrate-database
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      PGDATABASE="cider_ci_v6_${CIDER_CI_TRIAL_ID}" \
+        java -jar target/cider-ci.jar server run \
+          --http-server-bind 127.0.0.1 \
+          --http-server-port "${CI_SERVER_PORT}"
+
+  server-ready:
+    start_when:
+      server-executing:
+        script_key: server
+        states: [executing]
+    terminate_when:
+      server-terminal:
+        script_key: server
+        states: [passed, failed, aborted, defective]
+    timeout: 3 Minutes
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      until curl -sf "http://127.0.0.1:${CI_SERVER_PORT}/"; do sleep 1; done
+
+  test:
+    start_when:
+      server-is-ready:
+        script_key: server-ready

@@ -1,0 +1,28 @@
+scripts:
+  create-database:
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      createdb "cider_ci_v6_${CIDER_CI_TRIAL_ID}"
+
+  migrate-database:
+    start_when:
+      db-created:
+        script_key: create-database
+      jar-ready:
+        script_key: build-jar
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      PGDATABASE="cider_ci_v6_${CIDER_CI_TRIAL_ID}" \
+        java -jar target/cider-ci.jar server db migrate
+
+  delete-database:
+    ignore_state: true
+    start_when:
+      test-terminal:
+        script_key: test
+        states: [passed, failed, aborted, defective, skipped]
+    body: |
+      #!/usr/bin/env bash
+      dropdb --if-exists "cider_ci_v6_${CIDER_CI_TRIAL_ID}"

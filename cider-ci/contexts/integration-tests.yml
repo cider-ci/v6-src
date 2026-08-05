@@ -1,0 +1,27 @@
+script_defaults:
+  timeout: 10 Minutes
+  template_environment_variables: true
+
+task_defaults:
+  max_trials: 2
+  load: 1.5
+  include:
+    - cider-ci/task_components/build.yml
+    - cider-ci/task_components/database.yml
+    - cider-ci/task_components/server.yml
+    - cider-ci/task_components/test.yml
+
+  ports:
+    CI_SERVER_PORT:
+      min: 4100
+      max: 8799
+
+  trial_attachments:
+    screenshots:
+      include_match: 'tmp/screenshots/.+\.png$'
+      content_type: image/png
+
+  environment_variables:
+    CIDER_CI_TEST_HEADLESS: "1"
+    PGHOST: localhost
+    PGUSER: cider-ci

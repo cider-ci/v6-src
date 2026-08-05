@@ -101,6 +101,38 @@
     content: "bash\n"
     force: no
 
+- name: Install system packages required for integration tests
+  ansible.builtin.apt:
+    name:
+      - postgresql-client
+      - curl
+      - libgtk-3-0
+      - libdbus-glib-1-2
+    state: present
+    update_cache: yes
+
+- name: Install mise (tool version manager) for exec-user
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://mise.run | sh
+    creates: "/home/{{ ci_executor_exec_user }}/.local/bin/mise"
+  become_user: "{{ ci_executor_exec_user }}"
+
+- name: Copy .tool-versions for tool pre-warming
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../.tool-versions"
+    dest: "/home/{{ ci_executor_exec_user }}/.tool-versions"
+    owner: "{{ ci_executor_exec_user }}"
+    group: "{{ ci_executor_exec_user }}"
+    mode: '0644'
+
+- name: Pre-install tool versions defined in .tool-versions
+  ansible.builtin.shell:
+    cmd: /home/{{ ci_executor_exec_user }}/.local/bin/mise install
+    chdir: "/home/{{ ci_executor_exec_user }}"
+  become_user: "{{ ci_executor_exec_user }}"
+  register: mise_install_result
+  changed_when: "'Installing' in mise_install_result.stderr"
+
 - name: Enable and start cider-ci-executor
   ansible.builtin.service:
     name: cider-ci-executor

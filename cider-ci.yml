@@ -1,0 +1,14 @@
+jobs:
+  integration-tests:
+    name: Integration Tests
+    run_when:
+      any-branch:
+        type: branch
+        include_match: ^.*$
+
+    context:
+      include:
+        - path: cider-ci/contexts/integration-tests.yml
+
+      generate_tasks:
+        include_match: spec/features/.*_spec\.rb$

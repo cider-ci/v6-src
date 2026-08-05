@@ -1,0 +1,18 @@
+scripts:
+  build-jar:
+    timeout: 10 Minutes
+    exclusive_executor_resource: cider-ci-v6-build
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      mise install
+      eval "$(mise activate bash)"
+      CACHE_JAR="/tmp/cider-ci-v6/$(git rev-parse HEAD).jar"
+      mkdir -p /tmp/cider-ci-v6
+      if [ ! -f "$CACHE_JAR" ]; then
+        npm ci
+        npx shadow-cljs release cider-ci
+        clj -T:build-leihs uber
+        cp target/cider-ci.jar "$CACHE_JAR"
+      fi
+      cp "$CACHE_JAR" target/cider-ci.jar

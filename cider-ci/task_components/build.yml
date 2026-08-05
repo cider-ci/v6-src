@@ -5,7 +5,9 @@ scripts:
     body: |
       #!/usr/bin/env bash
       set -euo pipefail
-      mise install
+      # Install only the tools needed for building (geckodriver is installed
+      # system-wide on ARM64 and cannot be installed via the asdf plugin there).
+      mise install java node clojure
       eval "$(mise activate bash)"
       CACHE_JAR="/tmp/cider-ci-v6/$(git rev-parse HEAD).jar"
       mkdir -p /tmp/cider-ci-v6

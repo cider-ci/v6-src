@@ -4,6 +4,8 @@ scripts:
     body: |
       #!/usr/bin/env bash
       set -euo pipefail
+      # Install only the tools needed for testing (geckodriver is system-wide).
+      mise install ruby firefox
       eval "$(mise activate bash)"
       bundle install --quiet
 

@@ -125,13 +125,39 @@
     group: "{{ ci_executor_exec_user }}"
     mode: '0644'
 
-- name: Pre-install tool versions defined in .tool-versions
+- name: Install custom mise plugin for firefox
   ansible.builtin.shell:
-    cmd: /home/{{ ci_executor_exec_user }}/.local/bin/mise install
+    cmd: >
+      /home/{{ ci_executor_exec_user }}/.local/bin/mise plugin install
+      firefox https://github.com/DrTom/asdf-firefox.git
+    creates: "/home/{{ ci_executor_exec_user }}/.local/share/mise/plugins/firefox"
+  become_user: "{{ ci_executor_exec_user }}"
+
+- name: Install custom mise plugin for geckodriver
+  ansible.builtin.shell:
+    cmd: >
+      /home/{{ ci_executor_exec_user }}/.local/bin/mise plugin install
+      geckodriver https://github.com/DrTom/asdf-geckodriver.git
+    creates: "/home/{{ ci_executor_exec_user }}/.local/share/mise/plugins/geckodriver"
+  become_user: "{{ ci_executor_exec_user }}"
+
+- name: Pre-install tool versions defined in .tool-versions (excluding geckodriver)
+  ansible.builtin.shell:
+    cmd: >
+      /home/{{ ci_executor_exec_user }}/.local/bin/mise install
+      java ruby node clojure firefox
     chdir: "/home/{{ ci_executor_exec_user }}"
   become_user: "{{ ci_executor_exec_user }}"
   register: mise_install_result
-  changed_when: "'Installing' in mise_install_result.stderr"
+  changed_when: "'installed' in mise_install_result.stderr"
+
+- name: Install geckodriver for aarch64 from GitHub releases
+  ansible.builtin.unarchive:
+    src: "https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux-aarch64.tar.gz"
+    dest: "/usr/local/bin"
+    remote_src: yes
+    mode: '0755'
+    creates: /usr/local/bin/geckodriver
 
 - name: Enable and start cider-ci-executor
   ansible.builtin.service:

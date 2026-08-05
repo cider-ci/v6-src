@@ -65,12 +65,10 @@
 
 (defn update-outdated [tx git-branches canonic-id repository-path]
   (let [existing-branches (sql.branches/for-repository tx canonic-id)
-        to-be-updated (to-be-updated git-branches existing-branches)]
+        existing-by-name  (into {} (map (fn [b] [(:name b) b]) existing-branches))
+        to-be-updated     (to-be-updated git-branches existing-branches)]
     (doall (map (fn [git-branch]
-                  (let [branch (first (query tx ["SELECT * FROM branches WHERE
-                                                      repository_id = ? AND name = ?"
-                                                      canonic-id
-                                                      (:name git-branch)]))
+                  (let [branch (get existing-by-name (:name git-branch))
                         _ (commits/import-recursively tx (:current_commit_id git-branch) repository-path)
 
                         update_result (update! tx :branches

@@ -9,6 +9,7 @@
    [cljs.core.async :refer [go-loop <! chan]]
    [cljs.core.async :as async]
    [cljs.pprint :refer [pprint]]
+   [clojure.string :as str]
    [reagent.core :as reagent]))
 
 
@@ -110,24 +111,40 @@
        (for [j jobs] [job-row j])]]]))
 
 
-(defn- available-jobs-panel [jobs]
-  [:<>
-   [:h4.mt-3 "Available Jobs"]
-   (if (seq jobs)
-     [:table.table.table-sm
-      [:thead
-       [:tr [:th "Key"] [:th "Name"] [:th ""]]]
-      [:tbody
-       (for [j jobs]
-         ^{:key (:key j)}
-         [:tr
-          [:td [:code (:key j)]]
-          [:td (:name j)]
-          [:td
-           [:button.btn.btn-sm.btn-outline-primary
-            {:on-click #(trigger-job (:key j))}
-            [:i.fas.fa-play] " Run"]]])]]
-     [:p.text-muted "No jobs defined in cider-ci.yml for this commit."])])
+(defn- available-jobs-panel [jobs created]
+  (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))]
+    [:<>
+     [:h4.mt-3 "Available Jobs"]
+     (if (seq jobs)
+       [:table.table.table-sm
+        [:thead
+         [:tr [:th "Key"] [:th "Name"] [:th ""]]]
+        [:tbody
+         (for [j jobs]
+           (let [existing (get created-by-key (:key j))]
+             ^{:key (:key j)}
+             [:tr
+              [:td [:code (:key j)]]
+              [:td (:name j)]
+              [:td
+               (cond
+                 (:has_instance j)
+                 [:a.btn.btn-sm.btn-outline-secondary
+                  {:href (path :project-job {:project-id (project-id)
+                                             :commit-id  (commit-id)
+                                             :job-id     (:id existing)})}
+                  [state-badge (:state existing)] " View"]
+
+                 (seq (:unmet_deps j))
+                 [:span.text-muted.small
+                  "Waiting for: " (str/join ", " (:unmet_deps j))]
+
+                 :else
+                 [:button.btn.btn-sm.btn-outline-primary
+                  {:on-click #(trigger-job (:key j))}
+                  [:i.fas.fa-play] " Run"])]])))]]
+       [:p.text-muted "No jobs defined in cider-ci.yml for this commit."])]))
+
 
 
 (defn- jobs-list-page []
@@ -143,7 +160,7 @@
        [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
         [:code (subs (commit-id) 0 8)]]
        " / Jobs"]
-      [available-jobs-panel (:available @data*)]
+      [available-jobs-panel (:available @data*) (:created @data*)]
       [created-jobs-panel (:created @data*)]
       (when @state/debug?*
         [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])])])

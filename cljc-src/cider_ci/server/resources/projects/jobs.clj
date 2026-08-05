@@ -26,9 +26,38 @@
         []
         (throw e)))))
 
-(defn- available-jobs [repo commit-id]
-  (->> (full-job-configs repo commit-id)
-       (map #(select-keys % [:key :name]))))
+(defn- dep-satisfied? [dep created-by-key]
+  (let [dep-type (some-> dep :type name)
+        job-key  (:job_key dep)
+        states   (set (map name (:states dep)))]
+    (cond
+      (or (and dep-type (not= dep-type "job"))
+          (seq (:submodule dep)))
+      false
+      :else
+      (let [existing (get created-by-key (name job-key))]
+        (and existing (contains? states (:state existing)))))))
+
+(defn- annotate-job [job-entry created-by-key]
+  (let [key-str       (:key job-entry)
+        depends-on    (:depends_on (:full-spec job-entry))
+        has-instance? (contains? created-by-key key-str)
+        unmet-deps    (when (and (not has-instance?) depends-on)
+                        (->> depends-on
+                             (remove (fn [[_ dep]] (dep-satisfied? dep created-by-key)))
+                             (map (fn [[dep-name _]] (name dep-name)))
+                             vec))
+        runnable?     (and (not has-instance?) (empty? unmet-deps))]
+    {:key          key-str
+     :name         (:name job-entry)
+     :runnable     runnable?
+     :has_instance has-instance?
+     :unmet_deps   (or unmet-deps [])}))
+
+(defn- available-jobs [repo commit-id created]
+  (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))]
+    (->> (full-job-configs repo commit-id)
+         (map #(annotate-job % created-by-key)))))
 
 (defn- created-jobs [project-id commit-id]
   (->> (-> (sql/select :id :key :name :state :created_at)
@@ -244,9 +273,10 @@
     :project-jobs
     (with-open [repo (shared/file-repository (shared/path {:project-id project-id}))]
       (case request-method
-        :get  {:status 200
-               :body   {:available (available-jobs repo commit-id)
-                        :created   (created-jobs project-id commit-id)}}
+        :get  (let [created (created-jobs project-id commit-id)]
+                {:status 200
+                 :body   {:available (available-jobs repo commit-id created)
+                          :created   created}})
         :post (create-job repo project-id commit-id body session)
         {:status 405 :body "Method not allowed"}))
 

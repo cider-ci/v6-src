@@ -40,6 +40,20 @@
              .start
              .waitFor)))
 
+(defn- valid-bare-clone? [^File dir]
+  (.exists (File. dir "HEAD")))
+
+(defn- delete-recursively! [^File f]
+  (java.nio.file.Files/walkFileTree
+    (.toPath f)
+    (proxy [java.nio.file.SimpleFileVisitor] []
+      (visitFile [file _attrs]
+        (java.nio.file.Files/delete file)
+        java.nio.file.FileVisitResult/CONTINUE)
+      (postVisitDirectory [dir _e]
+        (java.nio.file.Files/delete dir)
+        java.nio.file.FileVisitResult/CONTINUE))))
+
 (defn- server-origin [git-url]
   (let [uri (java.net.URI/create git-url)]
     (str (.getScheme uri) "://" (.getAuthority uri))))
@@ -56,7 +70,10 @@
   (let [cache (File. cache-root (sha1-hex git-url))
         auth  (auth-args token git-url)]
     (locking (repo-lock git-url)
-      (when-not (.exists cache)
+      (when-not (valid-bare-clone? cache)
+        (when (.exists cache)
+          (warn "Cache dir exists but is not a valid git repo; deleting" (.getAbsolutePath cache))
+          (delete-recursively! cache))
         (.mkdirs cache)
         (info "Initialising bare clone cache for" git-url)
         (run! (vec (concat ["git"] auth ["clone" "--bare" git-url (.getAbsolutePath cache)])) nil))

@@ -33,5 +33,10 @@
           VALUES ('cider-ci-demo-project', 'Demo Project',
                   'https://github.com/cider-ci/cider-ci_demo-project-bash.git')
           ON CONFLICT DO NOTHING;
+
+          INSERT INTO repositories (id, name, git_url)
+          VALUES ('cider-ci-v6', 'CIDER-CI v6',
+                  'https://github.com/cider-ci/v6-src.git')
+          ON CONFLICT DO NOTHING;
         named_args:
           token: "{{ ci_executor_token }}"

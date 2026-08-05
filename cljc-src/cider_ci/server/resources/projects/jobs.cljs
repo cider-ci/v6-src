@@ -142,7 +142,7 @@
                  :else
                  [:button.btn.btn-sm.btn-outline-primary
                   {:on-click #(trigger-job (:key j))}
-                  [:i.fas.fa-play] " Run"])]])))]]
+                  [:i.fas.fa-play] " Run"])]]))]]
        [:p.text-muted "No jobs defined in cider-ci.yml for this commit."])]))
 
 

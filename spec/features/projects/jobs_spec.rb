@@ -146,6 +146,41 @@ feature 'Jobs' do
     expect(page).to have_content 'Request ERROR 404'
   end
 
+  scenario 'run button changes to view link after job is triggered' do
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
+    find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+
+    # After triggering, the job appears in both panels; check the first (available) row
+    within(first('tr', text: 'Introduction Demo')) do
+      expect(page).not_to have_button 'Run'
+      expect(page).to have_link 'View'
+    end
+  end
+
+  scenario 'dependent job shows waiting text when prerequisite is not yet run' do
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
+    within('tr', text: 'Jobs - Dependencies and Triggers - Dependent') do
+      expect(page).not_to have_button 'Run'
+      expect(page).to have_content 'Waiting for:'
+    end
+  end
+
+  scenario 'dependent job becomes runnable after prerequisite passes' do
+    database[:jobs].insert(
+      id:         SecureRandom.uuid,
+      project_id: JOBS_PROJECT_ID,
+      commit_id:  JOBS_HEAD_COMMIT,
+      key:        'job-prerequisite',
+      name:       'Jobs - Dependencies and Triggers - Prerequisite',
+      state:      'passed'
+    )
+
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
+    within('tr', text: 'Jobs - Dependencies and Triggers - Dependent') do
+      expect(page).to have_button 'Run'
+    end
+  end
+
   scenario 'job shows executing badge while trial is running' do
     token = setup_executor_token
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"

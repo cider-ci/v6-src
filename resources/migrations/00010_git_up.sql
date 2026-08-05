@@ -311,6 +311,24 @@ ALTER TABLE ONLY commit_arcs
 
 --- FUN -----------------------------------------------------------------------
 
+CREATE OR REPLACE FUNCTION with_ancestors(character varying) RETURNS TABLE(ancestor_id character varying)
+    LANGUAGE sql
+    AS $_$
+      WITH RECURSIVE arcs(parent_id,child_id) AS
+        (SELECT $1::varchar, NULL::varchar
+          UNION
+         SELECT commit_arcs.* FROM commit_arcs, arcs WHERE arcs.parent_id = commit_arcs.child_id
+        )
+      SELECT parent_id FROM arcs
+      $_$;
+
+CREATE OR REPLACE FUNCTION is_ancestor(node character varying, possible_ancestor character varying) RETURNS boolean
+    LANGUAGE sql
+    AS $_$
+        SELECT ( EXISTS (SELECT * FROM with_ancestors(node) WHERE ancestor_id = possible_ancestor)
+                  AND $1 <> $2 )
+      $_$;
+
 CREATE OR REPLACE FUNCTION fast_forward_ancestors_to_be_added_to_branches_commits(branch_id uuid, commit_id character varying) RETURNS TABLE(branch_id uuid, commit_id character varying)
     LANGUAGE sql
     AS $_$

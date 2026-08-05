@@ -71,20 +71,15 @@
                   (let [branch (get existing-by-name (:name git-branch))
                         _ (commits/import-recursively tx (:current_commit_id git-branch) repository-path)
 
-                        update_result (update! tx :branches
+                        _update_result (update! tx :branches
                                                     (select-keys git-branch [:current_commit_id])
                                                     ["repository_id = ? AND name = ?" canonic-id (:name git-branch)])
 
-                        update_branches_commits_result (query tx ["SELECT update_branches_commits(?,?,?)"
-                                                                       (:id branch)
-                                                                       (:current_commit_id git-branch)
-                                                                       (:current_commit_id branch)])
-
-                        updated_branch (first (query tx ["SELECT * FROM branches WHERE
-                                                              repository_id = ? AND name = ?"
-                                                              canonic-id
-                                                              (:name git-branch)]))]
-                    updated_branch))
+                        _update_branches_commits_result (query tx ["SELECT update_branches_commits(?,?,?)"
+                                                                        (:id branch)
+                                                                        (:current_commit_id git-branch)
+                                                                        (:current_commit_id branch)])]
+                    (assoc branch :current_commit_id (:current_commit_id git-branch))))
                 to-be-updated))))
 
 

@@ -53,6 +53,29 @@
    (:key job)])
 
 
+(defn- project-cell [branches]
+  (let [projects (->> branches
+                      (map (fn [b] {:id (:repository_id b) :name (:repository_name b)}))
+                      distinct
+                      (sort-by :name))
+        cur-branch (-> @state/routing* :query-params :branch str)]
+    [:td
+     (for [{:keys [id name]} projects]
+       ^{:key id}
+       [:span.me-2.text-nowrap
+        [:a.me-1.text-decoration-none
+         {:href     "#"
+          :title    (str "Filter by project: " name)
+          :on-click (fn [e]
+                      (.preventDefault e)
+                      (apply-filters id cur-branch))}
+         name]
+        [:a {:href  (path :project {:project-id id})
+             :title "Project settings"
+             :class "text-muted"}
+         [icons/config]]])]))
+
+
 (defn- branch-tag [b]
   ^{:key (str (:repository_id b) "/" (:name b))}
   [:span.badge.bg-light.text-dark.border.me-1
@@ -81,6 +104,7 @@
       [:span {:title (:subject c)}
        (let [s (:subject c)]
          (if (> (count s) 72) (str (subs s 0 72) "…") s))]]
+     [project-cell (:branches c)]
      [:td (:author_name c)]
      [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
      [:td (for [b (:branches c)] [branch-tag b])]
@@ -133,7 +157,7 @@
     [:table.table.table-sm.table-hover
      [:thead
       [:tr
-       [:th "Commit"] [:th "Subject"] [:th "Author"]
+       [:th "Commit"] [:th "Subject"] [:th "Project"] [:th "Author"]
        [:th "Date"] [:th "Branches"] [:th "CI"]]]
      [:tbody
       (for [c commits] [commit-row c])]]))

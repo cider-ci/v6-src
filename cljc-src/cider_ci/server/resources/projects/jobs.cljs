@@ -241,8 +241,11 @@
             [:span.text-danger.small err])]
          (for [entry (-> trial :result :scripts seq)]
            [script-result-entry (:id trial) entry])
-         (when-let [dag (scripts-dag/scripts-dag (:spec t) (-> trial :result :scripts))]
-           [:div.mt-2 dag])])]]))
+         (try
+           (when-let [dag (scripts-dag/scripts-dag (:spec t) (-> trial :result :scripts))]
+             [:div.mt-2 dag])
+           (catch :default e
+             [:div.text-danger.small (str "DAG error: " (.-message e))]))])]]))
 
 
 (defn- tasks-panel [tasks]

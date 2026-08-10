@@ -76,12 +76,38 @@
 
 
 (defn- branch-tag [b]
-  ^{:key (str (:repository_id b) "/" (:name b))}
-  [:span.badge.bg-light.text-dark.border.me-1
-   {:title (:repository_name b)}
-   [:a {:href (path :project-branch {:project-id  (:repository_id b)
-                                     :branch-name (:name b)})}
-    (:name b)]])
+  (let [cur-project (-> @state/routing* :query-params :project str)]
+    ^{:key (str (:repository_id b) "/" (:name b))}
+    [:span.badge.bg-light.text-dark.border.me-1
+     {:title (:repository_name b)}
+     [:a.me-1 {:href (path :project-branch {:project-id  (:repository_id b)
+                                             :branch-name (:name b)})}
+      (:name b)]
+     [:a.text-muted
+      {:href     "#"
+       :title    (str "Filter by branch " (:name b))
+       :on-click (fn [e]
+                   (.preventDefault e)
+                   (apply-filters cur-project (str "^" (:name b) "$")))}
+      [icons/filter-icon]]]))
+
+
+(defn- ancestor-branch-tag [b]
+  (let [cur-project (-> @state/routing* :query-params :project str)]
+    ^{:key (str "anc-" (:repository_id b) "/" (:name b))}
+    [:span.badge.bg-light.border.me-1.text-muted
+     {:title (str (:repository_name b) " (+" (:distance b) " commits ahead)")}
+     [:sub.me-1 (:distance b)]
+     [:a.me-1.text-muted {:href (path :project-branch {:project-id  (:repository_id b)
+                                                        :branch-name (:name b)})}
+      (:name b)]
+     [:a.text-muted
+      {:href     "#"
+       :title    (str "Filter by branch " (:name b))
+       :on-click (fn [e]
+                   (.preventDefault e)
+                   (apply-filters cur-project (str "^" (:name b) "$")))}
+      [icons/filter-icon]]]))
 
 
 (defn- commit-row [c]
@@ -106,7 +132,9 @@
      [project-cell (:branches c)]
      [:td (:author_name c)]
      [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
-     [:td (for [b (:branches c)] [branch-tag b])]
+     [:td
+      (for [b (:branches c)] [branch-tag b])
+      (for [b (:ancestor_branches c)] [ancestor-branch-tag b])]
      [:td
       (for [j (:jobs c)] [job-badge (:id c) j])
       [:a.ms-1 {:href  (path :project-jobs {:project-id project-id

@@ -54,25 +54,24 @@
 
 
 (defn- project-cell [branches]
-  (let [projects (->> branches
-                      (map (fn [b] {:id (:repository_id b) :name (:repository_name b)}))
-                      distinct
-                      (sort-by :name))
+  (let [projects   (->> branches
+                        (map (fn [b] {:id (:repository_id b) :name (:repository_name b)}))
+                        distinct
+                        (sort-by :name))
         cur-branch (-> @state/routing* :query-params :branch str)]
     [:td
      (for [{:keys [id name]} projects]
        ^{:key id}
        [:span.me-2.text-nowrap
-        [:a.me-1.text-decoration-none
+        [:a.me-1 {:href (path :project {:project-id id})} name]
+        [:a.me-1.text-muted
          {:href     "#"
-          :title    (str "Filter by project: " name)
+          :title    (str "Filter by " name)
           :on-click (fn [e]
                       (.preventDefault e)
                       (apply-filters id cur-branch))}
-         name]
-        [:a {:href  (path :project {:project-id id})
-             :title "Project settings"
-             :class "text-muted"}
+         [icons/filter-icon]]
+        [:a {:href (path :project {:project-id id}) :title "Project page"}
          [icons/config]]])]))
 
 
@@ -117,38 +116,44 @@
 
 
 (defn- filter-bar []
-  (let [filters (current-filters)
-        project* (reagent/atom (:project filters))
-        branch*  (reagent/atom (:branch filters))]
+  (reagent/with-let
+    [project* (reagent/atom "")
+     branch*  (reagent/atom "")
+     _sync    (reagent/track!
+                #(let [qp (:query-params @state/routing*)]
+                   (reset! project* (or (:project qp) ""))
+                   (reset! branch*  (or (:branch qp)  ""))))]
     (fn []
-      [:form.row.g-2.mb-3.align-items-end
-       {:on-submit (fn [e]
-                     (.preventDefault e)
-                     (apply-filters @project* @branch*))}
-       [:div.col-auto
-        [:label.form-label.small.text-muted "Project"]
-        [:input.form-control.form-control-sm
-         {:type        "text"
-          :placeholder "project-id"
-          :value       @project*
-          :on-change   #(reset! project* (.. % -target -value))}]]
-       [:div.col-auto
-        [:label.form-label.small.text-muted "Branch (regex)"]
-        [:input.form-control.form-control-sm
-         {:type        "text"
-          :placeholder "^master$"
-          :value       @branch*
-          :on-change   #(reset! branch* (.. % -target -value))}]]
-       [:div.col-auto
-        [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
-       (when (or (not (str/blank? (:project filters)))
-                 (not (str/blank? (:branch filters))))
+      (let [active? (or (not (str/blank? @project*))
+                        (not (str/blank? @branch*)))]
+        [:form.row.g-2.mb-3.align-items-end
+         {:on-submit (fn [e]
+                       (.preventDefault e)
+                       (apply-filters @project* @branch*))}
          [:div.col-auto
-          [:button.btn.btn-sm.btn-outline-secondary
-           {:type     "button"
-            :on-click #(do (reset! project* "") (reset! branch* "")
-                           (apply-filters "" ""))}
-           "Clear"]])])))
+          [:label.form-label.small.text-muted "Project"]
+          [:input.form-control.form-control-sm
+           {:type        "text"
+            :placeholder "project-id"
+            :value       @project*
+            :on-change   #(reset! project* (.. % -target -value))}]]
+         [:div.col-auto
+          [:label.form-label.small.text-muted "Branch (regex)"]
+          [:input.form-control.form-control-sm
+           {:type        "text"
+            :placeholder "^master$"
+            :value       @branch*
+            :on-change   #(reset! branch* (.. % -target -value))}]]
+         [:div.col-auto
+          [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
+         (when active?
+           [:div.col-auto
+            [:button.btn.btn-sm.btn-outline-secondary
+             {:type     "button"
+              :on-click #(apply-filters "" "")}
+             "Clear"]])]))
+    (finally
+      (reagent/dispose! _sync))))
 
 
 (defn- commits-table [commits]

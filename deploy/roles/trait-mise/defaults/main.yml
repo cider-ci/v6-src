@@ -1,0 +1,4 @@
+---
+# Path to the mise binary installed by the executor role.
+# The executor role installs mise per-user via "curl https://mise.run | sh".
+ci_executor_trait_mise_bin: "/home/{{ ci_executor_exec_user }}/.local/bin/mise"

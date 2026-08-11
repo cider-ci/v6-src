@@ -21,6 +21,10 @@
       when: ci_executor_trait_asdf | default(false)
       tags: [trait-asdf]
 
+    - role: trait-mise
+      when: ci_executor_trait_mise | default(false)
+      tags: [trait-mise]
+
     - role: trait-postgresql
       when: ci_executor_trait_postgresql | default(false)
       tags: [trait-postgresql]

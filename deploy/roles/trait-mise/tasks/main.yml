@@ -1,0 +1,25 @@
+---
+# The executor role installs mise for ci_executor_exec_user under ~/.local/bin/mise.
+# This role makes it accessible system-wide and registers the trait.
+
+- name: Symlink mise into system PATH
+  ansible.builtin.file:
+    src: "{{ ci_executor_trait_mise_bin }}"
+    dest: /usr/local/bin/mise
+    state: link
+    owner: root
+    group: root
+
+- name: Install mise profile.d snippet
+  ansible.builtin.copy:
+    dest: /etc/profile.d/cider-ci-trait-mise.sh
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      eval "$(/usr/local/bin/mise activate bash)"
+
+- name: Register mise trait in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "mise"

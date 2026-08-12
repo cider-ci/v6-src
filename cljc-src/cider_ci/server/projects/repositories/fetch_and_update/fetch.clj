@@ -16,12 +16,12 @@
 (defn- git-fetch [repository path]
   (system/exec!
    ["git" "fetch" (git-url repository) "--force" "--tags" "--prune"  "+*:*"]
-   {:in "\n" :timeout "30 Minutes", :dir path, :env {"TERM" "VT-100"}}))
+   {:in "\n" :timeout "30 Minutes", :dir path, :add-env {"TERM" "VT-100"}}))
 
 (defn- git-update-server-info [path]
   (system/exec!
    ["git" "update-server-info"]
-   {:dir path :env {"TERM" "VT-100"}}))
+   {:dir path :add-env {"TERM" "VT-100"}}))
 
 (defn fetch [repository]
   (let [id (:id repository)

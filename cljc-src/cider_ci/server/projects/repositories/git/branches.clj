@@ -17,7 +17,7 @@
   [repository-path]
   (let [res (system/exec!
               ["git" "branch" "--no-abbrev" "--no-color" "-v"]
-              {:timeout "1 Minute", :dir repository-path, :env {"TERM" "VT-100"}})
+              {:timeout "1 Minute", :dir repository-path, :add-env {"TERM" "VT-100"}})
         out (:out res)
         lines (clojure.string/split out #"\n")
         branches (map (fn [line]

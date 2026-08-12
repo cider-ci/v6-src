@@ -61,7 +61,8 @@
 
     :else
     (let [content-length (get-in request [:headers "content-length"])
-          env {"GIT_PROJECT_ROOT" (.toString (path {:project-id project-id}))
+          env {"PATH" (System/getenv "PATH")
+               "GIT_PROJECT_ROOT" (.toString (path {:project-id project-id}))
                "PATH_INFO" (str "/" repository-path)
                "GIT_HTTP_EXPORT_ALL" "true"
                "REMOTE_USER" (or (-> request :authenticated-entity :primary_email_address)

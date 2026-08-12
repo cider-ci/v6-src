@@ -51,7 +51,7 @@
        ; I> identity-with-logging
         (system/exec!
          ["git" "branch" "--list" "--no-abbrev" "--no-color" "-v"]
-         {:timeout "1 Minutes", :dir repository-path, :env {"TERM" "VT-100"}})
+         {:timeout "1 Minutes", :dir repository-path, :add-env {"TERM" "VT-100"}})
         :out
         (clojure.string/split #"\n"))
        (map (fn [line]

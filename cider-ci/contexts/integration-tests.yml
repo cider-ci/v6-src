@@ -24,5 +24,5 @@ task_defaults:
 
   environment_variables:
     CIDER_CI_TEST_HEADLESS: "1"
-    PGHOST: localhost
+    PGPORT: "5415"
     PGUSER: cider-ci

@@ -2,13 +2,14 @@
 # The executor role installs mise for ci_executor_exec_user under ~/.local/bin/mise.
 # This role makes it accessible system-wide and registers the trait.
 
-- name: Symlink mise into system PATH
-  ansible.builtin.file:
+- name: Copy mise into system PATH
+  ansible.builtin.copy:
     src: "{{ ci_executor_trait_mise_bin }}"
     dest: /usr/local/bin/mise
-    state: link
+    remote_src: true
     owner: root
     group: root
+    mode: '0755'
 
 - name: Install mise profile.d snippet
   ansible.builtin.copy:

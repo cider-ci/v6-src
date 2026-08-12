@@ -11,8 +11,8 @@ scripts:
     body: |
       #!/usr/bin/env bash
       set -euo pipefail
-      PGDATABASE="cider_ci_v6_${CIDER_CI_TRIAL_ID}" \
-        java -jar target/cider-ci.jar server run \
+      export PGDATABASE="cider_ci_v6_${CIDER_CI_TRIAL_ID}"
+      exec java -jar target/cider-ci.jar server run \
           --http-server-bind 127.0.0.1 \
           --http-server-port "${CI_SERVER_PORT}"
 

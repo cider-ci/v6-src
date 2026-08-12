@@ -10,5 +10,6 @@
       - ca-certificates
       - curl
       - git
+      - gnupg
       - sudo
     state: present

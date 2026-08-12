@@ -3,6 +3,10 @@
 set -euo pipefail
 PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
 cd $PROJECT_DIR
-clj -M -m cider-ci.main executor "$@"
+if [ -f "target/cider-ci.jar" ]; then
+  exec java -jar target/cider-ci.jar executor "$@"
+else
+  clj -M -m cider-ci.main executor "$@"
+fi
 
 # vi: ft=sh

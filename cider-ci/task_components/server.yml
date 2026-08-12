@@ -4,6 +4,10 @@ scripts:
     start_when:
       db-migrated:
         script_key: migrate-database
+    terminate_when:
+      test-terminal:
+        script_key: test
+        states: [passed, failed, aborted, defective, skipped]
     body: |
       #!/usr/bin/env bash
       set -euo pipefail

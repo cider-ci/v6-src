@@ -101,6 +101,7 @@
                      (ports/reserve! (:ports task_spec)))
         env-vars   (merge {"CIDER_CI"             "true"
                            "CONTINUOUS_INTEGRATION" "true"
+                           "CIDER_CI_TRIAL_ID"     id
                            "CIDER_CI_WORKING_DIR"  (.getAbsolutePath work-dir)}
                           (:environment_variables task_spec)
                           port-env)]

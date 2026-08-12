@@ -55,14 +55,17 @@
     (.delete dir)))
 
 (defn sweep-working-dirs!
-  "Deletes stale cider-ci working dirs left over from a previous crashed executor."
+  "Deletes stale cider-ci working dirs left over from a previous crashed executor.
+   Skipped when running inside a CIDER-CI trial to avoid deleting the parent
+   trial's working directory."
   []
-  (let [tmpdir (File. (System/getProperty "java.io.tmpdir"))]
-    (doseq [^File f (.listFiles tmpdir)
-            :when (and (.isDirectory f)
-                       (.startsWith (.getName f) "cider-ci-"))]
-      (info "Sweeping stale working dir:" (.getName f))
-      (delete-dir! f))))
+  (when-not (System/getenv "CIDER_CI")
+    (let [tmpdir (File. (System/getProperty "java.io.tmpdir"))]
+      (doseq [^File f (.listFiles tmpdir)
+              :when (and (.isDirectory f)
+                         (.startsWith (.getName f) "cider-ci-"))]
+        (info "Sweeping stale working dir:" (.getName f))
+        (delete-dir! f)))))
 
 
 (defn- upload-trial-attachments! [trial opts ^File work-dir task-spec]

@@ -13,6 +13,8 @@ scripts:
     start_when:
       bundle-installed:
         script_key: bundle-install
+      server-is-ready:
+        script_key: server-ready
     body: |
       #!/usr/bin/env bash
       set -euo pipefail

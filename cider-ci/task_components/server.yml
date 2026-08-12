@@ -27,7 +27,3 @@ scripts:
       set -euo pipefail
       until curl -sf "http://127.0.0.1:${CI_SERVER_PORT}/"; do sleep 1; done
 
-  test:
-    start_when:
-      server-is-ready:
-        script_key: server-ready

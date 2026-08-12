@@ -24,8 +24,10 @@ task_defaults:
 
   environment_variables:
     CIDER_CI_TEST_HEADLESS: "1"
+    PGHOST: "127.0.0.1"
     PGPORT: "5415"
     PGUSER: cider-ci
+    PGPASSWORD: "cider-ci"
     GEM_HOME: /opt/cider-ci/.gem/ruby/3.1.0
     GEM_PATH: /opt/cider-ci/.gem/ruby/3.1.0:/home/ci-exec-user/.local/share/mise/installs/ruby/3.1.3/lib/ruby/gems/3.1.0
     BUNDLE_PATH: /opt/cider-ci/bundle

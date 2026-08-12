@@ -20,5 +20,5 @@ scripts:
       set -euo pipefail
       eval "$(mise activate bash)"
       CI_HTTP_PORT="${CI_SERVER_PORT}" \
-      PGDATABASE="cider_ci_v6_${CIDER_CI_TRIAL_ID}" \
+      CIDER_CI_DATABASE_NAME="cider_ci_v6_${CIDER_CI_TRIAL_ID}" \
         bundle exec rspec "$CIDER_CI_TASK_FILE"

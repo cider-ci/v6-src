@@ -22,5 +22,5 @@ psql -p "$PORT" -U postgres -c \
   2>/dev/null || true
 
 psql -p "$PORT" -U postgres -c \
-  "CREATE ROLE \"{{ cider_ci_user }}\" SUPERUSER CREATEDB LOGIN;" \
+  "CREATE ROLE \"cider-ci\" SUPERUSER CREATEDB LOGIN PASSWORD 'cider-ci';" \
   2>/dev/null || true

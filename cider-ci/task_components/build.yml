@@ -19,3 +19,8 @@ scripts:
       fi
       mkdir -p target
       cp "$CACHE_JAR" target/cider-ci.jar
+
+      # Restore demo project bare repo so specs can fetch from it via "local" remote
+      mkdir -p data/repositories
+      git clone --bare cider-ci/fixtures/demo-project.bundle data/repositories/cider-ci-demo-project
+      git -C data/repositories/cider-ci-demo-project remote add local "$(pwd)/cider-ci/fixtures/demo-project.bundle"

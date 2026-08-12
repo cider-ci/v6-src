@@ -68,6 +68,7 @@ RSpec.configure do |config|
   # Capybara.run_server = false
   Capybara.default_driver = :firefox
   Capybara.current_driver = :firefox
+  Capybara.default_max_wait_time = 8
 
   config.before :all do
     set_capybara_values

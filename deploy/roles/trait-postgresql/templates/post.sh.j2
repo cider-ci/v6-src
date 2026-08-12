@@ -24,3 +24,16 @@ psql -p "$PORT" -U postgres -c \
 psql -p "$PORT" -U postgres -c \
   "CREATE ROLE \"cider-ci\" SUPERUSER CREATEDB LOGIN PASSWORD 'cider-ci';" \
   2>/dev/null || true
+
+# Provide uuidv7() for PostgreSQL < 17 (PG17+ has it built in).
+# Creating it in template1 makes it available in every new database.
+psql -p "$PORT" -U postgres -d template1 -c "
+CREATE OR REPLACE FUNCTION uuidv7() RETURNS uuid LANGUAGE sql AS \$\$
+  SELECT (
+    lpad(to_hex(floor(extract(epoch from clock_timestamp())*1000)::bigint), 12, '0') ||
+    '7' ||
+    lpad(to_hex(floor(random()*4096)::int), 3, '0') ||
+    lpad(to_hex(floor(random()*16384 + 32768)::int), 4, '0') ||
+    lpad(to_hex(floor(random()*281474976710656)::bigint), 12, '0')
+  )::uuid
+\$\$;" 2>/dev/null || true

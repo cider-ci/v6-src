@@ -142,7 +142,7 @@
           final-env   (cond-> (env-str-map merged-env)
                         (:template_environment_variables spec) apply-templates)
           log-file    (File. (System/getProperty "java.io.tmpdir")
-                             (str "cider-ci-script-" key-str ".log"))
+                             (str "cider-ci-script-" key-str "-" trial-id ".log"))
           script-file (File. ^String work-dir (str "cider-ci-" key-str ".sh"))]
       (spit script-file (or (:body spec) ""))
       (.setExecutable script-file true)

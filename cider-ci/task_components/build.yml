@@ -14,7 +14,8 @@ scripts:
       if [ ! -f "$CACHE_JAR" ]; then
         npm ci
         npx shadow-cljs release cider-ci
-        clj -T:build-leihs uber
+        clojure -T:build-leihs uber
         cp target/cider-ci.jar "$CACHE_JAR"
       fi
+      mkdir -p target
       cp "$CACHE_JAR" target/cider-ci.jar

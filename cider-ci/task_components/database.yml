@@ -25,4 +25,4 @@ scripts:
         states: [passed, failed, aborted, defective, skipped]
     body: |
       #!/usr/bin/env bash
-      dropdb --if-exists "cider_ci_v6_${CIDER_CI_TRIAL_ID}"
+      dropdb --if-exists --force "cider_ci_v6_${CIDER_CI_TRIAL_ID}"

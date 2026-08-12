@@ -24,6 +24,10 @@ end
 firefox_bin_path = Pathname.new(`which firefox`.strip).expand_path.to_s
 Selenium::WebDriver::Firefox.path = firefox_bin_path
 
+# Use the system-installed geckodriver directly; bypass selenium-manager
+# which ships x86_64 binaries only and fails on ARM64 hosts.
+Selenium::WebDriver::Firefox::Service.driver_path = `which geckodriver`.strip
+
 Capybara.register_driver :firefox do |app|
   profile = Selenium::WebDriver::Firefox::Profile.new
   # TODO: configure language for locale testing

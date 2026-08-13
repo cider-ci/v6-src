@@ -109,7 +109,7 @@
          (or (nil? exclude_match) (not (matches-pattern? path exclude_match))))))
 
 (defn- init-submodules! [^File work-dir submodule-opts token git-url]
-  (when (.exists (File. work-dir ".gitmodules"))
+  (when (and (map? submodule-opts) (.exists (File. work-dir ".gitmodules")))
     (let [auth (auth-args token git-url)]
       (if (or (:include_match submodule-opts) (:exclude_match submodule-opts))
         (let [paths   (submodule-paths work-dir)

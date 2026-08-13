@@ -108,10 +108,13 @@
 
 (def trials
   ["/trials"
-   ["/:trial-id/attachments/*attachment-path"
-    {:name           :trial-attachment
-     :bypass-spa     true
-     :auth-http-safe #{:user}}]])
+   ["/:trial-id"
+    ["" {:name           :trial
+         :auth-http-safe #{:user}}]
+    ["/attachments/*attachment-path"
+     {:name           :trial-attachment
+      :bypass-spa     true
+      :auth-http-safe #{:user}}]]])
 
 (def workspace
   ["/commits"

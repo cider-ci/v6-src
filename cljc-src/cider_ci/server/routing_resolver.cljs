@@ -18,6 +18,7 @@
     [cider-ci.server.resources.users.user.email-addresses :as user-email-addresses]
     [cider-ci.server.resources.users.user.gpg-keys :as user-gpg-keys]
     [cider-ci.server.resources.users.user.main :as user]
+    [cider-ci.server.resources.trials :as trials]
     [cider-ci.server.resources.users.user.password :as user-password]
     [cider-ci.server.routes :as routes]
     [taoensso.timbre :refer [debug info warn error spy]]
@@ -38,7 +39,8 @@
    :project-commit project-commit/components
    :project-commit-configuration project-configuration/components
    :project-jobs project-jobs/components
-   :project-job project-jobs/components
+   :project-job  project-jobs/components
+   :trial        trials/components
    :projects projects/components
    :sign-in sign-in/components
    :users users/components

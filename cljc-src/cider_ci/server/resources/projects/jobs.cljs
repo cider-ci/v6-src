@@ -3,7 +3,6 @@
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
-   [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
    [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state]
    [cljs.core.async :refer [go-loop <! chan]]
@@ -168,28 +167,16 @@
 
 ;;; Job detail page (route :project-job)
 
-(defn- trial-duration [trial]
-  (when (and (:started_at trial) (:finished_at trial))
-    (let [ms (- (js/Date. (:finished_at trial))
-                (js/Date. (:started_at trial)))
-          s  (.round js/Math (/ ms 1000))]
-      (if (>= s 60)
-        (str (.floor js/Math (/ s 60)) "m " (mod s 60) "s")
-        (str s "s")))))
-
-(defn- script-result-entry [trial-id [key result]]
-  (let [key-str (name key)]
-    ^{:key key-str}
-    [:div.d-flex.align-items-baseline.gap-2.small.mt-1.ms-3
-     [:code key-str]
-     [state-badge (:state result)]
-     (when-let [exit (:exit_status result)]
-       [:span.text-muted (str "exit " exit)])
-     [:a {:href   (str "/trials/" trial-id "/attachments/scripts/" key-str)
-          :target "_blank"}
-      "Log"]
-     (when-let [err (:error result)]
-       [:span.text-danger err])]))
+(defn- trial-btn-cls [s]
+  (case s
+    "passed"    "btn-outline-success"
+    "failed"    "btn-outline-danger"
+    "executing" "btn-outline-primary"
+    "pending"   "btn-outline-secondary"
+    "aborted"   "btn-outline-warning"
+    "defective" "btn-outline-dark"
+    "skipped"   "btn-outline-secondary"
+    "btn-outline-secondary"))
 
 
 (defn- retry-task! [task-id]
@@ -222,30 +209,18 @@
      [:td
       [:code (:name t)]
       [trial-config-badges (:spec t)]]
-     [:td
-      [state-badge (:state t)]
-      (when retryable?
-        [:button.btn.btn-sm.btn-outline-secondary.ms-2
-         {:on-click #(retry-task! (:id t))}
-         [:i.fas.fa-rotate-right]])]
-     [:td [:span.text-muted (str (:created_at t))]]
+     [:td [state-badge (:state t)]]
      [:td
       (for [trial (:trials t)]
         ^{:key (:id trial)}
-        [:div.mb-2
-         [:div.d-flex.align-items-baseline.gap-2
-          [state-badge (:state trial)]
-          (when-let [dur (trial-duration trial)]
-            [:span.text-muted.small dur])
-          (when-let [err (:error trial)]
-            [:span.text-danger.small err])]
-         (for [entry (-> trial :result :scripts seq)]
-           [script-result-entry (:id trial) entry])
-         (try
-           (when-let [dag (scripts-dag/scripts-dag (:spec t) (-> trial :result :scripts))]
-             [:div.mt-2 dag])
-           (catch :default e
-             [:div.text-danger.small (str "DAG error: " (.-message e))]))])]]))
+        [:a.btn.btn-sm.ms-1
+         {:class (trial-btn-cls (:state trial))
+          :href  (path :trial {:trial-id (:id trial)})}
+         (:state trial)])
+      (when retryable?
+        [:button.btn.btn-sm.btn-outline-secondary.ms-2
+         {:on-click #(retry-task! (:id t))}
+         [:i.fas.fa-rotate-right]])]]))
 
 
 (defn- tasks-panel [tasks]
@@ -254,7 +229,7 @@
    (if (seq tasks)
      [:table.table.table-sm
       [:thead
-       [:tr [:th "Name"] [:th "State"] [:th "Created"] [:th "Trials"]]]
+       [:tr [:th "Name"] [:th "State"] [:th "Trials"]]]
       [:tbody
        (for [t tasks] [task-row t])]]
      [:p.text-muted "No tasks for this job."])])

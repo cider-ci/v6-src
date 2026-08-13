@@ -35,6 +35,7 @@
    :executor-sync             #'executors/handler
    :executor-trial            #'executors/handler
    :executor-trial-attachment #'executors/handler
+   :trial                     #'trials/handler
    :trial-attachment          #'trials/handler
    :init                      #'init/handler
    :commits                   #'commits/handler

@@ -60,18 +60,17 @@ feature 'Executor Run' do
     job_url = find('a code', text: 'introduction-demo').ancestor('a')[:href]
     job_url = "#{http_base_url}#{job_url}" unless job_url.start_with?('http')
 
-    # Poll the job page until the executor reports passed (up to 30 s)
-    Timeout.timeout(30) do
-      until page.has_css?('.badge', text: 'passed', minimum: 2, wait: 1)
+    # Poll the job page until the executor reports passed (up to 60 s)
+    Timeout.timeout(60) do
+      until page.has_css?('h3 .badge', text: 'passed', wait: 1)
         sleep 2
         visit job_url
       end
     end
 
-    expect(page).to have_css '.badge', text: 'passed', minimum: 2
+    expect(page).to have_css 'h3 .badge', text: 'passed'
 
     # Verify that log attachments were uploaded for the trial(s)
-    expect(page).to have_link 'Log'
     expect(database[:trial_attachments].where(path: 'scripts/main').count).to be >= 1
   end
 

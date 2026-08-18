@@ -67,7 +67,7 @@ shared_context 'with live executor' do
   # Poll the given URL until the page contains a badge with badge_text.
   def wait_for_job_badge(job_url, badge_text, timeout_sec: 90)
     Timeout.timeout(timeout_sec) do
-      until page.has_css?('.badge', text: badge_text, wait: 1)
+      until page.has_css?('h3 .badge', text: badge_text, wait: 1)
         sleep 2
         visit job_url
       end

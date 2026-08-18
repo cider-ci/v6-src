@@ -14,8 +14,8 @@ task_defaults:
 
   ports:
     CI_SERVER_PORT:
-      min: 4100
-      max: 8799
+      min: 5000
+      max: 5999
 
   trial_attachments:
     screenshots:

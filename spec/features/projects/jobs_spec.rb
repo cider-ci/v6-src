@@ -107,7 +107,7 @@ feature 'Jobs' do
     expect(page).to have_content 'main'
   end
 
-  scenario 'job detail shows error message from a failed trial' do
+  scenario 'trial detail shows error message from a failed trial' do
     token = setup_executor_token
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
     find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
@@ -118,20 +118,20 @@ feature 'Jobs' do
     executor_api(:patch, "/executor/trials/#{trial['id']}",
                  { state: 'failed', error: 'script exited with code 1' }, token)
 
-    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs/#{trial['job_id']}"
+    visit "/trials/#{trial['id']}"
     expect(page).to have_content 'script exited with code 1'
     expect(page).to have_css '.badge', text: 'failed'
   end
 
-  scenario 'job detail shows Log link for each trial' do
+  scenario 'trial detail shows Log link for each script' do
     h = insert_job_hierarchy(with_scripts: true)
-    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}"
+    visit "/trials/#{h[:trial_id]}"
     expect(page).to have_link 'Log', href: "/trials/#{h[:trial_id]}/attachments/scripts/main"
   end
 
-  scenario 'job detail shows trial duration when trial has timing data' do
+  scenario 'trial detail shows trial duration when trial has timing data' do
     h = insert_job_hierarchy(with_timing: true)
-    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}"
+    visit "/trials/#{h[:trial_id]}"
     expect(page).to have_css '.text-muted.small', text: /\d+s/
   end
 

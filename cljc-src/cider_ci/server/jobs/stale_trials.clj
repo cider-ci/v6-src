@@ -1,30 +1,10 @@
 (ns cider-ci.server.jobs.stale-trials
   (:require
-    [cider-ci.server.db.core :refer [get-ds]]
+    [cider-ci.server.db.core :refer [builder-fn-options-default get-ds]]
+    [cider-ci.server.jobs.propagation :as propagation]
     [cider-ci.utils.daemon :refer [defdaemon]]
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [info warn]]))
-
-
-(def ^:private terminal-states #{"passed" "failed" "defective" "aborted"})
-
-(defn- propagate-task! [tx task-id]
-  (let [states (map :state (jdbc/execute! tx
-                             ["SELECT state FROM trials WHERE task_id = ?" task-id]))]
-    (when (every? terminal-states states)
-      (let [new-state (if (every? #(= "passed" %) states) "passed" "failed")
-            task-row  (first (jdbc/execute! tx
-                               ["UPDATE tasks SET state = ?, updated_at = now()
-                                 WHERE id = ? RETURNING job_id" new-state task-id]))]
-        (when task-row
-          (let [job-states (map :state (jdbc/execute! tx
-                                         ["SELECT state FROM tasks WHERE job_id = ?"
-                                          (:job_id task-row)]))]
-            (when (every? terminal-states job-states)
-              (let [job-new-state (if (every? #(= "passed" %) job-states) "passed" "failed")]
-                (jdbc/execute! tx
-                  ["UPDATE jobs SET state = ?, updated_at = now() WHERE id = ?"
-                   job-new-state (:job_id task-row)])))))))))
 
 
 (defn- reset-stale-dispatching! [ds]
@@ -40,25 +20,48 @@
 
 
 (defn- reset-stale-executing! [ds]
-  (jdbc/with-transaction [tx ds]
-    (let [rows (jdbc/execute! tx
+  (jdbc/with-transaction [raw-tx ds]
+    (let [tx   (jdbc/with-options raw-tx builder-fn-options-default)
+          rows (jdbc/execute! tx
                  ["UPDATE trials
                    SET state = 'defective',
                        error = 'Execution timed out after 60 minutes',
                        finished_at = now(), updated_at = now()
                    WHERE state = 'executing'
                      AND started_at < now() - interval '60 minutes'
-                   RETURNING task_id"])]
+                   RETURNING id"])]
       (when (seq rows)
         (info "Timed out" (count rows) "executing trial(s)")
-        (doseq [{:keys [task_id]} rows]
-          (propagate-task! tx task_id))))))
+        (doseq [{:keys [id]} rows]
+          (propagation/propagate-from-trial tx id))))))
+
+
+(defn- reconcile-stuck-tasks! [ds]
+  (jdbc/with-transaction [raw-tx ds]
+    (let [tx   (jdbc/with-options raw-tx builder-fn-options-default)
+          rows (jdbc/execute! tx
+                 ["SELECT DISTINCT ON (tr.task_id) tr.id
+                   FROM trials tr
+                   JOIN tasks t ON t.id = tr.task_id
+                   WHERE t.state NOT IN ('passed','failed','defective','aborted')
+                     AND tr.state IN ('passed','failed','defective','aborted')
+                     AND NOT EXISTS (
+                       SELECT 1 FROM trials tr2
+                       WHERE tr2.task_id = tr.task_id
+                         AND tr2.state NOT IN ('passed','failed','defective','aborted')
+                     )
+                   ORDER BY tr.task_id, tr.created_at DESC"])]
+      (when (seq rows)
+        (info "Reconciling" (count rows) "stuck task(s)")
+        (doseq [{:keys [id]} rows]
+          (propagation/propagate-from-trial tx id))))))
 
 
 (defdaemon "stale-trial-recovery" 60
   (try
     (reset-stale-dispatching! (get-ds))
     (reset-stale-executing! (get-ds))
+    (reconcile-stuck-tasks! (get-ds))
     (catch Exception e
       (warn "Stale trial recovery error:" (.getMessage e)))))
 

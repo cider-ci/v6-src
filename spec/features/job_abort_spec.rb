@@ -91,7 +91,7 @@ feature 'Job abort' do
 
   # ── UI rendering tests (Capybara) ────────────────────────────────────────
 
-  scenario 'Abort button appears for executing job, not for passed job' do
+  scenario 'Abort button appears for executing job only; Retry is always visible' do
     set_session_cookie @admin
     exec_ids   = seed_job_with_task(job_state: 'executing', trial_state: 'executing')
     passed_ids = seed_job_with_task(job_state: 'passed',    trial_state: 'passed')
@@ -99,15 +99,15 @@ feature 'Job abort' do
     visit job_url(exec_ids[:job_id])
     expect(page).to have_css '.badge', text: 'executing'
     expect(page).to have_button 'Abort'
-    expect(page).not_to have_button 'Retry'
+    expect(page).to have_button 'Retry'
 
     visit job_url(passed_ids[:job_id])
     expect(page).to have_css '.badge', text: 'passed'
     expect(page).not_to have_button 'Abort'
-    expect(page).not_to have_button 'Retry'
+    expect(page).to have_button 'Retry'
   end
 
-  scenario 'Retry button appears for failed job, not for executing job' do
+  scenario 'Retry button is always visible; Abort button only for executing/aborting jobs' do
     set_session_cookie @admin
     failed_ids = seed_job_with_task(job_state: 'failed', trial_state: 'failed')
     exec_ids   = seed_job_with_task(job_state: 'executing', trial_state: 'executing')
@@ -120,6 +120,6 @@ feature 'Job abort' do
     visit job_url(exec_ids[:job_id])
     expect(page).to have_css '.badge', text: 'executing'
     expect(page).to have_button 'Abort'
-    expect(page).not_to have_button 'Retry'
+    expect(page).to have_button 'Retry'
   end
 end

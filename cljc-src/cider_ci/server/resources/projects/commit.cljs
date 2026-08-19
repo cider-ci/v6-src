@@ -33,15 +33,15 @@
     (cond
       (not signed?)
       [:div.alert.alert-secondary
-       [:i.fas.fa-circle-xmark] " Unsigned commit"]
+       [icons/unsigned] " Unsigned commit"]
 
       (and signed? (nil? fp))
       [:div.alert.alert-warning
-       [:i.fas.fa-question-circle] " Signed, but the signing key is not trusted"]
+       [icons/unknown-signature] " Signed, but the signing key is not trusted"]
 
       :else
       [:div.alert.alert-success
-       [:i.fas.fa-check-circle] " Signed by "
+       [icons/signed] " Signed by "
        [:strong (or key-name "trusted key")]
        (when login [:span " (" login ")"])
        [:div.small.mt-1.text-monospace fp]])))
@@ -100,13 +100,13 @@
          [:a {:href (path :project-blob {:project-id (project-id)
                                          :commit-id  (:id c)
                                          :blob-path  "cider-ci.yml"})}
-          [:i.fas.fa-file-code] " cider-ci.yml"]
+          [icons/file-code] " cider-ci.yml"]
          [:a {:href (path :project-commit-configuration {:project-id (project-id)
                                                          :commit-id  (:id c)})}
-          [:i.fas.fa-code-branch] " Configuration"]
+          [icons/code-branch] " Configuration"]
          [:a {:href (path :project-jobs {:project-id (project-id)
                                          :commit-id  (:id c)})}
-          [:i.fas.fa-play-circle] " Jobs"]]
+          [icons/play-circle] " Jobs"]]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
 

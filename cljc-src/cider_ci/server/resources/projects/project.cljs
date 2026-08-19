@@ -89,7 +89,7 @@
     [:div.mt-3.d-flex.gap-2
      [:button.btn.btn-sm.btn-outline-secondary
       {:on-click #(swap! editing?* not)}
-      [:i.fas.fa-edit] " Edit settings"]
+      [icons/edit] " Edit settings"]
      [:form {:on-submit (fn [e]
                           (.preventDefault e)
                           (fetch-request "POST"
@@ -97,13 +97,13 @@
                                          (fn [_] (set! js/window.location
                                                         (path :project {:project-id (project-id)})))))}
       [:button.btn.btn-sm.btn-secondary {:type :submit}
-       [:i.fas.fa-rotate] " Fetch now"]]
+       [icons/fetch] " Fetch now"]]
      [:button.btn.btn-sm.btn-danger
       {:on-click (fn [_]
                    (fetch-request "DELETE"
                                   (path :project {:project-id (project-id)})
                                   (fn [_] (set! js/window.location (path :projects)))))}
-      [:i.fas.fa-trash] " Delete project"]]))
+      [icons/delete] " Delete project"]]))
 
 
 ;;; project metadata ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -130,7 +130,7 @@
 
 (defn- signature-cell [fingerprint]
   (if fingerprint
-    [:span.text-success {:title fingerprint} [:i.fas.fa-check-circle] " signed"]
+    [:span.text-success {:title fingerprint} [icons/signed] " signed"]
     [:span.text-muted "—"]))
 
 (defn- branches-table []

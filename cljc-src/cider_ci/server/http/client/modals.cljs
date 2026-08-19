@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [str keyword send-off])
     (:require
     [cider-ci.server.html.clipboard :as clipboard]
+    [cider-ci.server.html.icons :as icons]
     [cider-ci.server.http.client.main :refer [requests* dismiss]]
     [cider-ci.server.http.client.shared :refer [wait-component]]
     [cider-ci.server.http.core :refer [HTTP_UNSAFE_METHODS]]
@@ -48,7 +49,7 @@
     {:class (str "btn-" (-> request status bootstrap-status)
                  " " (:class opts))
      :on-click #(dismiss (:id request))}
-    [:i.fas.fa-times] " Dismiss "]))
+    [icons/dismiss] " Dismiss "]))
 
 (defn modal-body-inner [body]
   [:div

@@ -1,6 +1,7 @@
 (ns cider-ci.server.html.clipboard
   (:refer-clojure :exclude [str keyword])
   (:require
+    [cider-ci.server.html.icons :as icons]
     [cider-ci.utils.core :refer [str keyword deep-merge presence]]
     [cljs.core.async :refer [go]]
     [reagent.ratom :as ratom :refer [reaction]]
@@ -43,10 +44,10 @@
 (defn button-tiny [text]
   [:button.btn.btn-outline-secondary.btn-sm.py-0.px-1
    {:on-click #(copy-text text)}
-   [:span [:i.fas.fa-clipboard]]])
+   [:span [icons/clipboard]]])
 
 
 (defn button [text]
   [:button.btn.btn-outline-secondary.btn-sm.py-0.px-1
    {:on-click #(copy-text text)}
-   [:span [:i.fas.fa-clipboard] " Copy to clipboard"]])
+   [:span [icons/clipboard] " Copy to clipboard"]])

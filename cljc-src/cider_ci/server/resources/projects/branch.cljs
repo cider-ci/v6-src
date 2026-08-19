@@ -41,7 +41,7 @@
 
 (defn- signature-cell [fingerprint]
   (if fingerprint
-    [:span.text-success {:title fingerprint} [:i.fas.fa-check-circle] " signed"]
+    [:span.text-success {:title fingerprint} [icons/signed] " signed"]
     [:span.text-muted "—"]))
 
 
@@ -137,7 +137,7 @@
         [:nav.mb-3
          [:a {:href (path :project {:project-id (project-id)})}
           [icons/projects] " " (project-id)]]
-        [:h2 [:i.fas.fa-code-branch] " " (:name b)]
+        [:h2 [icons/code-branch] " " (:name b)]
         [tip-commit-panel]
         [:h3.mt-4 "Recent commits"]
         [commits-table]

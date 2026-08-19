@@ -141,7 +141,7 @@
                  :else
                  [:button.btn.btn-sm.btn-outline-primary
                   {:on-click #(trigger-job (:key j))}
-                  [:i.fas.fa-play] " Run"])]]))]]
+                  [icons/play] " Run"])]]))]]
        [:p.text-muted "No jobs defined in cider-ci.yml for this commit."])]))
 
 
@@ -203,24 +203,22 @@
 
 
 (defn- task-row [t]
-  (let [retryable? (#{"failed" "defective" "aborted"} (:state t))]
-    ^{:key (:id t)}
-    [:tr
-     [:td
-      [:code (:name t)]
-      [trial-config-badges (:spec t)]]
-     [:td [state-badge (:state t)]]
-     [:td
-      (for [trial (:trials t)]
-        ^{:key (:id trial)}
-        [:a.btn.btn-sm.ms-1
-         {:class (trial-btn-cls (:state trial))
-          :href  (path :trial {:trial-id (:id trial)})}
-         (:state trial)])
-      (when retryable?
-        [:button.btn.btn-sm.btn-outline-secondary.ms-2
-         {:on-click #(retry-task! (:id t))}
-         [:i.fas.fa-rotate-right]])]]))
+  ^{:key (:id t)}
+  [:tr
+   [:td
+    [:code (:name t)]
+    [trial-config-badges (:spec t)]]
+   [:td [state-badge (:state t)]]
+   [:td
+    (for [trial (:trials t)]
+      ^{:key (:id trial)}
+      [:a.btn.btn-sm.ms-1
+       {:class (trial-btn-cls (:state trial))
+        :href  (path :trial {:trial-id (:id trial)})}
+       (:state trial)])
+    [:button.btn.btn-sm.btn-outline-secondary.ms-2
+     {:on-click #(retry-task! (:id t))}
+     [icons/retry] " Retry"]]])
 
 
 (defn- tasks-panel [tasks]
@@ -255,9 +253,8 @@
    [state/hidden-routing-state-component :did-change start-job-polling!]
    (if-not (seq @data*)
      [:div "Loading..."]
-     (let [job      @data*
-           abortable? (#{"pending" "executing"} (:state job))
-           retryable? (#{"failed" "defective" "aborted"} (:state job))]
+     (let [job        @data*
+           abortable? (#{"pending" "executing"} (:state job))]
        [:<>
         [:nav.mb-3
          [:a {:href (path :project {:project-id (project-id)})}
@@ -270,15 +267,15 @@
           "Jobs"]
          " / "
          [:code (:key job)]]
-        [:h3 (:name job) " " [state-badge (:state job)]
+        [:h3 (:name job) " " [state-badge (:state job)]]
+        [:div.mb-3
          (when abortable?
-           [:button.btn.btn-sm.btn-outline-warning.ms-2
+           [:button.btn.btn-sm.btn-outline-warning.me-2
             {:on-click abort-job!}
-            [:i.fas.fa-stop] " Abort"])
-         (when retryable?
-           [:button.btn.btn-sm.btn-outline-secondary.ms-2
-            {:on-click retry-job!}
-            [:i.fas.fa-rotate-right] " Retry"])]
+            [icons/stop] " Abort"])
+         [:button.btn.btn-sm.btn-outline-secondary
+          {:on-click retry-job!}
+          [icons/retry] " Retry"]]
         [tasks-panel (:tasks job)]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])

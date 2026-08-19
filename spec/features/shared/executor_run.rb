@@ -1,6 +1,6 @@
 require 'digest'
+require 'fileutils'
 require 'securerandom'
-require 'tempfile'
 require 'timeout'
 
 shared_context 'with live executor' do
@@ -25,24 +25,25 @@ shared_context 'with live executor' do
       enabled:    true
     )
 
-    @executor_log = Tempfile.new(['executor', '.log'])
+    log_dir = PROJECT_DIR.join('tmp/executor-logs')
+    FileUtils.mkdir_p(log_dir)
+    @executor_log_path = log_dir.join("executor-#{SecureRandom.hex(6)}.log").to_s
     @executor_pid = Process.spawn(
       { 'CIDER_CI_EXECUTOR_TOKEN'  => @executor_token,
         'CIDER_CI_SERVER_URL'      => http_base_url,
         'CIDER_CI_EXECUTOR_TRAITS' => 'Bash' },
       PROJECT_DIR.join('bin/executor-run').to_s,
-      out: @executor_log.path,
-      err: @executor_log.path
+      out: @executor_log_path,
+      err: @executor_log_path
     )
     Timeout.timeout(40) do
-      sleep 0.5 until File.read(@executor_log.path).include?('Executor sync loop starting')
+      sleep 0.5 until File.read(@executor_log_path).include?('Executor sync loop starting')
     end
   end
 
   after :each do
     Process.kill('TERM', @executor_pid) rescue nil
     Process.wait(@executor_pid)         rescue nil
-    @executor_log.unlink                rescue nil
   end
 
   # Navigate to the commit's job list and click Run for the named job.

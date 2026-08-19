@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'digest'
+require 'fileutils'
 require 'securerandom'
-require 'tempfile'
 require 'timeout'
 
 feature 'Executor Run' do
@@ -28,26 +28,27 @@ feature 'Executor Run' do
     )
 
     project_dir = Pathname.new(__FILE__).join('../../../..').realdirpath
-    @executor_log = Tempfile.new(['executor', '.log'])
+    log_dir = project_dir.join('tmp/executor-logs')
+    FileUtils.mkdir_p(log_dir)
+    @executor_log_path = log_dir.join("executor-#{SecureRandom.hex(6)}.log").to_s
 
     @executor_pid = Process.spawn(
       { 'CIDER_CI_EXECUTOR_TOKEN' => @executor_token,
         'CIDER_CI_SERVER_URL'     => http_base_url },
       project_dir.join('bin/executor-run').to_s,
-      out: @executor_log.path,
-      err: @executor_log.path
+      out: @executor_log_path,
+      err: @executor_log_path
     )
 
     # Wait for the executor JVM + sync loop to be ready
     Timeout.timeout(40) do
-      sleep 0.5 until File.read(@executor_log.path).include?('Executor sync loop starting')
+      sleep 0.5 until File.read(@executor_log_path).include?('Executor sync loop starting')
     end
   end
 
   after :each do
     Process.kill('TERM', @executor_pid) rescue nil
     Process.wait(@executor_pid)         rescue nil
-    @executor_log.unlink                rescue nil
   end
 
   scenario 'executor picks up and passes a trial end-to-end' do

@@ -79,7 +79,15 @@
         (run! (vec (concat ["git"] auth ["clone" "--bare" git-url (.getAbsolutePath cache)])) nil))
       (when-not (commit-present? cache commit-id)
         (info "Fetching" git-url "for commit" (subs commit-id 0 8))
-        (run! (vec (concat ["git"] auth ["fetch" "--force" "--tags" git-url "+refs/*:refs/*"])) cache)
+        (try
+          (run! (vec (concat ["git"] auth ["fetch" "--force" "--tags" git-url "+refs/*:refs/*"])) cache)
+          (catch Exception fetch-e
+            ; Fetch failed — cache may have a HEAD file but corrupt/incomplete objects
+            ; from a previous interrupted clone. Delete and reclone from scratch.
+            (warn "Fetch failed (" (.getMessage fetch-e) "); deleting cache and recloning" git-url)
+            (delete-recursively! cache)
+            (.mkdirs cache)
+            (run! (vec (concat ["git"] auth ["clone" "--bare" git-url (.getAbsolutePath cache)])) nil)))
         (when-not (commit-present? cache commit-id)
           (throw (ex-info "Commit not found in repository after fetch"
                           {:git-url git-url :commit-id commit-id})))))

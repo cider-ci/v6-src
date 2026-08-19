@@ -21,6 +21,9 @@ task_defaults:
     screenshots:
       include_match: 'tmp/screenshots/.+\.png$'
       content_type: image/png
+    executor_logs:
+      include_match: 'tmp/executor-logs/.+\.log$'
+      content_type: text/plain
 
   environment_variables:
     CIDER_CI_TEST_HEADLESS: "1"

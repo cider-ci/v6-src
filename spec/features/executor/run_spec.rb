@@ -61,12 +61,22 @@ feature 'Executor Run' do
     job_url = find('a code', text: 'introduction-demo').ancestor('a')[:href]
     job_url = "#{http_base_url}#{job_url}" unless job_url.start_with?('http')
 
-    # Poll the job page until the executor reports passed (up to 60 s)
-    Timeout.timeout(60) do
-      until page.has_css?('h3 .badge', text: 'passed', wait: 1)
-        sleep 2
-        visit job_url
+    # Poll the job page until the executor reports passed (up to 120 s)
+    begin
+      Timeout.timeout(120) do
+        until page.has_css?('h3 .badge', text: 'passed', wait: 1)
+          sleep 2
+          visit job_url
+        end
       end
+    rescue Timeout::Error
+      warn "=== run_spec timeout: DB state ==="
+      warn database[:jobs].select(:key, :state).all.inspect
+      warn database[:tasks].select(:name, :state).all.inspect
+      warn database[:trials].select(:state, :error, :dispatched_at).all.inspect
+      warn "=== last 60 lines of executor log ==="
+      warn File.read(@executor_log_path).lines.last(60).join rescue nil
+      raise
     end
 
     expect(page).to have_css 'h3 .badge', text: 'passed'

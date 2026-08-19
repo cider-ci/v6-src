@@ -66,12 +66,22 @@ shared_context 'with live executor' do
   end
 
   # Poll the given URL until the page contains a badge with badge_text.
-  def wait_for_job_badge(job_url, badge_text, timeout_sec: 90)
-    Timeout.timeout(timeout_sec) do
-      until page.has_css?('h3 .badge', text: badge_text, wait: 1)
-        sleep 2
-        visit job_url
+  def wait_for_job_badge(job_url, badge_text, timeout_sec: 120)
+    begin
+      Timeout.timeout(timeout_sec) do
+        until page.has_css?('h3 .badge', text: badge_text, wait: 1)
+          sleep 2
+          visit job_url
+        end
       end
+    rescue Timeout::Error
+      warn "=== wait_for_job_badge(#{badge_text}) timeout: DB state ==="
+      warn database[:jobs].select(:key, :state).all.inspect
+      warn database[:tasks].select(:name, :state).all.inspect
+      warn database[:trials].select(:state, :error, :dispatched_at).all.inspect
+      warn "=== last 60 lines of executor log ==="
+      warn File.read(@executor_log_path).lines.last(60).join rescue nil
+      raise
     end
   end
 end

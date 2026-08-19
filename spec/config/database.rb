@@ -34,11 +34,17 @@ def clean_db
     AND table_schema = 'public'
     ORDER BY table_type, table_name;
     SQL
-  ].map{|r| r[:table_name]}.reject { |tn| tn == 'migrations' } \
-    .join(', ').tap do |tables|
-    database.run" TRUNCATE TABLE #{tables} CASCADE; "
-    database.run "INSERT INTO SETTINGS (id) VALUES (0);"
+  ].map{|r| r[:table_name]}.reject { |tn| tn == 'migrations' }.join(', ')
+
+  retries = 0
+  begin
+    database.run "TRUNCATE TABLE #{tables} CASCADE;"
+  rescue Sequel::DatabaseError => e
+    raise unless e.message.include?('deadlock') && (retries += 1) <= 3
+    sleep 0.1
+    retry
   end
+  database.run "INSERT INTO SETTINGS (id) VALUES (0);"
 end
 
 RSpec.configure do |config|

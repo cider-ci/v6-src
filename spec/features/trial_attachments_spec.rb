@@ -96,13 +96,12 @@ feature 'Trial Attachments' do
   end
 
   scenario 'non-script attachment appears in Attachments section on trial detail page' do
-    project_id = 'attach-ui-project'
+    project_id = ATTACH_PROJECT_ID  # already inserted in before :each
     commit_id  = 'c' * 40
     job_id     = SecureRandom.uuid
     task_id    = SecureRandom.uuid
     trial_id   = SecureRandom.uuid
 
-    database[:repositories].insert(id: project_id, name: 'Attach UI', git_url: 'local')
     database[:commits].insert(
       id: commit_id, tree_id: 'd' * 40, subject: 'UI test',
       author_name: 'T', committer_name: 'T', committer_date: Time.now.utc

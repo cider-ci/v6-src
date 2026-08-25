@@ -80,15 +80,39 @@
             [:span.text-danger.small err])]]))
 
 
+(defn- attachment-item [trial-id {:keys [path content_type]}]
+  (let [url (str "/trials/" trial-id "/attachments/" path)]
+    [:div.mb-2
+     (if (clojure.string/starts-with? (or content_type "") "image/")
+       [:div
+        [:a {:href url :target "_blank"}
+         [:img {:src url :alt path :style {:max-width "100%" :max-height "300px"
+                                           :border "1px solid #dee2e6" :border-radius "4px"}}]]
+        [:div.small.text-muted.mt-1 [:code path]]]
+       [:a {:href url :target "_blank"}
+        [icons/file-code] " " [:code path]])]))
+
+
+(defn- attachments-panel [trial-id attachments]
+  (let [non-script (remove #(clojure.string/starts-with? (:path %) "scripts/") attachments)]
+    (when (seq non-script)
+      [:<>
+       [:h5.mt-4 "Attachments"]
+       (for [a non-script]
+         ^{:key (:path a)}
+         [attachment-item trial-id a])])))
+
+
 (defn page []
   [:div.page.trial
    [state/hidden-routing-state-component :did-change start-polling!]
    (if-not (seq @data*)
      [:div "Loading..."]
-     (let [trial     @data*
-           trial-id  (:trial_id trial)
-           task-spec (:task_spec trial)
-           scripts   (-> trial :result :scripts)]
+     (let [trial       @data*
+           trial-id    (:trial_id trial)
+           task-spec   (:task_spec trial)
+           scripts     (-> trial :result :scripts)
+           attachments (:attachments trial)]
        [:<>
         [:nav.mb-3
          [:a {:href (path :project {:project-id (:project_id trial)})}
@@ -124,6 +148,7 @@
             [:tbody
              (for [entry (seq scripts)]
                [script-row entry trial-id])]]])
+        [attachments-panel trial-id attachments]
         (when task-spec
           (try
             (when-let [dag (scripts-dag/scripts-dag task-spec scripts)]

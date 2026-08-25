@@ -30,6 +30,15 @@
             trial-id])))
 
 
+(defn- get-trial-attachments [tx trial-id]
+  (jdbc/execute! tx
+    ["SELECT path, content_type
+      FROM trial_attachments
+      WHERE trial_id = ?::uuid
+      ORDER BY path"
+     trial-id]))
+
+
 (defn handler [{tx             :tx
                 route-name     :route-name
                 request-method :request-method
@@ -38,7 +47,8 @@
     :trial
     (case request-method
       :get (if-let [trial (get-trial tx trial-id)]
-             {:status 200 :body trial}
+             {:status 200
+              :body   (assoc trial :attachments (get-trial-attachments tx trial-id))}
              {:status 404 :body "Trial not found"})
       {:status 405 :body "Method not allowed"})
 

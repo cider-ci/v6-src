@@ -95,4 +95,40 @@ feature 'Trial Attachments' do
     expect(resp.code.to_i).to eq(403)
   end
 
+  scenario 'non-script attachment appears in Attachments section on trial detail page' do
+    project_id = 'attach-ui-project'
+    commit_id  = 'c' * 40
+    job_id     = SecureRandom.uuid
+    task_id    = SecureRandom.uuid
+    trial_id   = SecureRandom.uuid
+
+    database[:repositories].insert(id: project_id, name: 'Attach UI', git_url: 'local')
+    database[:commits].insert(
+      id: commit_id, tree_id: 'd' * 40, subject: 'UI test',
+      author_name: 'T', committer_name: 'T', committer_date: Time.now.utc
+    )
+    database[:jobs].insert(
+      id: job_id, project_id: project_id, commit_id: commit_id,
+      key: 'attach-job', name: 'Attach Job', state: 'passed'
+    )
+    database.fetch(
+      "INSERT INTO tasks (id, job_id, name, state, traits, load, spec)
+       VALUES (?, ?, 'main', 'passed', '{}', 1.0, '{}'::jsonb)",
+      task_id, job_id
+    ).first
+    database[:trials].insert(id: trial_id, task_id: task_id, state: 'passed')
+
+    executor_call(:put, "/executor/trials/#{trial_id}/attachments/report.txt",
+                  "hello from the trial", @token)
+
+    # script/* attachments are shown in the Scripts table, not the Attachments panel
+    executor_call(:put, "/executor/trials/#{trial_id}/attachments/scripts/main",
+                  "script log", @token)
+
+    visit "/trials/#{trial_id}"
+    expect(page).to have_css 'h5', text: 'Attachments'
+    expect(page).to have_css 'a code', text: 'report.txt'
+    expect(page).not_to have_css '.page.trial a code', text: 'scripts/main'
+  end
+
 end

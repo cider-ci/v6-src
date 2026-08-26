@@ -48,8 +48,8 @@
 
 
 (defn collect-from-context [context inherited-task-defaults inherited-script-defaults]
-  (let [task-defaults   (deep-merge inherited-task-defaults (:task_defaults context))
-        script-defaults (deep-merge inherited-script-defaults (:script_defaults context))
+  (let [task-defaults   (deep-merge inherited-task-defaults (:task_defaults context {}))
+        script-defaults (deep-merge inherited-script-defaults (:script_defaults context {}))
         from-task       (when-let [t (:task context)]
                           [(-> (deep-merge task-defaults
                                            (string->scripts t)

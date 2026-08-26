@@ -78,12 +78,18 @@
 
 
 (defn- job-should-trigger? [{:keys [spec]} branch-name]
-  (let [trigger (get spec :trigger)]
-    (or (nil? trigger)
-        (let [include (get-in trigger [:branch :include_match])]
-          (if (str/blank? include)
-            true
-            (matches-pattern? include branch-name))))))
+  (let [run-when (get spec :run_when)]
+    (if (nil? run-when)
+      true
+      (let [branch-triggers (->> (vals run-when)
+                                 (filter #(= "branch" (get % :type))))]
+        (if (empty? branch-triggers)
+          false
+          (some (fn [{:keys [include_match]}]
+                  (if (str/blank? include_match)
+                    true
+                    (matches-pattern? include_match branch-name)))
+                branch-triggers))))))
 
 
 (defn trigger-for-commit! [ds project-id commit-id branch-name

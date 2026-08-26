@@ -48,8 +48,8 @@
       (sql/where [:<= [:now] :sessions.valid_until])))
 
 (defn valid-session-user [tx token]
-  (assert (uuid? (UUID/fromString token)) "A tokens must always be a UUID")
-  (jdbc/execute-one! tx (-> token valid-session-user-query sql-format)))
+  (when (try (uuid? (UUID/fromString token)) (catch IllegalArgumentException _ false))
+    (jdbc/execute-one! tx (-> token valid-session-user-query sql-format))))
 
 
 ;;; delete ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

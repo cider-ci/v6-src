@@ -32,11 +32,13 @@
    :admin-executors           #'admin-executors/handler
    :admin-gpg-key             #'admin-gpg-keys/handler
    :admin-gpg-keys            #'admin-gpg-keys/handler
-   :executor-sync             #'executors/handler
-   :executor-trial            #'executors/handler
-   :executor-trial-attachment #'executors/handler
-   :trial                     #'trials/handler
-   :trial-attachment          #'trials/handler
+   :executor-sync                  #'executors/handler
+   :executor-trial                 #'executors/handler
+   :executor-trial-attachment      #'executors/handler
+   :executor-trial-tree-attachment #'executors/handler
+   :trial                          #'trials/handler
+   :trial-attachment               #'trials/handler
+   :tree-attachment                #'trials/handler
    :init                      #'init/handler
    :commits                   #'commits/handler
    :jobs                      #'jobs-dashboard/handler

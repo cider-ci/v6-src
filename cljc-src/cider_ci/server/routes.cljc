@@ -104,7 +104,11 @@
     ["/attachments/*attachment-path" {:name             :executor-trial-attachment
                                       :bypass-spa       true
                                       :auth-http-safe   #{:public}
-                                      :auth-http-unsafe #{:public}}]]])
+                                      :auth-http-unsafe #{:public}}]
+    ["/tree-attachments/*attachment-path" {:name             :executor-trial-tree-attachment
+                                           :bypass-spa       true
+                                           :auth-http-safe   #{:public}
+                                           :auth-http-unsafe #{:public}}]]])
 
 (def trials
   ["/trials"
@@ -115,6 +119,12 @@
      {:name           :trial-attachment
       :bypass-spa     true
       :auth-http-safe #{:user}}]]])
+
+(def tree-attachments
+  ["/tree-attachments/:tree-id/*attachment-path"
+   {:name           :tree-attachment
+    :bypass-spa     true
+    :auth-http-safe #{:user}}])
 
 (def workspace
   ["/commits"
@@ -138,6 +148,7 @@
    executor
    projects
    trials
+   tree-attachments
    ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]
     ["/authenticate/password" {:name :sign-in-authenticate-password}]]

@@ -103,16 +103,40 @@
          [attachment-item trial-id a])])))
 
 
+(defn- tree-attachment-item [tree-id {:keys [path content_type]}]
+  (let [url (str "/tree-attachments/" tree-id "/" path)]
+    [:div.mb-2
+     (if (clojure.string/starts-with? (or content_type "") "image/")
+       [:div
+        [:a {:href url :target "_blank"}
+         [:img {:src url :alt path :style {:max-width "100%" :max-height "300px"
+                                           :border "1px solid #dee2e6" :border-radius "4px"}}]]
+        [:div.small.text-muted.mt-1 [:code path]]]
+       [:a {:href url :target "_blank"}
+        [icons/file-code] " " [:code path]])]))
+
+
+(defn- tree-attachments-panel [tree-id attachments]
+  (when (seq attachments)
+    [:<>
+     [:h5.mt-4 "Tree Attachments"]
+     (for [a attachments]
+       ^{:key (:path a)}
+       [tree-attachment-item tree-id a])]))
+
+
 (defn page []
   [:div.page.trial
    [state/hidden-routing-state-component :did-change start-polling!]
    (if-not (seq @data*)
      [:div "Loading..."]
      (let [trial       @data*
-           trial-id    (:trial_id trial)
-           task-spec   (:task_spec trial)
-           scripts     (-> trial :result :scripts)
-           attachments (:attachments trial)]
+           trial-id         (:trial_id trial)
+           task-spec        (:task_spec trial)
+           scripts          (-> trial :result :scripts)
+           attachments      (:attachments trial)
+           tree-id          (:tree_id trial)
+           tree-attachments (:tree_attachments trial)]
        [:<>
         [:nav.mb-3
          [:a {:href (path :project {:project-id (:project_id trial)})}
@@ -149,6 +173,7 @@
              (for [entry (seq scripts)]
                [script-row entry trial-id])]]])
         [attachments-panel trial-id attachments]
+        [tree-attachments-panel tree-id tree-attachments]
         (when task-spec
           (try
             (when-let [dag (scripts-dag/scripts-dag task-spec scripts)]

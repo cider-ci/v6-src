@@ -77,6 +77,36 @@
     {:status 201 :body {:path attachment-path}}))
 
 
+(defn- handle-trial-tree-attachment-put [tx trial-id attachment-path request]
+  (let [trial-uuid   (java.util.UUID/fromString trial-id)
+        content-type (get-in request [:headers "content-type"] "application/octet-stream")
+        body         (:body request)
+        content      (if (instance? InputStream body)
+                       (.readAllBytes ^InputStream body)
+                       (.getBytes ^String (str body) "UTF-8"))
+        tree-id      (-> (jdbc/execute! tx
+                           ["SELECT c.tree_id
+                             FROM trials t
+                             JOIN tasks tsk ON tsk.id = t.task_id
+                             JOIN jobs j    ON j.id   = tsk.job_id
+                             JOIN commits c ON c.id   = j.commit_id
+                             WHERE t.id = ?::uuid"
+                            trial-uuid])
+                         first
+                         :tree_id)]
+    (when-not tree-id
+      (throw (ex-info "Trial not found" {:status 404})))
+    (jdbc/execute-one! tx
+      ["INSERT INTO tree_attachments (tree_id, path, content_type, content)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT (tree_id, path)
+        DO UPDATE SET content = EXCLUDED.content,
+                      content_type = EXCLUDED.content_type,
+                      updated_at = now()"
+       tree-id attachment-path content-type content])
+    {:status 201 :body {:path attachment-path}}))
+
+
 (defn- traits-literal [traits]
   (str "{" (str/join "," traits) "}"))
 
@@ -155,6 +185,11 @@
         :executor-trial-attachment
         (case request-method
           :put (handle-trial-attachment-put tx trial-id attachment-path request)
+          {:status 405 :body "Method not allowed"})
+
+        :executor-trial-tree-attachment
+        (case request-method
+          :put (handle-trial-tree-attachment-put tx trial-id attachment-path request)
           {:status 405 :body "Method not allowed"})
 
         {:status 500 :body "Unresolved route"})

@@ -78,8 +78,7 @@
 
 
 (defn- handle-trial-tree-attachment-put [tx trial-id attachment-path request]
-  (let [trial-uuid   (java.util.UUID/fromString trial-id)
-        content-type (get-in request [:headers "content-type"] "application/octet-stream")
+  (let [content-type (get-in request [:headers "content-type"] "application/octet-stream")
         body         (:body request)
         content      (if (instance? InputStream body)
                        (.readAllBytes ^InputStream body)
@@ -91,7 +90,7 @@
                              JOIN jobs j    ON j.id   = tsk.job_id
                              JOIN commits c ON c.id   = j.commit_id
                              WHERE t.id = ?::uuid"
-                            trial-uuid])
+                            trial-id])
                          first
                          :tree_id)]
     (when-not tree-id

@@ -27,7 +27,7 @@
              FROM trials t
              JOIN tasks   tsk ON tsk.id = t.task_id
              JOIN jobs    j   ON j.id   = tsk.job_id
-             JOIN commits c   ON c.id   = j.commit_id
+             LEFT JOIN commits c   ON c.id   = j.commit_id
              WHERE t.id = ?::uuid"
             trial-id])))
 

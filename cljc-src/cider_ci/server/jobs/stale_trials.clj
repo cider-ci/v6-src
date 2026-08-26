@@ -19,6 +19,23 @@
       (info "Reset" (count rows) "stale dispatching trial(s) to pending"))))
 
 
+(defn- reset-lost-on-executor! [ds]
+  (jdbc/with-transaction [raw-tx ds]
+    (let [tx   (jdbc/with-options raw-tx builder-fn-options-default)
+          rows (jdbc/execute! tx
+                 ["UPDATE trials
+                   SET state = 'defective',
+                       error = 'Trial lost: executor did not send a heartbeat',
+                       finished_at = now(), updated_at = now()
+                   WHERE state = 'executing'
+                     AND updated_at < now() - interval '3 minutes'
+                   RETURNING id"])]
+      (when (seq rows)
+        (info "Marked" (count rows) "trial(s) as defective (lost on executor)")
+        (doseq [{:keys [id]} rows]
+          (propagation/propagate-from-trial tx id))))))
+
+
 (defn- reset-stale-executing! [ds]
   (jdbc/with-transaction [raw-tx ds]
     (let [tx   (jdbc/with-options raw-tx builder-fn-options-default)
@@ -60,6 +77,7 @@
 (defdaemon "stale-trial-recovery" 60
   (try
     (reset-stale-dispatching! (get-ds))
+    (reset-lost-on-executor! (get-ds))
     (reset-stale-executing! (get-ds))
     (reconcile-stuck-tasks! (get-ds))
     (catch Exception e

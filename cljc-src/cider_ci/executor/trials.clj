@@ -161,12 +161,14 @@
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts))
 
       (let [scripts-fut (future (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id))]
-        ;; Stream partial script logs to the server while scripts are running.
-        (loop []
+        ;; Stream partial script logs and heartbeat to the server while scripts are running.
+        (loop [n 0]
           (Thread/sleep 3000)
           (when-not (realized? scripts-fut)
             (upload-partial-script-logs! trial opts id)
-            (recur)))
+            (when (zero? (mod n 10))
+              (patch-trial! trial opts "executing" {}))
+            (recur (inc n))))
         (let [{:keys [trial-state scripts]} @scripts-fut]
           (info "Trial" id "finished with" trial-state)
           (upload-script-logs! trial opts scripts)

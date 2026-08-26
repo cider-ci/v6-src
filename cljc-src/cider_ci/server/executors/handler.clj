@@ -141,7 +141,7 @@
       (throw (ex-info "Missing state" {:status 400})))
     (let [terminal? #{"passed" "failed" "defective" "aborted"}
           set-map   (cond-> {:state new-state :updated_at [:raw "now()"]}
-                      (#{"executing"} new-state)   (assoc :started_at  [:raw "now()"])
+                      (#{"executing"} new-state)   (assoc :started_at  [:raw "COALESCE(started_at, now())"])
                       (terminal? new-state)         (assoc :finished_at [:raw "now()"])
                       error-msg                     (assoc :error error-msg)
                       scripts-results               (assoc :result [:lift {:scripts scripts-results}]))

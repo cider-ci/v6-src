@@ -76,6 +76,29 @@
              [:code (subs pid 0 8)]]])]])]))
 
 
+;;; tree attachments ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- tree-attachment-item [tree-id {:keys [path content_type]}]
+  (let [url (str "/tree-attachments/" tree-id "/" path)]
+    [:div.mb-2
+     (if (clojure.string/starts-with? (or content_type "") "image/")
+       [:div
+        [:a {:href url :target "_blank"}
+         [:img {:src url :alt path :style {:max-width "100%" :max-height "300px"
+                                           :border "1px solid #dee2e6" :border-radius "4px"}}]]
+        [:div.small.text-muted.mt-1 [:code path]]]
+       [:a {:href url :target "_blank"}
+        [icons/file-code] " " [:code path]])]))
+
+(defn- tree-attachments-panel [tree-id attachments]
+  (when (seq attachments)
+    [:<>
+     [:h5.mt-4 "Tree Attachments"]
+     (for [a attachments]
+       ^{:key (:path a)}
+       [tree-attachment-item tree-id a])]))
+
+
 ;;; page ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn page []
@@ -107,6 +130,7 @@
          [:a {:href (path :project-jobs {:project-id (project-id)
                                          :commit-id  (:id c)})}
           [icons/play-circle] " Jobs"]]
+        [tree-attachments-panel (:tree_id c) (:tree_attachments c)]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
 

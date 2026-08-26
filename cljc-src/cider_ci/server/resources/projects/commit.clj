@@ -36,11 +36,20 @@
       (sql/where [:= :child_id commit-id])
       (sql/order-by [:parent_id :asc])))
 
+(defn- tree-attachments-sql [tree-id]
+  (-> (sql/select :path :content_type)
+      (sql/from :tree_attachments)
+      (sql/where [:= :tree_id tree-id])
+      (sql/order-by [:path :asc])))
+
 
 (defn handler [{{{commit-id :commit-id} :path-params} :route tx :tx}]
   (if-let [commit (jdbc/execute-one! tx (sql-format (commit-sql commit-id)))]
-    (let [parents (->> (sql-format (parents-sql commit-id))
-                       (jdbc/execute! tx)
-                       (map :parent_id))]
-      {:body (assoc commit :parents parents)})
+    (let [parents          (->> (sql-format (parents-sql commit-id))
+                                (jdbc/execute! tx)
+                                (map :parent_id))
+          tree-attachments (jdbc/execute! tx (sql-format (tree-attachments-sql (:tree_id commit))))]
+      {:body (-> commit
+                 (assoc :parents parents)
+                 (assoc :tree_attachments tree-attachments))})
     {:status 404 :body "Commit not found"}))

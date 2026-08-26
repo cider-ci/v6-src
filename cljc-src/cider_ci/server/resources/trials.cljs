@@ -18,12 +18,28 @@
 (def ^:private terminal-states #{"passed" "failed" "aborted" "defective"})
 
 (defonce ^:private _fetch-id* (atom nil))
+(defonce ^:private _script-logs* (reagent/atom {}))
+
+
+(defn- fetch-script-logs! [trial-id scripts]
+  (doseq [[key result] (seq scripts)
+          :let [key-str (name key)]
+          :when (= "executing" (:state result))]
+    (let [url (str "/trials/" trial-id "/attachments/scripts/" key-str)
+          ch  (chan)]
+      (http-client/request {:url                     url
+                            :chan                     ch
+                            :modal-on-response-error false})
+      (go (let [resp (<! ch)]
+            (when (= 200 (:status resp))
+              (swap! _script-logs* assoc key-str (:body resp))))))))
 
 
 (defn- start-polling! []
   (let [route (:route @state/routing*)
         my-id (random-uuid)]
     (reset! _fetch-id* my-id)
+    (reset! _script-logs* {})
     (go-loop []
       (let [ch              (chan)
             already-loaded? (some? (get @_data* route))
@@ -36,6 +52,8 @@
             (swap! _data* assoc route (:body resp)))
           (when (= @_fetch-id* my-id)
             (let [s (-> @data* :trial_state)]
+              (when (= "executing" s)
+                (fetch-script-logs! (-> @data* :trial_id) (-> @data* :result :scripts)))
               (when-not (terminal-states s)
                 (<! (async/timeout (if (= "executing" s) 3000 5000)))
                 (when (= @_fetch-id* my-id)
@@ -65,19 +83,31 @@
         (str s "s")))))
 
 
-(defn- script-row [[key result] trial-id]
-  (let [key-str (name key)]
+(defn- script-row [[key result] trial-id script-logs]
+  (let [key-str     (name key)
+        executing?  (= "executing" (:state result))
+        log-content (get script-logs key-str)]
     ^{:key key-str}
-    [:tr
-     [:td [:code key-str]]
-     [:td [state-badge (:state result)]]
-     [:td (when-let [exit (:exit_status result)]
-            [:span.text-muted (str exit)])]
-     [:td [:a {:href   (str "/trials/" trial-id "/attachments/scripts/" key-str)
-               :target "_blank"}
-           "Log"]]
-     [:td (when-let [err (:error result)]
-            [:span.text-danger.small err])]]))
+    [:<>
+     [:tr
+      [:td [:code key-str]]
+      [:td [state-badge (:state result)]]
+      [:td (when-let [exit (:exit_status result)]
+             [:span.text-muted (str exit)])]
+      [:td [:a {:href   (str "/trials/" trial-id "/attachments/scripts/" key-str)
+                :target "_blank"}
+            "Log"]]
+      [:td (when-let [err (:error result)]
+             [:span.text-danger.small err])]]
+     (when (and executing? log-content)
+       [:tr {:key (str key-str "-log")}
+        [:td {:col-span 5 :style {:padding 0}}
+         [:pre.mb-0.p-2
+          {:style {:background "#1e1e1e" :color "#d4d4d4"
+                   :font-size "0.78rem" :max-height "300px"
+                   :overflow-y "auto" :white-space "pre-wrap"
+                   :border-radius "0"}}
+          log-content]]])]))
 
 
 (defn- attachment-item [trial-id {:keys [path content_type]}]
@@ -130,10 +160,11 @@
    [state/hidden-routing-state-component :did-change start-polling!]
    (if-not (seq @data*)
      [:div "Loading..."]
-     (let [trial       @data*
+     (let [trial            @data*
            trial-id         (:trial_id trial)
            task-spec        (:task_spec trial)
            scripts          (-> trial :result :scripts)
+           script-logs      @_script-logs*
            attachments      (:attachments trial)
            tree-id          (:tree_id trial)
            tree-attachments (:tree_attachments trial)]
@@ -171,7 +202,7 @@
              [:tr [:th "Script"] [:th "State"] [:th "Exit"] [:th "Log"] [:th "Error"]]]
             [:tbody
              (for [entry (seq scripts)]
-               [script-row entry trial-id])]]])
+               [script-row entry trial-id script-logs])]]])
         [attachments-panel trial-id attachments]
         [tree-attachments-panel tree-id tree-attachments]
         (when task-spec

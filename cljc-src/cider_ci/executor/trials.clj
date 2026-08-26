@@ -109,6 +109,26 @@
                                   content-type (FileInputStream. f))))))))
 
 
+(defn- partial-script-log-files [trial-id]
+  (let [tmpdir  (File. (System/getProperty "java.io.tmpdir"))
+        quoted  (java.util.regex.Pattern/quote trial-id)
+        pattern (re-pattern (str "cider-ci-script-(.+)-" quoted "\\.log"))]
+    (->> (or (.listFiles tmpdir) [])
+         (keep (fn [^File f]
+                 (when-let [[_ k] (re-matches pattern (.getName f))]
+                   [k f])))
+         (into {}))))
+
+(defn- upload-partial-script-logs! [trial opts trial-id]
+  (doseq [[key-str ^File log-file] (partial-script-log-files trial-id)]
+    (when (.exists log-file)
+      (try
+        (put-attachment! trial opts (str "scripts/" key-str) "text/plain"
+                         (FileInputStream. log-file))
+        (catch Exception e
+          (warn "Partial log upload failed for script" key-str ":" (.getMessage e)))))))
+
+
 (defn- upload-script-logs! [trial opts script-results]
   (doseq [[key-str result] script-results]
     (when-let [^File log-file (:log-file result)]
@@ -140,13 +160,20 @@
 
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts))
 
-      (let [{:keys [trial-state scripts]} (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id)]
-        (info "Trial" id "finished with" trial-state)
-        (upload-script-logs! trial opts scripts)
-        (upload-trial-attachments! trial opts work-dir task_spec)
-        (upload-tree-attachments!  trial opts work-dir task_spec)
-        (patch-trial! trial opts trial-state
-                      {:scripts_results (strip-log-files scripts)}))
+      (let [scripts-fut (future (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id))]
+        ;; Stream partial script logs to the server while scripts are running.
+        (loop []
+          (Thread/sleep 3000)
+          (when-not (realized? scripts-fut)
+            (upload-partial-script-logs! trial opts id)
+            (recur)))
+        (let [{:keys [trial-state scripts]} @scripts-fut]
+          (info "Trial" id "finished with" trial-state)
+          (upload-script-logs! trial opts scripts)
+          (upload-trial-attachments! trial opts work-dir task_spec)
+          (upload-tree-attachments!  trial opts work-dir task_spec)
+          (patch-trial! trial opts trial-state
+                        {:scripts_results (strip-log-files scripts)})))
 
       (catch Exception e
         (warn "Trial" id "failed with exception:" (.getMessage e))

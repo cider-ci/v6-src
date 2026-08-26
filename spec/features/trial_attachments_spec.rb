@@ -95,6 +95,45 @@ feature 'Trial Attachments' do
     expect(resp.code.to_i).to eq(403)
   end
 
+  scenario 'executor uploads tree attachment; logged-in user downloads it' do
+    visit "/projects/#{ATTACH_PROJECT_ID}/commits/#{ATTACH_HEAD_COMMIT}/jobs"
+    find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+
+    resp     = executor_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
+    trial    = JSON.parse(resp.body)['trials_to_execute'].first
+    trial_id = trial['id']
+
+    content = "shared tree output\n"
+    resp = executor_call(:put, "/executor/trials/#{trial_id}/tree-attachments/report.txt",
+                         content, @token)
+    expect(resp.code.to_i).to eq(201)
+
+    # Resolve tree_id for this commit
+    tree_id = database[:commits].where(id: ATTACH_HEAD_COMMIT).get(:tree_id)
+
+    resp = user_get("/tree-attachments/#{tree_id}/report.txt", @admin.session_token)
+    expect(resp.code.to_i).to eq(200)
+    expect(resp['content-type']).to include('text/plain')
+    expect(resp.body).to eq(content)
+  end
+
+  scenario 'tree attachment is deduplicated by tree_id across trials' do
+    visit "/projects/#{ATTACH_PROJECT_ID}/commits/#{ATTACH_HEAD_COMMIT}/jobs"
+    find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+
+    resp     = executor_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
+    trial_id = JSON.parse(resp.body)['trials_to_execute'].first['id']
+
+    executor_call(:put, "/executor/trials/#{trial_id}/tree-attachments/shared.txt",
+                  'first version', @token)
+    executor_call(:put, "/executor/trials/#{trial_id}/tree-attachments/shared.txt",
+                  'second version', @token)
+
+    tree_id = database[:commits].where(id: ATTACH_HEAD_COMMIT).get(:tree_id)
+    resp = user_get("/tree-attachments/#{tree_id}/shared.txt", @admin.session_token)
+    expect(resp.body).to eq('second version')
+  end
+
   scenario 'non-script attachment appears in Attachments section on trial detail page' do
     project_id = ATTACH_PROJECT_ID  # already inserted in before :each
     commit_id  = 'c' * 40
@@ -124,10 +163,16 @@ feature 'Trial Attachments' do
     executor_call(:put, "/executor/trials/#{trial_id}/attachments/scripts/main",
                   "script log", @token)
 
+    # tree attachment appears in Tree Attachments panel
+    executor_call(:put, "/executor/trials/#{trial_id}/tree-attachments/tree-report.txt",
+                  "shared tree output", @token)
+
     visit "/trials/#{trial_id}"
     expect(page).to have_css 'h5', text: 'Attachments'
     expect(page).to have_css 'a code', text: 'report.txt'
     expect(page).not_to have_css '.page.trial a code', text: 'scripts/main'
+    expect(page).to have_css 'h5', text: 'Tree Attachments'
+    expect(page).to have_css 'a code', text: 'tree-report.txt'
   end
 
 end

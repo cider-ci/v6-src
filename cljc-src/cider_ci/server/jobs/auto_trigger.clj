@@ -78,9 +78,11 @@
 
 
 (defn- job-should-trigger? [{:keys [spec]} branch-name]
-  (let [run-when (get spec :run_when)]
-    (if (nil? run-when)
-      true
+  (let [run-when (get spec :run_when)
+        trigger  (get spec :trigger)]
+    (cond
+      ;; New format: run_when with named entries (type: branch/cron/job)
+      run-when
       (let [branch-triggers (->> (vals run-when)
                                  (filter #(= "branch" (get % :type))))]
         (if (empty? branch-triggers)
@@ -89,7 +91,15 @@
                   (if (str/blank? include_match)
                     true
                     (matches-pattern? include_match branch-name)))
-                branch-triggers))))))
+                branch-triggers)))
+      ;; Legacy format: trigger.branch.include_match
+      trigger
+      (let [include-match (get-in trigger [:branch :include_match])]
+        (if (str/blank? include-match)
+          true
+          (matches-pattern? include-match branch-name)))
+      ;; No trigger configuration: always fire on branch push
+      :else true)))
 
 
 (defn trigger-for-commit! [ds project-id commit-id branch-name

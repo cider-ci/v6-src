@@ -3,6 +3,7 @@
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.jobs.decompose :as decompose]
     [cider-ci.server.jobs.generate :as generate]
+    [cider-ci.server.projects.repositories.commits :as commits]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as shared]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -82,6 +83,7 @@
               new-job-id (java.util.UUID/randomUUID)]
           (try
             (jdbc/with-transaction [tx (get-ds)]
+              (commits/import-recursively tx commit-id (shared/repository-fs-path project-id))
               (jdbc/execute-one! tx
                 (-> (sql/insert-into :jobs)
                     (sql/values [{:id          new-job-id

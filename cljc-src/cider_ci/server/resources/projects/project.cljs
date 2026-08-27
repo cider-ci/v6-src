@@ -133,15 +133,41 @@
     [:span.text-success {:title fingerprint} [icons/signed] " signed"]
     [:span.text-muted "—"]))
 
+(defonce branches-sort* (reagent/atom {:key :commit_committer_date :dir :desc}))
+
+(defn- sort-icon [col-key]
+  (let [{:keys [key dir]} @branches-sort*]
+    (when (= key col-key)
+      (if (= dir :asc) " ▲" " ▼"))))
+
+(defn- sort-th [col-key label]
+  [:th {:style {:cursor "pointer" :user-select "none"}
+        :on-click #(swap! branches-sort*
+                          (fn [{:keys [key dir]}]
+                            (if (= key col-key)
+                              {:key col-key :dir (if (= dir :asc) :desc :asc)}
+                              {:key col-key :dir :asc})))}
+   label (sort-icon col-key)])
+
+(defn- sorted-branches [branches]
+  (let [{:keys [key dir]} @branches-sort*
+        sorted (sort-by #(get % key) branches)]
+    (if (= dir :desc) (reverse sorted) sorted)))
+
 (defn- branches-table []
   (let [branches (:branches @data*)]
     (if (empty? branches)
       [:p.text-muted "No branches yet."]
       [:table.table.table-sm.table-hover.branches
        [:thead
-        [:tr [:th "Branch"] [:th "Last commit"] [:th "Date"] [:th "Signed"] [:th "Subject"]]]
+        [:tr
+         [sort-th :name "Branch"]
+         [:th "Last commit"]
+         [sort-th :commit_committer_date "Date"]
+         [:th "Signed"]
+         [:th "Subject"]]]
        [:tbody
-        (for [b branches]
+        (for [b (sorted-branches branches)]
           ^{:key (:id b)}
           [:tr
            [:td [:a {:href (path :project-branch

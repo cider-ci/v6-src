@@ -30,7 +30,7 @@
       (sql/from [:branches :b])
       (sql/left-join [:commits :c] [:= :c.id :b.current_commit_id])
       (sql/where [:= :b.repository_id project-id])
-      (sql/order-by [[:c.committer_date :desc :nulls-last]])))
+      (sql/order-by [:c.committer_date :is-null] [:c.committer_date :desc])))
 
 
 (defn- get-handler [tx project-id]

@@ -32,7 +32,7 @@ feature 'Trial reliability' do
     visit job_url
 
     expect(page).to have_css '.badge', text: 'failed'
-    find('button', text: /Retry/).click
+    first('button', text: /Retry/).click
 
     expect(page).to have_css '.badge', text: 'pending'
     expect(database[:jobs][id: @job_id][:state]).to eq 'pending'

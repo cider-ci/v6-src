@@ -40,6 +40,8 @@
         :down (partial exec-resource-sql! "migrations/00018_pgcrypto_down.sql")}
     19 {:up (partial exec-resource-sql! "migrations/00019_trial_attachments_cascade_up.sql")
         :down (partial exec-resource-sql! "migrations/00019_trial_attachments_cascade_down.sql")}
+    20 {:up (partial exec-resource-sql! "migrations/00020_tree_attachments_up.sql")
+        :down (partial exec-resource-sql! "migrations/00020_tree_attachments_down.sql")}
     ))
 
 (defn available []

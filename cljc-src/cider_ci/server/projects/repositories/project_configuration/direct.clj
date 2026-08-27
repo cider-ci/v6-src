@@ -65,9 +65,18 @@
          (map (fn [[k v]] [k (expand repo commit-id v)]))
          (into {}))))
 
+(defn- read-and-replace [repo commit-id spec]
+  (if-let [rar-spec (:read_and_replace_with spec)]
+    (let [path (if (string? rar-spec) rar-spec (:path rar-spec))]
+      (if-let [raw (read-bytes repo commit-id path)]
+        (clojure.string/trim (String. ^bytes raw "UTF-8"))
+        (throw (ex-info "read_and_replace_with: file not found"
+                        {:path path :status 422}))))
+    spec))
+
 (defn- expand [repo commit-id spec]
   (cond
-    (map? spec)        (include-maps repo commit-id spec)
+    (map? spec)        (read-and-replace repo commit-id (include-maps repo commit-id spec))
     (sequential? spec) (mapv #(expand repo commit-id %) spec)
     :else              spec))
 

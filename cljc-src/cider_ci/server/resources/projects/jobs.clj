@@ -3,14 +3,14 @@
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.jobs.decompose :as decompose]
     [cider-ci.server.jobs.generate :as generate]
-    [cider-ci.server.projects.repositories.commits :as commits]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as shared]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :as jdbc-sql]
-    [taoensso.timbre :refer [warn]]))
+    [taoensso.timbre :refer [warn]])
+  (:import [org.eclipse.jgit.revwalk RevWalk]))
 
 (defn- full-job-configs [repo commit-id]
   (try
@@ -81,9 +81,17 @@
               full-spec  (generate/expand project-id commit-id (:full-spec job-entry))
               task-specs (decompose/decompose full-spec)
               new-job-id (java.util.UUID/randomUUID)]
+          ;; Ensure the commit row exists with tree_id so tree attachments work.
+          ;; Done outside the job transaction to avoid deadlock with the fetch daemon.
+          (when-let [oid (.resolve repo (str commit-id "^{commit}"))]
+            (let [tree-id (.. (RevWalk. repo) (parseCommit oid) getTree getName)]
+              (jdbc/execute-one! (get-ds)
+                ["INSERT INTO commits (id, tree_id) VALUES (?, ?)
+                  ON CONFLICT (id) DO UPDATE SET tree_id = EXCLUDED.tree_id
+                  WHERE commits.tree_id IS NULL"
+                 commit-id tree-id])))
           (try
             (jdbc/with-transaction [tx (get-ds)]
-              (commits/import-recursively tx commit-id (shared/repository-fs-path project-id))
               (jdbc/execute-one! tx
                 (-> (sql/insert-into :jobs)
                     (sql/values [{:id          new-job-id

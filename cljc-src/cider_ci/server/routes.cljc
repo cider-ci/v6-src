@@ -40,8 +40,11 @@
                   :auth-http-unsafe #{:user}}]
        ["/retry" {:name             :project-job-retry
                   :auth-http-unsafe #{:user}}]
-       ["/tasks/:task-id/retry" {:name             :project-job-task-retry
-                                 :auth-http-unsafe #{:user}}]]]]
+       ["/tasks/:task-id"
+        ["" {:name :project-job-task
+             :auth-http-safe #{:user}}]
+        ["/retry" {:name             :project-job-task-retry
+                   :auth-http-unsafe #{:user}}]]]]]
     ["/branches/*branch-name" {:name :project-branch
                                :auth-http-safe #{:user}}]]])
 

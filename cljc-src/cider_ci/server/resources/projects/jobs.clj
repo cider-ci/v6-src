@@ -156,6 +156,18 @@
                             sql-format)))]
       (assoc job :tasks tasks))))
 
+(defn- get-task-with-trials [project-id job-id task-id]
+  (when-let [task (first (jdbc-sql/query (get-ds)
+                           (-> (sql/select :t.id :t.name :t.state :t.spec :t.created_at)
+                               (sql/from [:tasks :t])
+                               (sql/join [:jobs :j] [:= :j.id :t.job_id])
+                               (sql/where [:= :t.id (java.util.UUID/fromString task-id)])
+                               (sql/where [:= :t.job_id (java.util.UUID/fromString job-id)])
+                               (sql/where [:= :j.project_id project-id])
+                               sql-format)))]
+    (assoc task :trials (get-trials-for-task (:id task)))))
+
+
 (defn- abort-job! [project-id job-id]
   (let [job-uuid (java.util.UUID/fromString job-id)]
     (when-not (first (jdbc-sql/query (get-ds)
@@ -263,6 +275,13 @@
       :get (if-let [result (get-job-with-tasks project-id job-id)]
              {:status 200 :body result}
              {:status 404 :body "Job not found"})
+      {:status 405 :body "Method not allowed"})
+
+    :project-job-task
+    (case request-method
+      :get (if-let [result (get-task-with-trials project-id job-id task-id)]
+             {:status 200 :body result}
+             {:status 404 :body "Task not found"})
       {:status 405 :body "Method not allowed"})
 
     :project-job-abort

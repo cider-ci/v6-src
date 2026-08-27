@@ -53,6 +53,7 @@
    :project-job             #'project-jobs/handler
    :project-job-abort       #'project-jobs/handler
    :project-job-retry       #'project-jobs/handler
+   :project-job-task        #'project-jobs/handler
    :project-job-task-retry  #'project-jobs/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler

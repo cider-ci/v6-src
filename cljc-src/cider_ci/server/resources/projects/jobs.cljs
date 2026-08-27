@@ -206,7 +206,11 @@
   ^{:key (:id t)}
   [:tr
    [:td
-    [:code (:name t)]
+    [:a {:href (path :project-job-task {:project-id (project-id)
+                                        :commit-id  (commit-id)
+                                        :job-id     (job-id)
+                                        :task-id    (:id t)})}
+     [:code (:name t)]]
     [trial-config-badges (:spec t)]]
    [:td [state-badge (:state t)]]
    [:td
@@ -281,10 +285,116 @@
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
 
 
+;;; Task detail page (route :project-job-task)
+
+(defn- task-id-param []
+  (-> @state/routing* :path-params :task-id))
+
+(defn- scripts-panel [scripts]
+  (when (seq scripts)
+    [:<>
+     [:h5.mt-3 "Scripts"]
+     (for [[k script] scripts]
+       ^{:key (name k)}
+       [:div.mb-3
+        [:div.d-flex.align-items-center.mb-1
+         [:code.fw-bold.me-2 (name k)]
+         (when-let [to (:timeout script)]
+           [:span.badge.bg-light.text-dark.border.me-1 to])
+         (when-let [deps (seq (:start_when script))]
+           [:span.text-muted.small
+            "after: "
+            (str/join ", " (map (fn [[_ d]] (or (:script_key d) (str d))) deps))])]
+        [:pre.bg-light.p-2.rounded.small
+         {:style {:max-height "200px" :overflow-y "auto" :white-space "pre"}}
+         (or (:body script) "")]])]))
+
+(defn- env-vars-panel [env-vars]
+  (when (seq env-vars)
+    [:<>
+     [:h5.mt-3 "Environment Variables"]
+     [:table.table.table-sm.table-bordered
+      [:tbody
+       (for [[k v] env-vars]
+         ^{:key (name k)}
+         [:tr
+          [:td [:code (name k)]]
+          [:td (if (string? v)
+                 [:code v]
+                 [:code.text-muted (str v)])]])]]]))
+
+(defn- traits-panel [traits]
+  (when (seq traits)
+    [:<>
+     [:h5.mt-3 "Traits"]
+     [:div
+      (for [t (if (map? traits) (keys traits) traits)]
+        ^{:key (str t)}
+        [:span.badge.bg-secondary.me-1 (name t)])]]))
+
+(defn- ports-panel [ports]
+  (when (seq ports)
+    [:<>
+     [:h5.mt-3 "Ports"]
+     [:table.table.table-sm
+      [:thead [:tr [:th "Name"] [:th "Range"]]]
+      [:tbody
+       (for [[k v] ports]
+         ^{:key (name k)}
+         [:tr
+          [:td [:code (name k)]]
+          [:td (str (:min v) "–" (:max v))]])]]]))
+
+(defn- task-trials-panel [trials]
+  [:<>
+   [:h5.mt-3 "Trials"]
+   (if (seq trials)
+     [:div
+      (for [trial trials]
+        ^{:key (:id trial)}
+        [:a.btn.btn-sm.ms-1.mb-1
+         {:class (trial-btn-cls (:state trial))
+          :href  (path :trial {:trial-id (:id trial)})}
+         (:state trial)])]
+     [:p.text-muted "No trials yet."])])
+
+(defn- task-detail-page []
+  [:div.page.task
+   [state/hidden-routing-state-component :did-change #(fetch-data)]
+   (if-not (seq @data*)
+     [:div "Loading..."]
+     (let [task @data*
+           spec (:spec task)]
+       [:<>
+        [:nav.mb-3
+         [:a {:href (path :project {:project-id (project-id)})}
+          [icons/projects] " " (project-id)]
+         " / "
+         [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
+          [:code (subs (commit-id) 0 8)]]
+         " / "
+         [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (commit-id)})}
+          "Jobs"]
+         " / "
+         [:a {:href (path :project-job {:project-id (project-id) :commit-id (commit-id) :job-id (job-id)})}
+          [:code (subs (job-id) 0 8)]]
+         " / "
+         [:code (:name task)]]
+        [:h3 (:name task) " " [state-badge (:state task)]]
+        [scripts-panel (:scripts spec)]
+        [env-vars-panel (:environment_variables spec)]
+        [traits-panel (:traits spec)]
+        [ports-panel (:ports spec)]
+        [task-trials-panel (:trials task)]
+        (when @state/debug?*
+          [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
+
+
 (defn page []
   (case (:name @state/routing*)
-    :project-job  [job-detail-page]
-    :project-jobs [jobs-list-page]
+    :project-job      [job-detail-page]
+    :project-job-task [task-detail-page]
+    :project-jobs     [jobs-list-page]
     [:div "Unknown route"]))
 
 

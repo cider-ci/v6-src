@@ -19,7 +19,8 @@
     []
     (->> (str/split s #",")
          (map str/trim)
-         (remove str/blank?))))
+         (remove str/blank?)
+         (map str/lower-case))))
 
 
 (defn- traits-literal [traits]

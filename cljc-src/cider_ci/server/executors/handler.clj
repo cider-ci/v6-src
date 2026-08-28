@@ -107,7 +107,7 @@
 
 
 (defn- traits-literal [traits]
-  (str "{" (str/join "," traits) "}"))
+  (str "{" (str/join "," (map str/lower-case traits)) "}"))
 
 
 (defn- handle-sync [tx executor body server-base-url]

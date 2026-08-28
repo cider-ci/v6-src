@@ -37,7 +37,7 @@
       (str "{"
            (->> traits
                 (filter (comp true? val))
-                (map (comp name key))
+                (map (comp str/lower-case name key))
                 (str/join ","))
            "}")
       "{}")))

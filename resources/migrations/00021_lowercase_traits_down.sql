@@ -1,0 +1,1 @@
+-- No-op: case information is not recoverable after lowercasing.

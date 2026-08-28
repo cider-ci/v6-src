@@ -325,7 +325,8 @@
 
 (defn- traits-panel [traits]
   (when (seq traits)
-    (let [trait-names (if (map? traits) (map name (keys traits)) (map name traits))
+    (let [trait-names (->> (if (map? traits) (map name (keys traits)) (map name traits))
+                           sort)
           filter-url  (str (path :admin-executors {}) "?traits=" (str/join "," trait-names))]
       [:<>
        [:h5.mt-3 "Traits"]

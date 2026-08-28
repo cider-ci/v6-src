@@ -61,8 +61,8 @@
 (defn- matches-filter? [traits-str filter-str]
   (if (string/blank? filter-str)
     true
-    (let [required (->> (string/split filter-str #",") (map string/trim) (remove string/blank?))
-          have     (->> (string/split (or traits-str "") #",") (map string/trim) (remove string/blank?) set)]
+    (let [required (->> (string/split filter-str #",") (map string/trim) (map string/lower-case) (remove string/blank?))
+          have     (->> (string/split (or traits-str "") #",") (map string/trim) (map string/lower-case) (remove string/blank?) set)]
       (every? have required))))
 
 (defn- list-page []
@@ -102,7 +102,14 @@
                 [:tr
                  [:td [:a {:href (path :admin-executor-edit {:executor-id (:id ex)})}
                        [icons/edit] " " (:name ex)]]
-                 [:td [:small (if (string/blank? (:traits ex)) "—" (:traits ex))]]
+                 [:td (let [ts (->> (string/split (or (:traits ex) "") #",")
+                                   (map string/trim)
+                                   (remove string/blank?)
+                                   sort)]
+                        (if (seq ts)
+                          [:div.d-flex.flex-wrap.gap-1
+                           (for [t ts] ^{:key t} [:span.badge.bg-secondary t])]
+                          [:span.text-muted "—"]))]
                  [:td (:max_load ex)]
                  [:td [enabled-badge (:enabled ex)]]
                  [:td [:small (or (:last_seen_at ex) "–")]]])]])])))
@@ -136,6 +143,7 @@
          [forms/input-component form* [:traits]
           :label "Traits (comma-separated)"
           :type :text]
+         [:p.form-text.text-muted "Trait names are stored in lowercase."]
          [forms/input-component form* [:max_load]
           :label "Max load"
           :type :number]
@@ -194,6 +202,7 @@
                 [forms/input-component form* [:traits]
                  :label "Traits (comma-separated)"
                  :type :text]
+                [:p.form-text.text-muted "Trait names are stored in lowercase."]
                 [forms/input-component form* [:max_load]
                  :label "Max load"
                  :type :number]

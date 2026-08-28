@@ -42,6 +42,8 @@
         :down (partial exec-resource-sql! "migrations/00019_trial_attachments_cascade_down.sql")}
     20 {:up (partial exec-resource-sql! "migrations/00020_tree_attachments_up.sql")
         :down (partial exec-resource-sql! "migrations/00020_tree_attachments_down.sql")}
+    21 {:up (partial exec-resource-sql! "migrations/00021_lowercase_traits_up.sql")
+        :down (partial exec-resource-sql! "migrations/00021_lowercase_traits_down.sql")}
     ))
 
 (defn available []

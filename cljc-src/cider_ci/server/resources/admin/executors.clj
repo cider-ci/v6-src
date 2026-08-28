@@ -63,6 +63,14 @@
 
     :admin-executor
     (case method
+      :get (if-let [ex (jdbc/execute-one! tx
+                         ["SELECT id, name, token_part,
+                                   array_to_string(traits, ',') AS traits,
+                                   max_load, enabled, last_seen_at
+                            FROM executors WHERE id = ?::uuid"
+                          executor-id])]
+             {:body ex}
+             {:status 404 :body "Executor not found"})
       :patch (let [enabled  (:enabled body)
                    new-name (presence (:name body))
                    max-load (some-> (:max_load body) double)

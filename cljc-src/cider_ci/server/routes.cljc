@@ -89,9 +89,14 @@
     ["/" {:name :admin-executors
           :auth-http-safe #{:admin}
           :auth-http-unsafe #{:admin}}]
-    ["/:executor-id" {:name :admin-executor
-                      :auth-http-safe #{:admin}
-                      :auth-http-unsafe #{:admin}}]]])
+    ["/new" {:name :admin-executor-new
+             :auth-http-safe #{:admin}}]
+    ["/:executor-id"
+     ["" {:name :admin-executor
+          :auth-http-safe #{:admin}
+          :auth-http-unsafe #{:admin}}]
+     ["/edit" {:name :admin-executor-edit
+               :auth-http-safe #{:admin}}]]]])
 
 (def executor
   ["/executor"
@@ -166,7 +171,7 @@
          (path :user-password {:user-id "123"}))
 
 
-(def router (reitit/router routes))
+(def router (reitit/router routes {:conflicts nil}))
 
 (def routes-flattened (reitit/routes router))
 

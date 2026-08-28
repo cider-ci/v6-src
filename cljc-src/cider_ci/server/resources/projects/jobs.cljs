@@ -325,12 +325,17 @@
 
 (defn- traits-panel [traits]
   (when (seq traits)
-    [:<>
-     [:h5.mt-3 "Traits"]
-     [:div
-      (for [t (if (map? traits) (keys traits) traits)]
-        ^{:key (str t)}
-        [:span.badge.bg-secondary.me-1 (name t)])]]))
+    (let [trait-names (if (map? traits) (map name (keys traits)) (map name traits))
+          filter-url  (str (path :admin-executors {}) "?traits=" (str/join "," trait-names))]
+      [:<>
+       [:h5.mt-3 "Traits"]
+       [:div.d-flex.align-items-center.flex-wrap.gap-1
+        (for [t trait-names]
+          ^{:key t}
+          [:span.badge.bg-secondary t])
+        [:a.btn.btn-sm.btn-outline-secondary.ms-1
+         {:href filter-url}
+         [icons/server] " Find executors"]]])))
 
 (defn- ports-panel [ports]
   (when (seq ports)

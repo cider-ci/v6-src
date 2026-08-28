@@ -38,8 +38,9 @@
    :project-branch project-branch/components
    :project-commit project-commit/components
    :project-commit-configuration project-configuration/components
-   :project-jobs project-jobs/components
-   :project-job  project-jobs/components
+   :project-jobs      project-jobs/components
+   :project-job       project-jobs/components
+   :project-job-task  project-jobs/components
    :trial        trials/components
    :projects projects/components
    :sign-in sign-in/components

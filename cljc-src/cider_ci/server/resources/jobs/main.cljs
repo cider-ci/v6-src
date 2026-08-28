@@ -18,12 +18,6 @@
   (http-client/route-cached-fetch _data* :reload true :reload-delay 15000))
 
 
-(defn- current-filters []
-  (let [qp (-> @state/routing* :query-params)]
-    {:project (or (:project qp) "")
-     :state   (or (:state qp) "")}))
-
-
 (defn- apply-filters [project state-val]
   (let [qp (cond-> {}
               (not (str/blank? project))   (assoc :project project)
@@ -71,10 +65,15 @@
 
 
 (defn- filter-bar []
-  (let [filters  (current-filters)
-        project* (reagent/atom (:project filters))
-        state*   (reagent/atom (:state filters))]
-    (fn []
+  (reagent/with-let
+    [project* (reagent/atom "")
+     state*   (reagent/atom "")
+     _sync    (reagent/track!
+                #(let [qp (:query-params @state/routing*)]
+                   (reset! project* (or (:project qp) ""))
+                   (reset! state*   (or (:state qp) ""))))]
+    (let [active? (or (not (str/blank? @project*))
+                      (not (str/blank? @state*)))]
       [:form.row.g-2.mb-3.align-items-end
        {:on-submit (fn [e]
                      (.preventDefault e)
@@ -96,14 +95,14 @@
           :on-change   #(reset! project* (.. % -target -value))}]]
        [:div.col-auto
         [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
-       (when (or (not (str/blank? (:project filters)))
-                 (not (str/blank? (:state filters))))
+       (when active?
          [:div.col-auto
           [:button.btn.btn-sm.btn-outline-secondary
            {:type     "button"
-            :on-click #(do (reset! project* "") (reset! state* "")
-                           (apply-filters "" ""))}
-           "Clear"]])])))
+            :on-click #(apply-filters "" "")}
+           "Clear"]])])
+    (finally
+      (reagent/dispose! _sync))))
 
 
 (defn- jobs-table [jobs]

@@ -13,10 +13,9 @@
    [reagent.core :as reagent]))
 
 
-(defonce _data*   (reagent/atom nil))
-(def     data*    (reagent/reaction (get @_data* (:route @state/routing*))))
-(defonce _single* (reagent/atom nil))
-(defonce _filter* (reagent/atom ""))
+(defonce _data*     (reagent/atom {}))
+(def     data*      (reagent/reaction (get @_data* (path :admin-executors {}))))
+(defonce _single*   (reagent/atom nil))
 (defonce new-token* (reagent/atom nil))
 
 
@@ -26,11 +25,14 @@
 (defn- executor-url [id]
   (path :admin-executor {:executor-id id}))
 
-(defn- traits-from-url []
-  (or (some-> js/window.location.search js/URLSearchParams. (.get "traits")) ""))
-
 (defn fetch-data [& _]
-  (http-client/route-cached-fetch _data*))
+  (go (let [url  (path :admin-executors {})
+            resp (<! (:chan (http-client/request {:url                     url
+                                                  :modal-on-request        false
+                                                  :modal-on-response-error false
+                                                  :modal-on-response-success false})))]
+        (when (< (:status resp) 300)
+          (swap! _data* assoc url (:body resp))))))
 
 (defn- fetch-single [& _]
   (go (when-let [res (-> {:method :get
@@ -66,55 +68,71 @@
       (every? have required))))
 
 (defn- list-page []
-  [:div.page
-   [state/hidden-routing-state-component :did-change
-    #(do (fetch-data) (reset! _filter* (traits-from-url)))]
-   [:div.d-flex.align-items-center.justify-content-between.mb-3
-    [:h2 "Admin: Executors"]
-    [:a.btn.btn-primary {:href (path :admin-executor-new {})}
-     [icons/create] " Add Executor"]]
-   [token-alert]
-   [:div.mb-3.col-md-5
-    [:div.input-group
-     [:span.input-group-text [icons/filter-icon]]
-     [:input.form-control
-      {:type        "text"
-       :placeholder "Filter by traits (comma-separated)"
-       :value       @_filter*
-       :on-change   #(reset! _filter* (-> % .-target .-value))}]
-     (when-not (string/blank? @_filter*)
-       [:button.btn.btn-outline-secondary {:on-click #(reset! _filter* "")} "×"])]]
-   (if (nil? @data*)
-     [:p.text-muted "Loading..."]
-     (let [filtered (filter #(matches-filter? (:traits %) @_filter*) @data*)]
-       (if (empty? @data*)
-         [:p.text-muted "No executors configured."]
-         [:<>
-          (when (and (not (string/blank? @_filter*)) (empty? filtered))
-            [:p.text-muted "No executors match the trait filter."])
-          (when (seq filtered)
-            [:table.table.table-sm.table-hover
-             [:thead
-              [:tr [:th "Name"] [:th "Traits"] [:th "Max Load"] [:th "Status"] [:th "Last Seen"]]]
-             [:tbody
-              (for [ex filtered]
-                ^{:key (:id ex)}
-                [:tr
-                 [:td [:a {:href (path :admin-executor-edit {:executor-id (:id ex)})}
-                       [icons/edit] " " (:name ex)]]
-                 [:td (let [ts (->> (string/split (or (:traits ex) "") #",")
-                                   (map string/trim)
-                                   (remove string/blank?)
-                                   sort)]
-                        (if (seq ts)
-                          [:div.d-flex.flex-wrap.gap-1
-                           (for [t ts] ^{:key t} [:span.badge.bg-secondary t])]
-                          [:span.text-muted "—"]))]
-                 [:td (:max_load ex)]
-                 [:td [enabled-badge (:enabled ex)]]
-                 [:td [:small (or (:last_seen_at ex) "–")]]])]])])))
-   (when @state/debug?*
-     [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
+  (reagent/with-let
+    [filter* (reagent/atom (or (-> @state/routing* :query-params :traits) ""))
+     _sync   (reagent/track!
+               #(let [v (or (-> @state/routing* :query-params :traits) "")]
+                  (when (not= @filter* v)
+                    (reset! filter* v))))]
+    (let [filter-val @filter*
+          filtered   (filter #(matches-filter? (:traits %) filter-val) (or @data* []))]
+      [:div.page
+       [state/hidden-routing-state-component :did-change
+        (fn [old-state new-state]
+          (when (not= (:path old-state) (:path new-state))
+            (fetch-data)))]
+       [:div.d-flex.align-items-center.justify-content-between.mb-3
+        [:h2 "Admin: Executors"]
+        [:a.btn.btn-primary {:href (path :admin-executor-new {})}
+         [icons/create] " Add Executor"]]
+       [token-alert]
+       [:div.mb-3.col-md-5
+        [:div.input-group
+         [:span.input-group-text [icons/filter-icon]]
+         [:input.form-control
+          {:type        "text"
+           :placeholder "Filter by traits (comma-separated)"
+           :value       filter-val
+           :on-change   #(let [v (.. % -target -value)]
+                           (reset! filter* v)
+                           (navigate! (path :admin-executors {}
+                                            (when-not (string/blank? v) {:traits v}))))}]
+         (when-not (string/blank? filter-val)
+           [:button.btn.btn-outline-secondary
+            {:on-click #(navigate! (path :admin-executors {}))}
+            "×"])]]
+       (if (nil? @data*)
+         [:p.text-muted "Loading..."]
+         (if (empty? @data*)
+           [:p.text-muted "No executors configured."]
+           [:<>
+            (when (and (not (string/blank? filter-val)) (empty? filtered))
+              [:p.text-muted "No executors match the trait filter."])
+            (when (seq filtered)
+              [:table.table.table-sm.table-hover
+               [:thead
+                [:tr [:th "Name"] [:th "Traits"] [:th "Max Load"] [:th "Status"] [:th "Last Seen"]]]
+               [:tbody
+                (for [ex filtered]
+                  ^{:key (:id ex)}
+                  [:tr
+                   [:td [:a {:href (path :admin-executor-edit {:executor-id (:id ex)})}
+                         [icons/edit] " " (:name ex)]]
+                   [:td (let [ts (->> (string/split (or (:traits ex) "") #",")
+                                      (map string/trim)
+                                      (remove string/blank?)
+                                      sort)]
+                          (if (seq ts)
+                            [:div.d-flex.flex-wrap.gap-1
+                             (for [t ts] ^{:key t} [:span.badge.bg-secondary t])]
+                            [:span.text-muted "—"]))]
+                   [:td (:max_load ex)]
+                   [:td [enabled-badge (:enabled ex)]]
+                   [:td [:small (or (:last_seen_at ex) "–")]]])]])]))
+       (when @state/debug?*
+         [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
+    (finally
+      (reagent/dispose! _sync))))
 
 
 ;;; Add page (route :admin-executor-new)

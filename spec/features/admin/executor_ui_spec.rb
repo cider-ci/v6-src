@@ -150,6 +150,14 @@ feature 'Admin: Executor management UI' do
       expect(page).not_to have_content 'ruby-only'
     end
 
+    scenario 'trait filter updates URL as user types' do
+      fill_in 'Filter by traits (comma-separated)', with: 'bash'
+      expect(page.current_url).to include('traits=bash')
+
+      find('button', text: '×').click
+      expect(page.current_url).not_to include('traits=')
+    end
+
     scenario 'trait filter URL param pre-fills the filter on load' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'bash-box'

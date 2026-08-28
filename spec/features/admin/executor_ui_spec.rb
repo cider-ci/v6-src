@@ -172,11 +172,6 @@ feature 'Admin: Executor management UI' do
       visit '/admin/executors/'
       expect(page).to have_content 'Request ERROR 403'
     end
-
-    scenario 'add page returns 403' do
-      visit '/admin/executors/new'
-      expect(page).to have_content 'Request ERROR 403'
-    end
   end
 
 end

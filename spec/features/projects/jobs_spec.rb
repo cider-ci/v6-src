@@ -44,6 +44,12 @@ feature 'Jobs' do
     token
   end
 
+  # Inserts a task spec (JSONB) for an existing task row.
+  def set_task_spec(task_id, spec)
+    spec_json = spec.to_json.gsub("'", "''")
+    database.run("UPDATE tasks SET spec = '#{spec_json}'::jsonb WHERE id = '#{task_id}'")
+  end
+
   # Inserts a complete job+task+trial hierarchy directly into the DB.
   # Returns { job_id:, task_id:, trial_id:, commit_id: }.
   def insert_job_hierarchy(state: 'failed', error: nil, with_timing: false, with_scripts: false)
@@ -139,6 +145,74 @@ feature 'Jobs' do
     h = insert_job_hierarchy
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}"
     expect(page).to have_button 'Retry'
+  end
+
+  scenario 'task name in job detail is a link to the task detail page' do
+    h = insert_job_hierarchy
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}"
+    expect(page).to have_link 'main', href: /\/tasks\/#{h[:task_id]}/
+  end
+
+  scenario 'task detail page shows task name and state' do
+    h = insert_job_hierarchy(state: 'failed')
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
+    expect(page).to have_content 'main'
+    expect(page).to have_css '.badge', text: 'failed'
+  end
+
+  scenario 'task detail page shows trials with links' do
+    h = insert_job_hierarchy
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
+    expect(page).to have_content 'Trials'
+    expect(page).to have_link href: /\/trials\/#{h[:trial_id]}/
+  end
+
+  scenario 'task detail page shows scripts from task spec' do
+    h = insert_job_hierarchy
+    set_task_spec(h[:task_id], {
+      scripts: { run: { body: "#!/bin/bash\necho hello", timeout: '3 minutes' } }
+    })
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
+    expect(page).to have_content 'Scripts'
+    expect(page).to have_content 'run'
+    expect(page).to have_content 'echo hello'
+    expect(page).to have_content '3 minutes'
+  end
+
+  scenario 'task detail page shows environment variables from task spec' do
+    h = insert_job_hierarchy
+    set_task_spec(h[:task_id], { environment_variables: { MY_VAR: 'hello' } })
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
+    expect(page).to have_content 'Environment Variables'
+    expect(page).to have_content 'MY_VAR'
+    expect(page).to have_content 'hello'
+  end
+
+  scenario 'task detail page shows traits and a Find executors link' do
+    h = insert_job_hierarchy
+    set_task_spec(h[:task_id], { traits: { bash: true, ruby: true } })
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
+    expect(page).to have_content 'Traits'
+    expect(page).to have_content 'bash'
+    expect(page).to have_content 'ruby'
+    link = find(:link, 'Find executors')
+    expect(link[:href]).to include('?traits=')
+    expect(link[:href]).to include('bash')
+    expect(link[:href]).to include('ruby')
+  end
+
+  scenario 'task detail page breadcrumb links back to the job' do
+    h = insert_job_hierarchy
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
+    within('nav') do
+      expect(page).to have_link(href: /\/jobs\/#{h[:job_id]}/)
+    end
+  end
+
+  scenario 'task detail page returns 404 for unknown task id' do
+    h = insert_job_hierarchy
+    visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{SecureRandom.uuid}"
+    expect(page).to have_content 'Request ERROR 404'
   end
 
   scenario 'job detail returns 404 for unknown job id' do

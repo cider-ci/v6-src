@@ -2,10 +2,10 @@
 @import "highlight.js/scss/github";
 
 // Navbar: tighter icon→label gap, clear gap between nav items
-.navbar-nav {
-  gap: 1.5rem;
+.navbar .nav-item + .nav-item {
+  margin-left: 1.5rem;
 }
-.navbar-nav .nav-link svg {
+.navbar .nav-link svg {
   margin-right: 0.2em;
 }
 

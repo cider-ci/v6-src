@@ -61,7 +61,21 @@
       "Dismiss"]]))
 
 
-;;; List page (route :admin-executors)
+(defn- time-ago [ts-str]
+  (if (string/blank? ts-str)
+    "–"
+    (let [diff-s (/ (- (js/Date.) (js/Date. ts-str)) 1000)
+          diff-m (js/Math.floor (/ diff-s 60))
+          diff-h (js/Math.floor (/ diff-m 60))
+          diff-d (js/Math.floor (/ diff-h 24))]
+      (cond
+        (< diff-s 60) "just now"
+        (< diff-m 60) (str diff-m " minute" (when (not= diff-m 1) "s") " ago")
+        (< diff-h 24) (str diff-h " hour"   (when (not= diff-h 1) "s") " ago")
+        :else         (str diff-d " day"    (when (not= diff-d 1) "s") " ago")))))
+
+
+;;; List page (route :executors)
 
 (defn- matches-filter? [traits-str filter-str]
   (if (string/blank? filter-str)
@@ -134,7 +148,7 @@
                             [:span.text-muted "—"]))]
                    [:td (:max_load ex)]
                    [:td [enabled-badge (:enabled ex)]]
-                   [:td [:small (or (:last_seen_at ex) "–")]]])]])]))
+                   [:td [:small (time-ago (:last_seen_at ex))]]])]])]))
        (when @state/debug?*
          [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
     (finally
@@ -245,7 +259,7 @@
                [:dt.col-sm-3 "Token prefix"]
                [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
                [:dt.col-sm-3 "Last seen"]
-               [:dd.col-sm-9 (or (:last_seen_at ex) "–")]]])))])))
+               [:dd.col-sm-9 (time-ago (:last_seen_at ex))]]])))])))
 
 
 (defn page []

@@ -134,10 +134,8 @@
                 (for [ex filtered]
                   ^{:key (:id ex)}
                   [:tr
-                   [:td (if (admin?)
-                          [:a {:href (path :executor-edit {:executor-id (:id ex)})}
-                           [icons/edit] " " (:name ex)]
-                          (:name ex))]
+                   [:td [:a {:href (path :executor-detail {:executor-id (:id ex)})}
+                         (:name ex)]]
                    [:td (let [ts (->> (string/split (or (:traits ex) "") #",")
                                       (map string/trim)
                                       (remove string/blank?)
@@ -191,7 +189,47 @@
           :inner [:span "Add Executor"]]]]])))
 
 
-;;; Edit page (route :admin-executor-edit)
+;;; Detail page (route :executor-detail)
+
+(defn- detail-page []
+  (fn []
+    [:div.page
+     [state/hidden-routing-state-component :did-change
+      #(do (reset! _single* nil) (fetch-single))]
+     [:nav.mb-3
+      [:a {:href (path :executors {})} "Executors"]
+      " / " (or (:name @_single*) "…")]
+     (if-not @_single*
+       [:div "Loading..."]
+       (let [ex @_single*
+             traits (->> (string/split (or (:traits ex) "") #",")
+                         (map string/trim)
+                         (remove string/blank?)
+                         sort)]
+         [:<>
+          [:div.d-flex.align-items-center.gap-2.mb-3
+           [:h2.mb-0 (:name ex)]
+           [enabled-badge (:enabled ex)]
+           (when (admin?)
+             [:a.btn.btn-sm.btn-outline-secondary.ms-2
+              {:href (path :executor-edit {:executor-id (:id ex)})}
+              [icons/edit] " Edit"])]
+          [:dl.row
+           [:dt.col-sm-3 "Traits"]
+           [:dd.col-sm-9
+            (if (seq traits)
+              [:div.d-flex.flex-wrap.gap-1
+               (for [t traits] ^{:key t} [:span.badge.bg-secondary t])]
+              [:span.text-muted "—"])]
+           [:dt.col-sm-3 "Max load"]
+           [:dd.col-sm-9 (:max_load ex)]
+           [:dt.col-sm-3 "Token prefix"]
+           [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
+           [:dt.col-sm-3 "Last seen"]
+           [:dd.col-sm-9 (time-ago (:last_seen_at ex))]]]))]))
+
+
+;;; Edit page (route :executor-edit)
 
 (defn- save-executor! [form*]
   (go (when-let [_res (-> {:method      :patch
@@ -222,7 +260,13 @@
         #(do (reset! _single* nil) (reset! form* nil) (fetch-single))]
        [:nav.mb-3
         [:a {:href (path :executors {})} "Executors"]
-        " / Edit"]
+        " / "
+        (when @_single*
+          [:<>
+           [:a {:href (path :executor-detail {:executor-id (executor-id-param)})}
+            (:name @_single*)]
+           " / "])
+        "Edit"]
        (if-not @_single*
          [:div "Loading..."]
          (let [ex @_single*]
@@ -264,9 +308,10 @@
 
 (defn page []
   (case (:name @state/routing*)
-    :executors     [list-page]
-    :executor-new  [add-page]
-    :executor-edit [edit-page]
+    :executors       [list-page]
+    :executor-new    [add-page]
+    :executor-detail [detail-page]
+    :executor-edit   [edit-page]
     [:div "Unknown route"]))
 
 (def components {:page page})

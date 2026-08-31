@@ -66,7 +66,7 @@ feature 'Executor management UI' do
       end
     end
 
-    scenario 'executor name links to edit page with pre-filled form' do
+    scenario 'executor name links to detail page' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'edit-me'
       fill_in 'Traits (comma-separated)', with: 'bash'
@@ -74,6 +74,21 @@ feature 'Executor management UI' do
       click_button 'Add Executor'
 
       click_on 'edit-me'
+
+      expect(page).to have_css 'h2', text: 'edit-me'
+      expect(page).to have_link 'Edit'
+      expect(page).not_to have_field 'Name'
+    end
+
+    scenario 'detail page Edit button leads to pre-filled edit form' do
+      click_link 'Add Executor'
+      fill_in 'Name', with: 'edit-me'
+      fill_in 'Traits (comma-separated)', with: 'bash'
+      fill_in 'Max load', with: '4'
+      click_button 'Add Executor'
+
+      click_on 'edit-me'
+      click_on 'Edit'
 
       expect(page).to have_field 'Name', with: 'edit-me'
       expect(page).to have_field 'Traits (comma-separated)', with: 'bash'
@@ -87,6 +102,7 @@ feature 'Executor management UI' do
       click_button 'Add Executor'
 
       click_on 'old-name'
+      click_on 'Edit'
       fill_in 'Name', with: 'new-name'
       fill_in 'Traits (comma-separated)', with: 'bash,ruby'
       click_button 'Save'
@@ -104,6 +120,7 @@ feature 'Executor management UI' do
       click_button 'Add Executor'
 
       click_on 'toggle-exec'
+      click_on 'Edit'
 
       click_on 'Disable'
       expect(page).to have_css '.badge', text: 'disabled'
@@ -120,10 +137,11 @@ feature 'Executor management UI' do
       click_button 'Add Executor'
 
       click_on 'removable'
+      click_on 'Edit'
 
       accept_confirm { click_on 'Delete' }
 
-      expect(page).to have_content 'Admin: Executors'
+      expect(page).to have_content 'Executors'
       expect(page).to have_content 'No executors configured.'
       expect(database[:executors].where(name: 'removable').count).to eq 0
     end
@@ -186,7 +204,7 @@ feature 'Executor management UI' do
       expect(page).not_to have_link 'Add Executor'
     end
 
-    scenario 'executor names are plain text, not edit links' do
+    scenario 'executor names link to detail page but Edit button is not shown' do
       set_session_cookie @admin
       visit '/executors/'
       click_link 'Add Executor'
@@ -196,8 +214,10 @@ feature 'Executor management UI' do
 
       set_session_cookie @user
       visit '/executors/'
-      expect(page).to have_content 'view-only-box'
-      expect(page).not_to have_link 'view-only-box'
+      click_on 'view-only-box'
+
+      expect(page).to have_css 'h2', text: 'view-only-box'
+      expect(page).not_to have_link 'Edit'
     end
   end
 

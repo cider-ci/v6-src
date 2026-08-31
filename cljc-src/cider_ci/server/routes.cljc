@@ -84,19 +84,21 @@
           :auth-http-unsafe #{:admin}}]
     ["/:gpg-key-id" {:name :admin-gpg-key
                      :auth-http-safe #{:admin}
-                     :auth-http-unsafe #{:admin}}]]
-   ["/executors"
-    ["/" {:name :admin-executors
-          :auth-http-safe #{:admin}
-          :auth-http-unsafe #{:admin}}]
-    ["/new" {:name :admin-executor-new
-             :auth-http-safe #{:admin}}]
-    ["/:executor-id"
-     ["" {:name :admin-executor
-          :auth-http-safe #{:admin}
-          :auth-http-unsafe #{:admin}}]
-     ["/edit" {:name :admin-executor-edit
-               :auth-http-safe #{:admin}}]]]])
+                     :auth-http-unsafe #{:admin}}]]])
+
+(def executors-ui
+  ["/executors"
+   ["/" {:name :executors
+         :auth-http-safe #{:user}
+         :auth-http-unsafe #{:admin}}]
+   ["/new" {:name :executor-new
+            :auth-http-safe #{:admin}}]
+   ["/:executor-id"
+    ["" {:name :executor-detail
+         :auth-http-safe #{:user}
+         :auth-http-unsafe #{:admin}}]
+    ["/edit" {:name :executor-edit
+              :auth-http-safe #{:admin}}]]])
 
 (def executor
   ["/executor"
@@ -154,6 +156,7 @@
              :auth-http-unsafe #{:public}}]
    admin
    executor
+   executors-ui
    projects
    trials
    tree-attachments

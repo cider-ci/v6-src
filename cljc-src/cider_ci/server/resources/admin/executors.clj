@@ -47,7 +47,7 @@
                 tx     :tx}]
   (case route-name
 
-    :admin-executors
+    :executors
     (case method
       :get  (list-resp tx)
       :post (let [token    (str (java.util.UUID/randomUUID))
@@ -62,7 +62,7 @@
               {:body {:token     token
                       :executors (fetch-list tx)}}))
 
-    :admin-executor
+    :executor-detail
     (case method
       :get (if-let [ex (jdbc/execute-one! tx
                          ["SELECT id, name, token_part,

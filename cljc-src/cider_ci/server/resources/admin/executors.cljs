@@ -14,7 +14,7 @@
 
 
 (defonce _data*     (reagent/atom {}))
-(def     data*      (reagent/reaction (get @_data* (path :admin-executors {}))))
+(def     data*      (reagent/reaction (get @_data* (path :executors {}))))
 (defonce _single*   (reagent/atom nil))
 (defonce new-token* (reagent/atom nil))
 
@@ -23,10 +23,13 @@
   (-> @state/routing* :path-params :executor-id))
 
 (defn- executor-url [id]
-  (path :admin-executor {:executor-id id}))
+  (path :executor-detail {:executor-id id}))
+
+(defn- admin? []
+  (-> @state/user* :is_admin))
 
 (defn fetch-data [& _]
-  (go (let [url  (path :admin-executors {})
+  (go (let [url  (path :executors {})
             resp (<! (:chan (http-client/request {:url                     url
                                                   :modal-on-request        false
                                                   :modal-on-response-error false
@@ -82,9 +85,10 @@
           (when (not= (:path old-state) (:path new-state))
             (fetch-data)))]
        [:div.d-flex.align-items-center.justify-content-between.mb-3
-        [:h2 "Admin: Executors"]
-        [:a.btn.btn-primary {:href (path :admin-executor-new {})}
-         [icons/create] " Add Executor"]]
+        [:h2 "Executors"]
+        (when (admin?)
+          [:a.btn.btn-primary {:href (path :executor-new {})}
+           [icons/create] " Add Executor"])]
        [token-alert]
        [:div.mb-3.col-md-5
         [:div.input-group
@@ -95,11 +99,11 @@
            :value       filter-val
            :on-change   #(let [v (.. % -target -value)]
                            (reset! filter* v)
-                           (navigate! (path :admin-executors {}
+                           (navigate! (path :executors {}
                                             (when-not (string/blank? v) {:traits v}))))}]
          (when-not (string/blank? filter-val)
            [:button.btn.btn-outline-secondary
-            {:on-click #(navigate! (path :admin-executors {}))}
+            {:on-click #(navigate! (path :executors {}))}
             "×"])]]
        (if (nil? @data*)
          [:p.text-muted "Loading..."]
@@ -116,8 +120,10 @@
                 (for [ex filtered]
                   ^{:key (:id ex)}
                   [:tr
-                   [:td [:a {:href (path :admin-executor-edit {:executor-id (:id ex)})}
-                         [icons/edit] " " (:name ex)]]
+                   [:td (if (admin?)
+                          [:a {:href (path :executor-edit {:executor-id (:id ex)})}
+                           [icons/edit] " " (:name ex)]
+                          (:name ex))]
                    [:td (let [ts (->> (string/split (or (:traits ex) "") #",")
                                       (map string/trim)
                                       (remove string/blank?)
@@ -139,18 +145,18 @@
 
 (defn- create-executor! [form*]
   (go (when-let [res (-> {:method      :post
-                           :url         (path :admin-executors {})
+                           :url         (path :executors {})
                            :json-params @form*}
                          http-client/request :chan <! http-client/filter-success :body)]
         (reset! new-token* (:token res))
-        (navigate! (path :admin-executors {})))))
+        (navigate! (path :executors {})))))
 
 (defn- add-page []
   (let [form* (reagent/atom {:name "" :traits "" :max_load 4.0})]
     (fn []
       [:div.page
        [:nav.mb-3
-        [:a {:href (path :admin-executors {})} "Admin: Executors"]
+        [:a {:href (path :executors {})} "Executors"]
         " / New"]
        [:h2 "Add Executor"]
        [:div.col-md-6
@@ -192,7 +198,7 @@
     (go (when-let [_res (-> {:method :delete
                                :url    (executor-url (executor-id-param))}
                              http-client/request :chan <! http-client/filter-success :body)]
-          (navigate! (path :admin-executors {}))))))
+          (navigate! (path :executors {}))))))
 
 (defn- edit-page []
   (let [form* (reagent/atom nil)]
@@ -201,7 +207,7 @@
        [state/hidden-routing-state-component :did-change
         #(do (reset! _single* nil) (reset! form* nil) (fetch-single))]
        [:nav.mb-3
-        [:a {:href (path :admin-executors {})} "Admin: Executors"]
+        [:a {:href (path :executors {})} "Executors"]
         " / Edit"]
        (if-not @_single*
          [:div "Loading..."]
@@ -244,9 +250,9 @@
 
 (defn page []
   (case (:name @state/routing*)
-    :admin-executors     [list-page]
-    :admin-executor-new  [add-page]
-    :admin-executor-edit [edit-page]
+    :executors     [list-page]
+    :executor-new  [add-page]
+    :executor-edit [edit-page]
     [:div "Unknown route"]))
 
 (def components {:page page})

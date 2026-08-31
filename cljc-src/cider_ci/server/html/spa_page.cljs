@@ -95,9 +95,9 @@
     [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :jobs)} [icons/jobs] "Jobs"]]
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :projects)} [icons/projects] "Projects"]]
+     [:> bs/Nav.Link {:href (path :executors {})} [icons/server] "Executors"]]
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :users)} [icons/users] "Users"]]]
+     [:> bs/Nav.Link {:href (path :projects)} [icons/projects] "Projects"]]]
    [:<> (when-let [center-nav (:center-nav @state/routing*)]
           [center-nav])]
    [:> bs/Container {:class "justify-content-end"}

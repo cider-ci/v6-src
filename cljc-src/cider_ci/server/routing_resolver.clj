@@ -28,8 +28,10 @@
     ))
 
 (def route-resource-table
-  {:admin-executor            #'admin-executors/handler
-   :admin-executors           #'admin-executors/handler
+  {:executors                 #'admin-executors/handler
+   :executor-new              #'admin-executors/handler
+   :executor-detail           #'admin-executors/handler
+   :executor-edit             #'admin-executors/handler
    :admin-gpg-key             #'admin-gpg-keys/handler
    :admin-gpg-keys            #'admin-gpg-keys/handler
    :executor-sync                  #'executors/handler

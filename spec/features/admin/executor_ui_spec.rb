@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-feature 'Admin: Executor management UI' do
+feature 'Executor management UI' do
 
   before :each do
     @admin = FactoryBot.create(:admin)
@@ -10,11 +10,11 @@ feature 'Admin: Executor management UI' do
   context 'as an admin' do
     before :each do
       set_session_cookie @admin
-      visit '/admin/executors/'
+      visit '/executors/'
     end
 
     scenario 'list page loads with heading, empty state, and Add Executor link' do
-      expect(page).to have_content 'Admin: Executors'
+      expect(page).to have_content 'Executors'
       expect(page).to have_content 'No executors configured.'
       expect(page).to have_link 'Add Executor'
     end
@@ -165,7 +165,7 @@ feature 'Admin: Executor management UI' do
       fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
-      visit '/admin/executors/?traits=ruby'
+      visit '/executors/?traits=ruby'
       expect(find_field('Filter by traits (comma-separated)').value).to eq 'ruby'
       expect(page).not_to have_content 'bash-box'
     end
@@ -174,11 +174,30 @@ feature 'Admin: Executor management UI' do
   context 'as a non-admin user' do
     before :each do
       set_session_cookie @user
+      visit '/executors/'
     end
 
-    scenario 'list page returns 403' do
-      visit '/admin/executors/'
-      expect(page).to have_content 'Request ERROR 403'
+    scenario 'list page is accessible and shows heading' do
+      expect(page).to have_content 'Executors'
+      expect(page).not_to have_content 'Request ERROR 403'
+    end
+
+    scenario 'Add Executor button is not shown' do
+      expect(page).not_to have_link 'Add Executor'
+    end
+
+    scenario 'executor names are plain text, not edit links' do
+      set_session_cookie @admin
+      visit '/executors/'
+      click_link 'Add Executor'
+      fill_in 'Name', with: 'view-only-box'
+      fill_in 'Max load', with: '4'
+      click_button 'Add Executor'
+
+      set_session_cookie @user
+      visit '/executors/'
+      expect(page).to have_content 'view-only-box'
+      expect(page).not_to have_link 'view-only-box'
     end
   end
 

@@ -25,10 +25,10 @@
     ))
 
 (def route-page-table
-  {:admin-executor      admin-executors/components
-   :admin-executor-new  admin-executors/components
-   :admin-executor-edit admin-executors/components
-   :admin-executors     admin-executors/components
+  {:executors       admin-executors/components
+   :executor-new    admin-executors/components
+   :executor-edit   admin-executors/components
+   :executor-detail admin-executors/components
    :admin-gpg-key  admin-gpg-keys/components
    :admin-gpg-keys admin-gpg-keys/components
    :root root/components

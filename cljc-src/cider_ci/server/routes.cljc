@@ -78,6 +78,9 @@
 
 (def admin
   ["/admin"
+   ["/settings" {:name             :admin-settings
+                 :auth-http-safe   #{:admin}
+                 :auth-http-unsafe #{:admin}}]
    ["/gpg-keys"
     ["/" {:name :admin-gpg-keys
           :auth-http-safe #{:admin}

@@ -1,6 +1,7 @@
 (ns cider-ci.server.jobs.stale-trials
   (:require
     [cider-ci.server.db.core :refer [builder-fn-options-default get-ds]]
+    [cider-ci.server.db.settings :refer [get-settings]]
     [cider-ci.server.jobs.propagation :as propagation]
     [cider-ci.utils.daemon :refer [defdaemon]]
     [next.jdbc :as jdbc]
@@ -53,6 +54,23 @@
           (propagation/propagate-from-trial tx id))))))
 
 
+(defn- abort-pending-timed-out! [ds]
+  (jdbc/with-transaction [raw-tx ds]
+    (let [tx      (jdbc/with-options raw-tx builder-fn-options-default)
+          timeout (:settings/trial_dispatch_timeout (get-settings))
+          rows    (jdbc/execute! tx
+                   ["UPDATE trials
+                     SET state = 'aborted', updated_at = now()
+                     WHERE state = 'pending'
+                       AND created_at < now() - ?
+                     RETURNING id"
+                    timeout])]
+      (when (seq rows)
+        (info "Aborted" (count rows) "pending trial(s) that exceeded dispatch timeout")
+        (doseq [{:keys [id]} rows]
+          (propagation/propagate-from-trial tx id))))))
+
+
 (defn- reconcile-stuck-tasks! [ds]
   (jdbc/with-transaction [raw-tx ds]
     (let [tx   (jdbc/with-options raw-tx builder-fn-options-default)
@@ -79,6 +97,7 @@
     (reset-stale-dispatching! (get-ds))
     (reset-lost-on-executor! (get-ds))
     (reset-stale-executing! (get-ds))
+    (abort-pending-timed-out! (get-ds))
     (reconcile-stuck-tasks! (get-ds))
     (catch Exception e
       (warn "Stale trial recovery error:" (.getMessage e)))))

@@ -2,6 +2,7 @@
   (:require
     [cider-ci.server.resources.admin.executors :as admin-executors]
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
+    [cider-ci.server.resources.admin.settings :as admin-settings]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.jobs.main :as jobs-dashboard]
     [cider-ci.server.executors.handler :as executors]
@@ -28,7 +29,8 @@
     ))
 
 (def route-resource-table
-  {:executors                 #'admin-executors/handler
+  {:admin-settings            #'admin-settings/handler
+   :executors                 #'admin-executors/handler
    :executor-new              #'admin-executors/handler
    :executor-detail           #'admin-executors/handler
    :executor-edit             #'admin-executors/handler

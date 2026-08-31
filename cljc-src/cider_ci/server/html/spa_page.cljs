@@ -74,7 +74,7 @@
    (when (:is_admin user)
      [:<>
       [:> bs/NavDropdown.Divider]
-      [:> bs/NavDropdown.Item {:href (path :admin-executors)} "Executors"]
+      [:> bs/NavDropdown.Item {:href (path :admin-settings)} "Settings"]
       [:> bs/NavDropdown.Item {:href (path :admin-gpg-keys)} "GPG Keys"]])
    [:> bs/NavDropdown.Item
     {:class "btn btn-warning"

@@ -25,30 +25,39 @@
     :else                                        "defective"))
 
 (defn- job-state-from-tasks
-  "Job passes only when ALL tasks pass. Returns nil when not yet decided."
-  [states]
+  "Job passes only when ALL tasks pass. Returns nil when not yet decided.
+   job-state is the current job state; when aborting, terminal non-passed tasks
+   resolve to 'aborted' rather than 'failed'/'defective'."
+  [states job-state]
   (cond
     (not-every? terminal-states states)  nil
     (every? #{"passed"} states)          "passed"
     (every? #{"aborted"} states)         "aborted"
+    (= job-state "aborting")             "aborted"
     (some #{"defective"} states)         "defective"
     (some #{"aborted"} states)           "failed"
     :else                                "failed"))
 
 
 (defn propagate-from-task [tx task-id]
-  (let [task   (first (jdbc-sql/query tx
-                        (-> (sql/select :job_id)
-                            (sql/from :tasks)
-                            (sql/where [:= :id task-id])
-                            sql-format)))
-        job-id (:job_id task)
-        states (map :state (jdbc-sql/query tx
-                             (-> (sql/select :state)
-                                 (sql/from :tasks)
-                                 (sql/where [:= :job_id job-id])
-                                 sql-format)))]
-    (when-let [new-state (job-state-from-tasks states)]
+  (let [task       (first (jdbc-sql/query tx
+                            (-> (sql/select :job_id)
+                                (sql/from :tasks)
+                                (sql/where [:= :id task-id])
+                                sql-format)))
+        job-id     (:job_id task)
+        job        (first (jdbc-sql/query tx
+                            (-> (sql/select :state)
+                                (sql/from :jobs)
+                                (sql/where [:= :id job-id])
+                                sql-format)))
+        job-state  (:state job)
+        states     (map :state (jdbc-sql/query tx
+                                 (-> (sql/select :state)
+                                     (sql/from :tasks)
+                                     (sql/where [:= :job_id job-id])
+                                     sql-format)))]
+    (when-let [new-state (job-state-from-tasks states job-state)]
       (jdbc/execute-one! tx
         ["UPDATE jobs SET state = ?, updated_at = now() WHERE id = ?"
          new-state job-id]))))

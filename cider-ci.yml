@@ -1,4 +1,28 @@
 jobs:
+  unit-tests:
+    name: Unit Tests
+    run_when:
+      any-branch:
+        type: branch
+        include_match: ^.*$
+    context:
+      task_defaults:
+        traits: [Bash, mise]
+        max_trials: 2
+        load: 1.0
+      tasks:
+        unit-tests:
+          name: Clojure Unit Tests
+          scripts:
+            run-tests:
+              timeout: 5 Minutes
+              body: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                mise install java
+                eval "$(mise activate bash)"
+                clojure -M:test
+
   integration-tests:
     name: Integration Tests
     run_when:

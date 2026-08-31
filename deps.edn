@@ -47,6 +47,10 @@
            :outdated {:extra-deps {com.github.liquidz/antq {:mvn/version "2.11.1276"}}
                       :main-opts ["-m" "antq.core"]}
 
-           :test {:extra-paths ["test"]}
+           :test {:extra-paths ["test"]
+                  :extra-deps {io.github.cognitect-labs/test-runner
+                               {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+                  :main-opts  ["-m" "cognitect.test-runner"
+                               "--dir" "test"]}
 
            :resource-paths ["resources"]}}

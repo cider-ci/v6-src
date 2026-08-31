@@ -91,13 +91,13 @@
     [:> bs/Navbar.Brand {:href (path :root)} "Cider-CI"]]
    [:> bs/Container {:class "justify-content-center"}
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :commits)} [icons/commits] " Commits"]]
+     [:> bs/Nav.Link {:href (path :commits)} [icons/commits] "Commits"]]
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :jobs)} [icons/jobs] " Jobs"]]
+     [:> bs/Nav.Link {:href (path :jobs)} [icons/jobs] "Jobs"]]
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :projects)} [icons/projects] " Projects"]]
+     [:> bs/Nav.Link {:href (path :projects)} [icons/projects] "Projects"]]
     [:> bs/Nav.Item
-     [:> bs/Nav.Link {:href (path :users)} [icons/users] " Users"]]]
+     [:> bs/Nav.Link {:href (path :users)} [icons/users] "Users"]]]
    [:<> (when-let [center-nav (:center-nav @state/routing*)]
           [center-nav])]
    [:> bs/Container {:class "justify-content-end"}

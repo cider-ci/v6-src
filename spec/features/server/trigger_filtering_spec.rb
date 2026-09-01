@@ -5,7 +5,7 @@ require 'securerandom'
 feature 'Trigger filtering' do
 
   let(:project_id) { "trigger-filter-#{SecureRandom.hex(4)}" }
-  let(:fixture_dir) { Pathname.new(__FILE__).join('../../fixtures/trigger-filter-repo.git').realdirpath }
+  let(:fixture_dir) { Pathname.new(__FILE__).join('../../../fixtures/trigger-filter-repo.git').realdirpath }
   let(:git_url)     { "file://#{fixture_dir}" }
 
   before :each do

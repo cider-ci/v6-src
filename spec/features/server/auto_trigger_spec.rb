@@ -4,7 +4,7 @@ require 'timeout'
 feature 'Auto-trigger' do
 
   let(:project_id)  { 'cider-ci-demo-project' }
-  let(:project_root){ Pathname.new(__FILE__).join('../../..').realdirpath }
+  let(:project_root){ Pathname.new(__FILE__).join('../../../..').realdirpath }
   let(:git_url)     { "file://#{project_root}/data/repositories/#{project_id}" }
 
   before :each do

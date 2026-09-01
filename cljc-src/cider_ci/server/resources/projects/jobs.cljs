@@ -329,7 +329,7 @@
   (when (seq traits)
     (let [trait-names (->> (if (map? traits) (map name (keys traits)) (map name traits))
                            sort)
-          filter-url  (str (path :admin-executors {}) "?traits=" (str/join "," trait-names))]
+          filter-url  (str (path :executors {}) "?traits=" (str/join "," trait-names))]
       [:<>
        [:h5.mt-3 "Traits"]
        [:div.d-flex.align-items-center.flex-wrap.gap-1

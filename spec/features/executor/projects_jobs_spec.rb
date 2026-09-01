@@ -188,15 +188,15 @@ feature 'Jobs' do
     expect(page).to have_content 'hello'
   end
 
-  scenario 'task detail page shows traits and a Find executors link' do
+  scenario 'task detail page shows traits and a Match executors link pointing to /executors/' do
     h = insert_job_hierarchy
     set_task_spec(h[:task_id], { traits: { bash: true, ruby: true } })
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
     expect(page).to have_content 'Traits'
     expect(page).to have_content 'bash'
     expect(page).to have_content 'ruby'
-    link = find(:link, 'Find executors')
-    expect(link[:href]).to include('?traits=')
+    link = find(:link, 'Match executors')
+    expect(link[:href]).to match(%r{/executors/\?traits=})
     expect(link[:href]).to include('bash')
     expect(link[:href]).to include('ruby')
   end

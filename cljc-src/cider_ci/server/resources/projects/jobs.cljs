@@ -1,8 +1,10 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
+   ["js-yaml" :as js-yaml]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
+   [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
    [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state]
    [cljs.core.async :refer [go-loop <! chan]]
@@ -336,7 +338,7 @@
           [:span.badge.bg-secondary t])
         [:a.btn.btn-sm.btn-outline-secondary.ms-1
          {:href filter-url}
-         [icons/server] " Find executors"]]])))
+         [icons/server] " Match executors"]]])))
 
 (defn- ports-panel [ports]
   (when (seq ports)
@@ -351,9 +353,13 @@
           [:td [:code (name k)]]
           [:td (str (:min v) "–" (:max v))]])]]]))
 
-(defn- task-trials-panel [trials]
+(defn- task-trials-panel [trials task-id]
   [:<>
-   [:h5.mt-3 "Trials"]
+   [:div.d-flex.align-items-center.gap-2.mt-3.mb-1
+    [:h5.mb-0 "Trials"]
+    [:button.btn.btn-sm.btn-outline-secondary
+     {:on-click #(retry-task! task-id)}
+     [icons/retry] " Retry"]]
    (if (seq trials)
      [:div
       (for [trial trials]
@@ -363,6 +369,20 @@
           :href  (path :trial {:trial-id (:id trial)})}
          (:state trial)])]
      [:p.text-muted "No trials yet."])])
+
+(defn- scripts-dag-panel [spec]
+  (when (and (seq (:scripts spec))
+             (some #(seq (:start_when (second %))) (:scripts spec)))
+    [:<>
+     [:h5.mt-3 "Script Dependencies"]
+     [scripts-dag/scripts-dag spec {}]]))
+
+(defn- spec-yaml-panel [spec]
+  [:<>
+   [:h5.mt-3 "Task Configuration"]
+   [:pre.bg-light.p-2.rounded.small
+    {:style {:max-height "500px" :overflow-y "auto" :white-space "pre"}}
+    (.dump js-yaml (clj->js spec))]])
 
 (defn- task-detail-page []
   [:div.page.task
@@ -387,11 +407,13 @@
          " / "
          [:code (:name task)]]
         [:h3 (:name task) " " [state-badge (:state task)]]
-        [scripts-panel (:scripts spec)]
-        [env-vars-panel (:environment_variables spec)]
+        [task-trials-panel (:trials task) (:id task)]
         [traits-panel (:traits spec)]
+        [env-vars-panel (:environment_variables spec)]
         [ports-panel (:ports spec)]
-        [task-trials-panel (:trials task)]
+        [scripts-dag-panel spec]
+        [scripts-panel (:scripts spec)]
+        [spec-yaml-panel spec]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
 

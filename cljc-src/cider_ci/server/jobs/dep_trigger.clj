@@ -52,7 +52,8 @@
                                   job-configs)]
         (when (seq to-trigger)
           (info "dep-trigger: triggering" (map :key to-trigger)
-                "for" project-id commit-id))
+                "for" project-id commit-id
+                "- existing job states:" (into {} (map (fn [j] [(:key j) (:state j)]) existing-jobs))))
         (doseq [job-config to-trigger]
           (try
             (jdbc/with-transaction [tx ds]

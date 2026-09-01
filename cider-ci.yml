@@ -23,8 +23,8 @@ jobs:
                 eval "$(mise activate bash)"
                 clojure -M:test
 
-  integration-tests:
-    name: Integration Tests
+  server-ui-tests:
+    name: Server UI Tests
     run_when:
       any-branch:
         type: branch
@@ -35,4 +35,18 @@ jobs:
         - path: cider-ci/contexts/integration-tests.yml
 
       generate_tasks:
-        include_match: spec/features/.*_spec\.rb$
+        include_match: spec/features/server/.*_spec\.rb$
+
+  executor-integration-tests:
+    name: Executor Integration Tests
+    run_when:
+      any-branch:
+        type: branch
+        include_match: ^.*$
+
+    context:
+      include:
+        - path: cider-ci/contexts/integration-tests.yml
+
+      generate_tasks:
+        include_match: spec/features/executor/.*_spec\.rb$

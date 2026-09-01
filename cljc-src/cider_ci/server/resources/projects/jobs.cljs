@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
+   ["@dagrejs/dagre" :as dagre]
    ["js-yaml" :as js-yaml]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
@@ -85,6 +86,93 @@
     [:span.badge {:class cls} s]))
 
 
+;;; Jobs DAG
+
+(def ^:private jdag-node-w 160)
+(def ^:private jdag-node-h 36)
+
+(def ^:private jdag-state-fill
+  {"passed"    "#198754"
+   "failed"    "#dc3545"
+   "executing" "#0d6efd"
+   "pending"   "#dee2e6"
+   "aborted"   "#dee2e6"
+   "defective" "#212529"})
+
+(def ^:private jdag-state-text
+  {"passed"    "#fff"
+   "failed"    "#fff"
+   "executing" "#fff"
+   "pending"   "#6c757d"
+   "aborted"   "#6c757d"
+   "defective" "#fff"})
+
+(defn- jdag-points->d [points]
+  (let [pts (map (fn [^js p] [(.-x p) (.-y p)]) points)]
+    (str "M " (str/join " L " (map #(str (first %) "," (second %)) pts)))))
+
+(defn- jdag-build-graph [jobs]
+  (let [^js dmod     dagre
+        ^js graphlib (.-graphlib dmod)
+        ^js g        (new (.-Graph graphlib))]
+    (.setGraph g #js {:rankdir "LR" :nodesep 20 :ranksep 60 :marginx 20 :marginy 16})
+    (.setDefaultEdgeLabel g (fn [] #js {}))
+    (doseq [j jobs]
+      (.setNode g (:key j) #js {:width jdag-node-w :height jdag-node-h}))
+    (doseq [j jobs
+            dep-key (:dep_job_keys j)
+            :when (seq dep-key)]
+      (.setEdge g dep-key (:key j) #js {}))
+    ((.-layout dmod) g)
+    g))
+
+(defn- jobs-dag [jobs]
+  (when (some #(seq (:dep_job_keys %)) jobs)
+    (let [^js g  (jdag-build-graph jobs)
+          ^js gi (.graph g)
+          svg-w  (+ (.-width gi) 4)
+          svg-h  (+ (.-height gi) 4)]
+      [:<>
+       [:h5.mt-3 "Job Dependencies"]
+       [:svg {:viewBox (str "0 0 " svg-w " " svg-h)
+              :width svg-w :height svg-h
+              :style {:display "block" :max-width "100%"}}
+        [:defs
+         [:marker {:id "jdag-arrow" :markerWidth 8 :markerHeight 6
+                   :refX 7 :refY 3 :orient "auto"}
+          [:polygon {:points "0,0 8,3 0,6" :fill "#888"}]]]
+        (doall
+          (for [^js e (.edges g)]
+            (let [pts (.-points (.edge g e))]
+              ^{:key (str (.-v e) "→" (.-w e))}
+              [:path {:d            (jdag-points->d pts)
+                      :fill         "none"
+                      :stroke       "#888"
+                      :stroke-width 1.5
+                      :marker-end   "url(#jdag-arrow)"}])))
+        (doall
+          (for [j jobs]
+            (let [key-str (:key j)
+                  ^js nd  (.node g key-str)
+                  nx      (- (.-x nd) (/ jdag-node-w 2))
+                  ny      (- (.-y nd) (/ jdag-node-h 2))
+                  state   (when (:has_instance j) (:state j))
+                  fill    (get jdag-state-fill state "#dee2e6")
+                  tcol    (get jdag-state-text state "#6c757d")]
+              ^{:key key-str}
+              [:g {:transform (str "translate(" nx "," ny ")")}
+               [:rect {:width jdag-node-w :height jdag-node-h :rx 4
+                       :fill fill :stroke "#ced4da" :stroke-width 1}]
+               [:text {:x           (/ jdag-node-w 2)
+                       :y           (/ jdag-node-h 2)
+                       :dy          "0.35em"
+                       :text-anchor "middle"
+                       :font-size   11
+                       :font-family "sans-serif"
+                       :fill        tcol}
+                (:name j)]])))]])))
+
+
 ;;; Jobs list page (route :project-jobs)
 
 (defn- job-row [j]
@@ -161,6 +249,7 @@
        [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
         [:code (subs (commit-id) 0 8)]]
        " / Jobs"]
+      [jobs-dag (:available @data*)]
       [available-jobs-panel (:available @data*) (:created @data*)]
       [created-jobs-panel (:created @data*)]
       (when @state/debug?*

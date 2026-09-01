@@ -48,12 +48,19 @@
                              (remove (fn [[_ dep]] (dep-satisfied? dep created-by-key)))
                              (map (fn [[dep-name _]] (name dep-name)))
                              vec))
-        runnable?     (and (not has-instance?) (empty? unmet-deps))]
+        runnable?     (and (not has-instance?) (empty? unmet-deps))
+        dep-job-keys  (->> depends-on
+                           vals
+                           (filter #(= "job" (:type %)))
+                           (keep :job_key)
+                           (map name)
+                           vec)]
     {:key          key-str
      :name         (:name job-entry)
      :runnable     runnable?
      :has_instance has-instance?
-     :unmet_deps   (or unmet-deps [])}))
+     :unmet_deps   (or unmet-deps [])
+     :dep_job_keys dep-job-keys}))
 
 (defn- available-jobs [repo commit-id created]
   (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))]

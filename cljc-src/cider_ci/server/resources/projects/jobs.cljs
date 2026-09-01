@@ -126,12 +126,13 @@
     ((.-layout dmod) g)
     g))
 
-(defn- jobs-dag [jobs]
-  (when (some #(seq (:dep_job_keys %)) jobs)
-    (let [^js g  (jdag-build-graph jobs)
-          ^js gi (.graph g)
-          svg-w  (+ (.-width gi) 4)
-          svg-h  (+ (.-height gi) 4)]
+(defn- jobs-dag [available created]
+  (when (some #(seq (:dep_job_keys %)) available)
+    (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))
+          ^js g          (jdag-build-graph available)
+          ^js gi         (.graph g)
+          svg-w          (+ (.-width gi) 4)
+          svg-h          (+ (.-height gi) 4)]
       [:<>
        [:h5.mt-3 "Job Dependencies"]
        [:svg {:viewBox (str "0 0 " svg-w " " svg-h)
@@ -151,12 +152,12 @@
                       :stroke-width 1.5
                       :marker-end   "url(#jdag-arrow)"}])))
         (doall
-          (for [j jobs]
+          (for [j available]
             (let [key-str (:key j)
                   ^js nd  (.node g key-str)
                   nx      (- (.-x nd) (/ jdag-node-w 2))
                   ny      (- (.-y nd) (/ jdag-node-h 2))
-                  state   (when (:has_instance j) (:state j))
+                  state   (:state (get created-by-key key-str))
                   fill    (get jdag-state-fill state "#dee2e6")
                   tcol    (get jdag-state-text state "#6c757d")]
               ^{:key key-str}
@@ -249,7 +250,7 @@
        [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
         [:code (subs (commit-id) 0 8)]]
        " / Jobs"]
-      [jobs-dag (:available @data*)]
+      [jobs-dag (:available @data*) (:created @data*)]
       [available-jobs-panel (:available @data*) (:created @data*)]
       [created-jobs-panel (:created @data*)]
       (when @state/debug?*

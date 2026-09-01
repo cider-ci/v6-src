@@ -43,7 +43,7 @@
       "{}")))
 
 
-(defn- create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
+(defn create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
   (let [expanded   (generate/expand project-id (str commit-id) spec)
         new-job-id (java.util.UUID/randomUUID)
         result     (jdbc/execute-one! tx
@@ -78,6 +78,8 @@
 
 
 (defn- job-should-trigger? [{:keys [spec]} branch-name]
+  ;; Jobs with depends_on are triggered by the dep-trigger daemon, not by branch push.
+  (when-not (seq (:depends_on spec))
   (let [run-when (get spec :run_when)
         trigger  (get spec :trigger)]
     (cond
@@ -99,7 +101,7 @@
           true
           (matches-pattern? include-match branch-name)))
       ;; No trigger configuration: always fire on branch push
-      :else true)))
+      :else true))))
 
 
 (defn trigger-for-commit! [ds project-id commit-id branch-name

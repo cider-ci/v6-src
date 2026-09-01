@@ -25,10 +25,11 @@ jobs:
 
   server-ui-tests:
     name: Server UI Tests
-    run_when:
-      any-branch:
-        type: branch
-        include_match: ^.*$
+    depends_on:
+      unit-tests-passed:
+        type: job
+        job_key: unit-tests
+        states: [passed]
 
     context:
       include:
@@ -39,10 +40,11 @@ jobs:
 
   executor-integration-tests:
     name: Executor Integration Tests
-    run_when:
-      any-branch:
-        type: branch
-        include_match: ^.*$
+    depends_on:
+      server-ui-tests-passed:
+        type: job
+        job_key: server-ui-tests
+        states: [passed]
 
     context:
       include:

@@ -113,7 +113,7 @@
                "Examples: " [:code "48 hours"] ", " [:code "7 days"] "."]]
              [:div.d-flex.gap-2
               [:button.btn.btn-primary {:type "submit"} "Save"]
-              [:a.btn.btn-secondary {:href (path :admin-settings)} "Cancel"]]]]])])))
+              [:a.btn.btn-secondary {:href (path :admin-settings)} "Cancel"]]]]))])))
 
 
 (defn page []

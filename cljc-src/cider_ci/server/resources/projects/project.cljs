@@ -253,7 +253,7 @@
               [:div.form-text "PostgreSQL interval. How often to fetch from the remote."]]
              [:div.d-flex.gap-2
               [:button.btn.btn-primary {:type "submit"} "Save"]
-              [:a.btn.btn-secondary {:href (project-url)} "Cancel"]]]]])])))
+              [:a.btn.btn-secondary {:href (project-url)} "Cancel"]]]]))])))
 
 
 ;;; New page (route :project-new) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

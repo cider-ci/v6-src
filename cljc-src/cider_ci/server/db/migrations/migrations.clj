@@ -46,6 +46,8 @@
         :down (partial exec-resource-sql! "migrations/00021_lowercase_traits_down.sql")}
     22 {:up (partial exec-resource-sql! "migrations/00022_settings_dispatch_timeout_up.sql")
         :down (partial exec-resource-sql! "migrations/00022_settings_dispatch_timeout_down.sql")}
+    23 {:up (partial exec-resource-sql! "migrations/00023_settings_commit_age_default_up.sql")
+        :down (partial exec-resource-sql! "migrations/00023_settings_commit_age_default_down.sql")}
     ))
 
 (defn available []

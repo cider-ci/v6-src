@@ -12,10 +12,14 @@
    ["/" {:name :projects
          :auth-http-safe #{:user}
          :auth-http-unsafe #{:admin}}]
+   ["/new" {:name :project-new
+            :auth-http-safe #{:admin}}]
    ["/:project-id"
     ["" {:name :project
          :auth-http-safe #{:user}
          :auth-http-unsafe #{:admin}}]
+    ["/edit" {:name :project-edit
+              :auth-http-safe #{:admin}}]
     ["/fetch" {:name :project-fetch
                :auth-http-unsafe #{:admin}}]
     ["/git/*repository-path" {:name             :project-git
@@ -78,9 +82,12 @@
 
 (def admin
   ["/admin"
-   ["/settings" {:name             :admin-settings
-                 :auth-http-safe   #{:admin}
-                 :auth-http-unsafe #{:admin}}]
+   ["/settings"
+    ["" {:name             :admin-settings
+         :auth-http-safe   #{:admin}
+         :auth-http-unsafe #{:admin}}]
+    ["/edit" {:name :admin-settings-edit
+              :auth-http-safe #{:admin}}]]
    ["/gpg-keys"
     ["/" {:name :admin-gpg-keys
           :auth-http-safe #{:admin}

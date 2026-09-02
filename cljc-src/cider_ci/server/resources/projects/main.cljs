@@ -5,22 +5,15 @@
    ["react-bootstrap" :as bs]
    [cider-ci.utils.core :refer [str keyword]]
    [cider-ci.server.html.icons :as icons]
-   [cider-ci.server.html.utils.forms :as forms]
    [cider-ci.server.http.client.main :as http-client]
-   [cider-ci.server.routes :refer [path navigate!]]
+   [cider-ci.server.routes :refer [path]]
    [cider-ci.server.state :as state :refer [routing*] :rename {routing* routing-state*}]
-   [cljs.core.async :refer [go <!]]
    [cljs.pprint :refer [pprint]]
    [reagent.core :as reagent :refer [reaction]]
    [taoensso.timbre :refer [debug info warn error spy]]))
 
 
-;;; PROJECTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 (defonce data* (reagent/atom {}))
-
-(def fetch-id* (atom nil))
 
 
 (defn fetch-td-component [params]
@@ -34,14 +27,14 @@
         [:span (date-fns/formatDistance
                 last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]]))
 
-(defn branch-update-td-component [params]
-  [:td
-   [:pre (with-out-str (pprint params))]])
-
 
 (defn projects-component []
   [:div.projects
-   [:h2 [icons/projects] " Projects"]
+   [:div.d-flex.align-items-center.justify-content-between.mb-3
+    [:h2 [icons/projects] " Projects"]
+    (when (-> @state/user* :is_admin)
+      [:a.btn.btn-primary {:href (path :project-new)}
+       [icons/create] " New Project"])]
    [state/hidden-routing-state-component
     :did-change #(http-client/route-cached-fetch
                   data* :reload true :reload-delay 500)]
@@ -50,17 +43,16 @@
           [:div.pre (with-out-str (pprint @data*))])]
 
    (if-not (contains? @data* (:route @routing-state*))
-     [:div "Spinner..."]
+     [:div "Loading..."]
      (let [projects (seq (get @data* (:route @routing-state*)))]
        (if-not projects
-         [:div "Empty..."]
+         [:p.text-muted "No projects yet."]
          [:table.table.table-sm.table-striped.projects
           [:thead
            [:tr
             [:th "ID"]
             [:th "Name"]
-            [:th "Fetch"]
-            [:th "Branches"]]]
+            [:th "Fetch"]]]
           [:tbody
            (for [project projects]
              ^{:key (:id project)}
@@ -69,54 +61,11 @@
                        (:id project)]]
               [:td.name [:a {:href (path :project {:project-id (:id project)})}
                          (:name project)]]
-              [:<> (fetch-td-component (:fetch-and-update project))]
-              [:<> (branch-update-td-component (:branch-updates project))]])]])))])
+              [:<> (fetch-td-component (:fetch-and-update project))]])]])))])
 
-
-;;; CREATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defonce create-mode* (reagent/atom false))
-(defonce create-data* (reagent/atom {}))
-
-
-(defn create [data]
-  (go (when (-> {:json-params data
-                 :method :post}
-                http-client/request
-                :chan <! http-client/filter-success)
-        (reset! create-mode* false))))
-
-
-(defn create-project []
-  [:div
-   [:h2 "Create a new project"]
-   [:form
-    {:on-submit (fn [e] (.preventDefault e) (create @create-data*))}
-    [forms/input-component create-data* [:id]]
-    [forms/input-component create-data* [:name]]
-    [forms/input-component create-data* [:git_url]]
-    [forms/cancel-component :on-click #(reset! create-mode* false)]
-    [forms/submit-component
-     :inner [:span [icons/create] " Create"]
-     :btn-classes [:btn-primary]]]])
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn page-nav []
-  [:<>
-   [:> bs/Nav.Item
-    [:button.btn.btn-outline-primary.btn-sm
-     {:on-click #(reset! create-mode* true)
-      :disabled @create-mode*}
-     [icons/create] " Create project"]]])
 
 (defn page []
   [:div.page
-   (if @create-mode*
-     [create-project]
-     [projects-component])])
+   [projects-component]])
 
-
-(def components {:page page
-                 :page-nav page-nav})
+(def components {:page page})

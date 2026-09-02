@@ -26,7 +26,8 @@
     ))
 
 (def route-page-table
-  {:admin-settings  admin-settings/components
+  {:admin-settings      admin-settings/components
+   :admin-settings-edit admin-settings/components
    :executors       admin-executors/components
    :executor-new    admin-executors/components
    :executor-edit   admin-executors/components
@@ -37,7 +38,9 @@
    :init init/components
    :commits commits/components
    :jobs    jobs-dashboard/components
-   :project  project/components
+   :project      project/components
+   :project-new  project/components
+   :project-edit project/components
    :project-blob project-blob/components
    :project-branch project-branch/components
    :project-commit project-commit/components

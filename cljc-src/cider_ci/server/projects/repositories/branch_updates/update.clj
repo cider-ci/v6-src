@@ -6,6 +6,7 @@
   (:refer-clojure :exclude [str keyword update])
   (:require
    [cider-ci.server.db.core :refer [get-ds]]
+   [cider-ci.server.db.settings :refer [get-settings]]
    [cider-ci.server.projects.repositories.branch-updates.shared :refer :all]
    [cider-ci.server.projects.repositories.branches :as branches]
    [cider-ci.server.projects.repositories.git.repositories :as git.repositories]
@@ -113,7 +114,8 @@
                 (get-ds) repo-id commit-id (:name branch)
                 :repo-include   (:branch_trigger_include_match repository)
                 :repo-exclude   (:branch_trigger_exclude_match repository)
-                :repo-max-age   (:branch_trigger_max_commit_age repository)))))))))
+                :repo-max-age   (or (:branch_trigger_max_commit_age repository)
+                                    (:branch_trigger_max_commit_age_default (get-settings)))))))))))
 
 
 ;### Debug ####################################################################

@@ -67,7 +67,7 @@
 
 
 (defn- commit-within-age? [ds commit-id max-age]
-  (if (str/blank? max-age)
+  (if (nil? max-age)
     true
     (let [result (jdbc/execute-one! ds
                    ["SELECT committer_date IS NULL

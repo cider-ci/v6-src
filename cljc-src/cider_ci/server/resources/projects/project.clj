@@ -11,8 +11,8 @@
   (-> (sql/select
         :id :name :git_url
         :branch_trigger_include_match :branch_trigger_exclude_match
-        :branch_trigger_max_commit_age
-        :remote_fetch_interval
+        [[:raw "branch_trigger_max_commit_age::text"] :branch_trigger_max_commit_age]
+        [[:raw "remote_fetch_interval::text"] :remote_fetch_interval]
         :public_view_permission
         :created_at :updated_at)
       (sql/from :repositories)

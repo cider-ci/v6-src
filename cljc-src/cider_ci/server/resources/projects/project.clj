@@ -56,14 +56,12 @@
         git-url  (some-> body :git_url str/trim)
         include  (get body :branch_trigger_include_match)
         exclude  (get body :branch_trigger_exclude_match)
-        max-age  (some-> body :branch_trigger_max_commit_age str/trim)
-        interval (some-> body :remote_fetch_interval str/trim)]
+        max-age  (some-> body :branch_trigger_max_commit_age str/trim not-empty)
+        interval (some-> body :remote_fetch_interval str/trim not-empty)]
     (when (str/blank? name)
       (throw (ex-info "Name is required" {:status 422})))
     (when (str/blank? git-url)
       (throw (ex-info "Git URL is required" {:status 422})))
-    (when (and (some? max-age) (str/blank? max-age))
-      (throw (ex-info "branch_trigger_max_commit_age must not be blank" {:status 422})))
     (try
       (let [updates (cond-> {:name name :git_url git-url}
                       (some? include)  (assoc :branch_trigger_include_match include)

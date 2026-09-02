@@ -42,17 +42,17 @@
           [:dl.row.col-md-8
            [:dt.col-sm-4 "External base URL"]
            [:dd.col-sm-8
-            (if-let [u (:settings/external_base_url s)]
+            (if-let [u (:external_base_url s)]
               [:code u]
               [:span.text-muted "—"])]
            [:dt.col-sm-4 "Trial dispatch timeout"]
            [:dd.col-sm-8
-            (if-let [t (:settings/trial_dispatch_timeout s)]
+            (if-let [t (:trial_dispatch_timeout s)]
               [:code t]
               [:span.text-muted "default (30 minutes)"])]
            [:dt.col-sm-4 "Default max commit age"]
            [:dd.col-sm-8
-            (if-let [a (:settings/branch_trigger_max_commit_age_default s)]
+            (if-let [a (:branch_trigger_max_commit_age_default s)]
               [:code a]
               [:span.text-muted "no limit"])]]
           (when (-> @state/user* :is_admin)
@@ -76,9 +76,9 @@
          [:p "Loading..."]
          (let [s @_data*]
            (when (nil? @form*)
-             (reset! form* {:external_base_url                   (or (:settings/external_base_url s) "")
-                            :trial_dispatch_timeout               (or (:settings/trial_dispatch_timeout s) "")
-                            :branch_trigger_max_commit_age_default (or (:settings/branch_trigger_max_commit_age_default s) "")}))
+             (reset! form* {:external_base_url                   (or (:external_base_url s) "")
+                            :trial_dispatch_timeout               (or (:trial_dispatch_timeout s) "")
+                            :branch_trigger_max_commit_age_default (or (:branch_trigger_max_commit_age_default s) "")}))
            [:div.col-md-6
             [:form {:on-submit (fn [e] (.preventDefault e) (save! form*))}
              [:div.mb-3

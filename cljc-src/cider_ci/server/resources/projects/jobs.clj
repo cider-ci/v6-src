@@ -159,7 +159,7 @@
                         (-> (sql/select :id :name :state :created_at :spec)
                             (sql/from :tasks)
                             (sql/where [:= :job_id (:id job)])
-                            (sql/order-by [:created_at :asc])
+                            (sql/order-by [:name :asc])
                             sql-format)))]
       (assoc job :tasks tasks))))
 

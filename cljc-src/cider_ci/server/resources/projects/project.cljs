@@ -204,16 +204,18 @@
             [:h2 "Edit " (:name p)]
             [:form {:on-submit (fn [e] (.preventDefault e) (save-project! form*))}
              [:div.mb-3
-              [:label.form-label "Name"]
+              [:label.form-label {:html-for "name"} "Name"]
               [:input.form-control
-               {:type      "text"
+               {:id        "name"
+                :type      "text"
                 :required  true
                 :value     (:name @form*)
                 :on-change #(swap! form* assoc :name (.. % -target -value))}]]
              [:div.mb-3
-              [:label.form-label "Git URL"]
+              [:label.form-label {:html-for "git_url"} "Git URL"]
               [:input.form-control
-               {:type      "text"
+               {:id        "git_url"
+                :type      "text"
                 :required  true
                 :value     (:git_url @form*)
                 :on-change #(swap! form* assoc :git_url (.. % -target -value))}]]
@@ -276,24 +278,27 @@
        [:div.col-md-6
         [:form {:on-submit (fn [e] (.preventDefault e) (create-project! form*))}
          [:div.mb-3
-          [:label.form-label "Project ID"]
+          [:label.form-label {:html-for "id"} "Project ID"]
           [:input.form-control
-           {:type      "text"
+           {:id        "id"
+            :type      "text"
             :required  true
             :value     (:id @form*)
             :on-change #(swap! form* assoc :id (.. % -target -value))}]
           [:div.form-text "Unique identifier. Use lowercase letters, digits, and hyphens."]]
          [:div.mb-3
-          [:label.form-label "Name"]
+          [:label.form-label {:html-for "name"} "Name"]
           [:input.form-control
-           {:type      "text"
+           {:id        "name"
+            :type      "text"
             :required  true
             :value     (:name @form*)
             :on-change #(swap! form* assoc :name (.. % -target -value))}]]
          [:div.mb-3
-          [:label.form-label "Git URL"]
+          [:label.form-label {:html-for "git_url"} "Git URL"]
           [:input.form-control
-           {:type      "text"
+           {:id        "git_url"
+            :type      "text"
             :required  true
             :value     (:git_url @form*)
             :on-change #(swap! form* assoc :git_url (.. % -target -value))}]]

@@ -63,7 +63,7 @@ feature 'Project detail page' do
 
   scenario 'admin can edit project settings' do
     visit "/projects/#{@project_id}"
-    find('button', text: 'Edit settings').click
+    click_on 'Edit'
 
     fill_in 'Name', with: 'Renamed Project'
     click_button 'Save'

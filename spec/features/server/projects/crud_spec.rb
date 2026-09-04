@@ -11,7 +11,7 @@ feature 'Projects' do
     scenario 'can create a project' do
       visit '/'
       click_on 'Projects'
-      click_on 'Create'
+      click_on 'New Project'
       fill_in 'id', with: 'cider-ci-demo-project'
       fill_in 'name', with: 'Cider-CI Demo-Project'
       fill_in 'git_url', with: 'https://github.com/cider-ci/cider-ci_demo-project-bash.git'

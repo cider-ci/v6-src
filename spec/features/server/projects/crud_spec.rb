@@ -16,6 +16,8 @@ feature 'Projects' do
       fill_in 'name', with: 'Cider-CI Demo-Project'
       fill_in 'git_url', with: 'https://github.com/cider-ci/cider-ci_demo-project-bash.git'
       click_on 'Create'
+      expect(page).to have_current_path('/projects/cider-ci-demo-project', ignore_query: true)
+      visit '/projects/'
       wait_until(10) { tr_project('cider-ci-demo-project') }
     end
   end

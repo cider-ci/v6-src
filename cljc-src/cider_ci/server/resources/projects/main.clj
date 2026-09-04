@@ -18,7 +18,7 @@
                 (sql/values [data])
                 (sql/returning :*)
                 (sql-format)
-                (#(jdbc/execute-one! tx % {:return-keys true})))]
+                (#(jdbc/execute-one! tx %)))]
     (when-not (:id res)
       (throw (ex-info "Project creation failed" {:status 422})))
     res))

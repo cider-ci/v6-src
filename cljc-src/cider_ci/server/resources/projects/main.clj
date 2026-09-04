@@ -21,7 +21,7 @@
                 (#(jdbc/execute-one! tx %)))]
     (when-not (:id res)
       (throw (ex-info "Project creation failed" {:status 422})))
-    res))
+    {:body res}))
 
 
 (defn get-projects [tx]

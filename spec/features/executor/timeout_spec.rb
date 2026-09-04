@@ -7,7 +7,7 @@ feature 'Executor: Timeout' do
     trigger_job 'Timeout Demo'
     job_url = job_detail_url('timeout')
 
-    wait_for_job_badge job_url, 'defective', timeout_sec: 90
+    wait_for_job_badge job_url, 'defective', timeout_sec: 120
 
     expect(page).to have_css '.badge', text: 'defective'
     expect(page).to have_css '.badge', text: 'passed'

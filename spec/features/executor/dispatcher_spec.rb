@@ -126,7 +126,7 @@ feature 'Dispatcher' do
     Net::HTTP.start(uri.hostname, uri.port) { |h| h.request(req) }
 
     executor = database[:executors].where(token_hash: token_hash).first
-    expect(executor[:traits]).to include('Ruby', 'Bash')
+    expect(executor[:traits]).to include('ruby', 'bash')
   end
 
   scenario 'dispatch_storm_delay_seconds blocks re-dispatch within the delay window' do

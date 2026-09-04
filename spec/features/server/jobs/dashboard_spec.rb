@@ -43,7 +43,7 @@ feature 'Jobs Dashboard' do
 
   scenario 'filter by state shows only matching jobs' do
     visit '/jobs/'
-    find('select').select('failed')
+    find('#state-filter').find(:option, 'failed').select_option
     find('button', text: 'Filter').click
 
     expect(page).to have_css '.badge', text: 'failed'
@@ -83,6 +83,29 @@ feature 'Jobs Dashboard' do
   scenario 'shows empty message when no jobs match' do
     visit "/jobs/?state=aborted"
     expect(page).to have_content 'No jobs found.'
+  end
+
+  scenario 'filter icon next to project name sets project filter' do
+    visit '/jobs/'
+    within('tr', text: 'Test') do
+      find('button[title="Filter by this project"]').click
+    end
+    expect(page).to have_content 'Repo B'
+    expect(page).not_to have_content 'Repo A'
+  end
+
+  scenario 'sort dropdown changes URL to sort by latest trial' do
+    visit '/jobs/'
+    find('#sort-filter').find(:option, 'By latest trial').select_option
+    find('button', text: 'Filter').click
+    expect(page.current_url).to include('sort=trial')
+    expect(page).to have_css '.badge', text: 'passed'
+    expect(page).to have_css '.badge', text: 'failed'
+  end
+
+  scenario 'reload button is present' do
+    visit '/jobs/'
+    expect(page).to have_css('button[title="Reload"]')
   end
 
 end

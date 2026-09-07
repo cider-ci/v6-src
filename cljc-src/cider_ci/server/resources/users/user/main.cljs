@@ -217,12 +217,7 @@
   [:<>
    [:> bs/Navbar.Collapse {:class "justify-content-center"}
     (when-let [u @_data*]
-      [:<>
-       [:> bs/Nav.Item
-        [:> bs/Nav.Link {:href (user-url)} (:login u)]]
-       [:> bs/Nav.Item
-        [:> bs/Nav.Link {:class "btn btn-outline-secondary btn-sm"
-                         :href  (path :user-password {:user-id (:id u)})}
-         [icons/password] " Reset password"]]])]])
+      [:> bs/Nav.Item
+       [:> bs/Nav.Link {:href (user-url)} (:login u)]])]])
 
 (def components {:page page :center-nav center-nav})

@@ -62,8 +62,10 @@
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
    :sign-out #'sign-out/handler
-   :users #'users/handler
-   :user #'user/handler
+   :users    #'users/handler
+   :user-new #'users/handler
+   :user     #'user/handler
+   :user-edit #'user/handler
    :user-email-address #'user-email-addresses/handler
    :user-email-addresses #'user-email-addresses/handler
    :user-gpg-key  #'user-gpg-keys/handler

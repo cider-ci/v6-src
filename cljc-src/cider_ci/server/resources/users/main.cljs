@@ -16,14 +16,42 @@
 
 (defonce data* (reagent/atom {}))
 
-(defn user-emails [user]
-  (when-let [emails (:email_addresses user)]
-    [:span
+(defn- user-emails [user]
+  (when-let [emails (seq (:email_addresses user))]
+    [:<>
      (for [email (take 3 emails)]
        ^{:key email}
        [:div email])
      (when (> (count emails) 3)
        [:div.text-muted (str "and " (- (count emails) 3) " more")])]))
+
+(defn- user-row [user]
+  [:tr.user
+   {:style {:cursor "pointer"}
+    :on-click #(navigate! (path :user {:user-id (:id user)}))}
+   [:td.login (:login user)]
+   [:td.name (:name user)]
+   [:td.emails [user-emails user]]
+   [:td.admin
+    [:span.badge {:class (if (:is_admin user) "bg-danger" "bg-secondary")}
+     (if (:is_admin user) "Admin" "User")]]
+   [:td.has-password
+    [:span.badge {:class (if (:has_password user) "bg-success" "bg-secondary")}
+     (if (:has_password user) "Yes" "No")]]])
+
+(defn- users-table [users]
+  [:table.table.table-sm.table-striped.table-hover.users
+   [:thead
+    [:tr
+     [:th "Login"]
+     [:th "Name"]
+     [:th "Email Addresses"]
+     [:th "Admin"]
+     [:th "Has Password"]]]
+   [:tbody
+    (for [user users]
+      ^{:key (:id user)}
+      [user-row user])]])
 
 (defn users-component []
   [:div.users
@@ -31,39 +59,22 @@
    [state/hidden-routing-state-component
     :did-change #(http-client/route-cached-fetch
                    data* :reload true :reload-delay 500)]
-
    [:<> (when @state/debug?*
-          [:div.pre (with-out-str (pprint @data*))]
-          )]
-
+          [:div.pre (with-out-str (pprint @data*))])]
    (if-not (contains? @data* (:route @routing-state*))
      [:div "Spinner..."]
      (let [users (seq (get @data* (:route @routing-state*)))]
        (if-not users
          [:div "No users found."]
-         [:table.table.table-sm.table-striped.users
-          [:thead
-           [:tr
-            [:th "ID"]
-            [:th "Email Addresses"] 
-            [:th "Has Password"]]]
-          [:tbody
-           (for [user users]
-             ^{:key (:id user)}
-             [:tr.user
-              [:td.id (:id user)]
-              [:td.emails [user-emails user]]
-              [:td.has-password 
-               [:span.badge
-                {:class (if (:has_password user) "bg-success" "bg-secondary")}
-                (if (:has_password user) "Yes" "No")]]])]])))])
+         [users-table users])))])
 
 (defn page-nav []
   [:<>
-   [:> bs/Nav.Item
-    [:button.btn.btn-outline-primary.btn-sm
-     {:on-click #(navigate! (path :sign-in))}
-     [icons/sign-in] " Add user"]]])
+   (when (-> @state/user* :is_admin)
+     [:> bs/Nav.Item
+      [:button.btn.btn-outline-primary.btn-sm
+       {:on-click #(navigate! (path :user-new))}
+       [icons/create] " New User"]])])
 
 (defn page []
   [:div.page

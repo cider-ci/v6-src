@@ -57,9 +57,14 @@
    ["/" {:name :users
          :auth-http-safe #{:admin}
          :auth-http-unsafe #{:admin}}]
+   ["/new" {:name :user-new
+            :auth-http-safe #{:admin}}]
    ["/:user-id"
     ["" {:name :user
-         :auth-http-safe #{:self}}]
+         :auth-http-safe #{:self :admin}
+         :auth-http-unsafe #{:admin}}]
+    ["/edit" {:name :user-edit
+              :auth-http-safe #{:admin}}]
     ["/password" {:name :user-password
                   :auth-http-unsafe #{:self :admin}}]
     ["/email-addresses"

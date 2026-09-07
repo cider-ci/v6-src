@@ -51,8 +51,10 @@
    :trial        trials/components
    :projects projects/components
    :sign-in sign-in/components
-   :users users/components
-   :user user/components
+   :users    users/components
+   :user-new user/components
+   :user     user/components
+   :user-edit user/components
    :user-email-addresses user-email-addresses/components
    :user-gpg-key  user-gpg-keys/components
    :user-gpg-keys user-gpg-keys/components

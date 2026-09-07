@@ -75,7 +75,9 @@
      [:<>
       [:> bs/NavDropdown.Divider]
       [:> bs/NavDropdown.Item {:href (path :admin-settings)} "Settings"]
-      [:> bs/NavDropdown.Item {:href (path :admin-gpg-keys)} "GPG Keys"]])
+      [:> bs/NavDropdown.Item {:href (path :admin-gpg-keys)} "GPG Keys"]
+      [:> bs/NavDropdown.Item {:href (path :users)} "Users"]])
+   [:> bs/NavDropdown.Divider]
    [:> bs/NavDropdown.Item
     {:class "btn btn-warning"
      :on-click sign-out}

@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.users.user.gpg-keys
   (:require
+    [cider-ci.server.projects.repositories.commits :as repo-commits]
     [cider-ci.utils.core :refer [presence]]
     [cider-ci.utils.git-gpg :as git-gpg]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -46,6 +47,7 @@
               (jdbc/execute-one! tx (-> (sql/insert-into :gpg_keys)
                                         (sql/values [row])
                                         sql-format))
+              (repo-commits/retroactive-verify! tx ascii-key fingerprint user-id)
               (resp user-id tx)))
 
     :user-gpg-key
@@ -54,8 +56,13 @@
                                              (sql/where [:= :id [:cast gpg-key-id :uuid]])
                                              (sql-format {:inline false})))
                   {:status 404 :body "GPG key not found"})
-      :delete (do (jdbc/execute-one! tx (-> (sql/delete-from :gpg_keys)
-                                             (sql/where [:= :id [:cast gpg-key-id :uuid]])
-                                             (sql/where [:= :user_id [:cast user-id :uuid]])
-                                             sql-format))
-                  (resp user-id tx)))))
+      :delete (let [existing (jdbc/execute-one! tx (-> (keys-sql user-id)
+                                                        (sql/where [:= :id [:cast gpg-key-id :uuid]])
+                                                        (sql-format {:inline false})))]
+                (when-let [fp (:fingerprint existing)]
+                  (repo-commits/revoke-fingerprint! tx fp gpg-key-id))
+                (jdbc/execute-one! tx (-> (sql/delete-from :gpg_keys)
+                                           (sql/where [:= :id [:cast gpg-key-id :uuid]])
+                                           (sql/where [:= :user_id [:cast user-id :uuid]])
+                                           sql-format))
+                (resp user-id tx)))))

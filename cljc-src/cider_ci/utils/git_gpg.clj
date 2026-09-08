@@ -51,6 +51,13 @@
   (DatatypeConverter/printHexBinary
     (.getFingerprint k )))
 
+(defn decoded-signatures [ascii-signature]
+  "Decode PGP signature objects from an ASCII-armored signature string
+  (as stored in commits.signature — not the full cat-file output)."
+  (try
+    (->> ascii-signature pgp/decode-signatures seq)
+    (catch Exception _ nil)))
+
 (defn valid-signature-fingerprint [cat-file-commit ascii-key]
   (when-let [signatures (exctract-commit-signature cat-file-commit)]
     (let [pkeys (pub-keys ascii-key)

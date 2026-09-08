@@ -69,7 +69,10 @@
           [icons/password] " Reset password"]
          [:a.btn.btn-sm.btn-outline-secondary
           {:href (path :user-email-addresses {:user-id (user-id-param)})}
-          "Manage email addresses"]]
+          "Manage email addresses"]
+         [:a.btn.btn-sm.btn-outline-secondary
+          {:href (path :user-gpg-keys {:user-id (user-id-param)})}
+          "Manage GPG keys"]]
         (when (admin?)
           [:div.mt-3
            [:button.btn.btn-sm.btn-danger

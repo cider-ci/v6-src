@@ -22,6 +22,9 @@
 (defn- user-id []
   (-> @state/routing* :path-params :user-id))
 
+(defn- user-url []
+  (path :user {:user-id (user-id)}))
+
 (defn- key-url [gpg-key-id]
   (path :user-gpg-key {:user-id (user-id) :gpg-key-id gpg-key-id}))
 
@@ -93,7 +96,12 @@
 (defn page []
   [:div.page
    [state/hidden-routing-state-component :did-change #(fetch-data)]
-   [:h2 "My GPG keys"]
+   [:nav.mb-3
+    [:a {:href (path :users)} "Users"]
+    " / "
+    [:a {:href (user-url)} (user-id)]
+    " / GPG Keys"]
+   [:h2 "GPG keys"]
    [gpg-keys-list]
    [add-form]
    (when @state/debug?*

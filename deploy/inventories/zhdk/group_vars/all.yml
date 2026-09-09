@@ -26,7 +26,7 @@ ci_authorized_keys:
   - "CHANGE_ME your-public-key"
 
 # --- Reverse proxy / SSL -----------------------------------------------------
-ci_hostname: CHANGE_ME
-ci_ssl_certificate_file: CHANGE_ME   # e.g. /etc/ssl/certs/hostname.crt
-ci_ssl_certificate_key_file: CHANGE_ME   # e.g. /etc/ssl/private/hostname.key
+ci_hostname: ci.zhdk.cider-ci.com
+ci_ssl_certificate_file: /etc/ssl/certs/ci.zhdk.cider-ci.com.crt
+ci_ssl_certificate_key_file: /etc/ssl/private/ci.zhdk.cider-ci.com.key
 ci_force_redirect_to_https: true

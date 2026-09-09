@@ -1,5 +1,5 @@
 [cider_ci_server]
-ci.zhdk ansible_host=65.109.66.139
+ci.zhdk.cider-ci.com ansible_host=65.109.66.139
 
 [cider_ci_executors]
-ex01.ch.zhdk ansible_host=65.109.57.181
+ex01.ci.zhdk.cider-ci.com ansible_host=65.109.57.181

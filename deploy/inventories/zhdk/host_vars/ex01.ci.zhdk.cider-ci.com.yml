@@ -3,3 +3,4 @@ ci_executor_trait_mise: true
 ci_executor_trait_postgresql: true
 ci_executor_trait_stress_ng: true
 ci_executor_trait_git: true
+

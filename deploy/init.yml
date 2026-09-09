@@ -1,0 +1,192 @@
+---
+# Server initialisation — run once on a fresh Debian/Ubuntu host before
+# the main server.yml / executor.yml playbooks.
+#
+# Usage:
+#   .venv/bin/ansible-playbook -i deploy/inventories/production deploy/init.yml
+#
+# Required inventory variables (none have defaults):
+#   ci_ssh_port          — SSH port to open and configure (e.g. 22)
+#   ci_authorized_keys   — list of public key strings for root access
+#
+# Example host_vars entry:
+#   ci_ssh_port: 22
+#   ci_authorized_keys:
+#     - "ssh-ed25519 AAAA... user@host"
+
+- hosts: all
+  gather_facts: false
+  pre_tasks:
+    - name: Bootstrap Python 3
+      raw: |
+        apt-get -qq update
+        apt-get install -qq -y python3 python-is-python3
+
+- hosts: all
+  tasks:
+
+    - name: Install base packages
+      ansible.builtin.apt:
+        pkg: [file, curl]
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # Track changes in /etc in a local git repo
+    - name: Install etckeeper
+      ansible.builtin.apt:
+        name: etckeeper
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # Cloud VMs often omit this; causes broken SMTP and slow hostname lookups
+    - name: Ensure hostname is present in /etc/hosts
+      ansible.builtin.lineinfile:
+        dest: /etc/hosts
+        line: "127.0.0.1     {{ ansible_facts['hostname'] }}"
+
+    - name: vim
+      block:
+        - name: Install vim-nox
+          ansible.builtin.apt:
+            pkg: vim-nox
+            state: present
+            update_cache: yes
+            cache_valid_time: 3600
+
+        - name: Set vim-nox as default editor
+          ansible.builtin.command: update-alternatives --set editor /usr/bin/vim.nox
+          register: result
+          changed_when: result.stdout is search("using /usr/bin/vim\\.nox")
+
+        - name: Enable vi mode in bash
+          ansible.builtin.lineinfile:
+            dest: "{{ ansible_facts['env']['HOME'] }}/.bashrc"
+            line: set -o vi
+
+    # CI servers aggregate logs across timezones; UTC avoids ambiguity
+    - name: UTC timezone
+      block:
+        - name: Set UTC timezone
+          ansible.builtin.copy:
+            content: "Etc/UTC"
+            dest: /etc/timezone
+            owner: root
+            group: root
+            mode: '0644'
+          register: set_utc_timezone
+
+        - name: Reconfigure tzdata
+          ansible.builtin.command: dpkg-reconfigure --frontend noninteractive tzdata
+          when: set_utc_timezone.changed
+
+    # Debian/Ubuntu default forwards journal to syslog — doubles disk writes
+    - name: journald — disable ForwardToSyslog
+      block:
+        - name: Configure journald ForwardToSyslog=no
+          ansible.builtin.lineinfile:
+            dest: /etc/systemd/journald.conf
+            line: ForwardToSyslog=no
+            regexp: ForwardToSyslog
+          register: journald_config
+
+        - name: Reload systemd-journald
+          ansible.builtin.systemd:
+            name: systemd-journald
+            state: reloaded
+          when: journald_config.changed
+
+    # Without this, cron accumulates bounce mail when no MTA is configured
+    - name: Disable cron email notifications
+      ansible.builtin.copy:
+        dest: /etc/cron.d/00-disable-mailto
+        content: "MAILTO=\"\"\n"
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Firewall
+      block:
+        - name: Install ufw
+          ansible.builtin.apt:
+            name: ufw
+            state: present
+            update_cache: yes
+            cache_valid_time: 3600
+
+        - name: Disable ufw before reconfiguring rules
+          community.general.ufw:
+            state: disabled
+
+        - name: Allow SSH
+          community.general.ufw:
+            rule: allow
+            port: "{{ ci_ssh_port | string }}"
+
+        - name: Allow HTTP
+          community.general.ufw:
+            rule: allow
+            port: "80"
+
+        - name: Allow HTTPS
+          community.general.ufw:
+            rule: allow
+            port: "443"
+
+        - name: Default allow outgoing
+          community.general.ufw:
+            default: allow
+            direction: outgoing
+
+        - name: Default deny incoming
+          community.general.ufw:
+            default: deny
+            direction: incoming
+
+        - name: Disable ufw logging
+          community.general.ufw:
+            logging: "off"
+
+        - name: Enable ufw
+          community.general.ufw:
+            state: enabled
+
+    - name: SSH hardening
+      block:
+        - name: Set authorized keys (exclusive)
+          ansible.posix.authorized_key:
+            user: root
+            key: "{{ ci_authorized_keys | join('\n') }}"
+            state: present
+            exclusive: true
+
+        - name: Configure sshd via drop-in
+          ansible.builtin.copy:
+            dest: /etc/ssh/sshd_config.d/00-cider-ci.conf
+            content: |
+              Port {{ ci_ssh_port }}
+              PermitRootLogin yes
+              PasswordAuthentication no
+              AuthenticationMethods publickey
+            owner: root
+            group: root
+            mode: '0644'
+          register: sshd_config
+
+        - name: Validate sshd configuration
+          ansible.builtin.command: /usr/sbin/sshd -t
+          changed_when: false
+
+        # Remove weak DH parameters (< 3072 bits) to prevent Logjam-class attacks
+        - name: Remove short DH moduli
+          ansible.builtin.shell: >
+            awk '$5 >= 3071' /etc/ssh/moduli > /tmp/moduli &&
+            mv /tmp/moduli /etc/ssh/moduli
+          changed_when: false
+
+        - name: Reload sshd
+          ansible.builtin.service:
+            name: sshd
+            state: reloaded
+          when: sshd_config.changed

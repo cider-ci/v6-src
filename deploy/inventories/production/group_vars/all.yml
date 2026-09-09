@@ -22,6 +22,11 @@ ci_server_http_bind: "127.0.0.1"
 # --- Executor ----------------------------------------------------------------
 ci_executor_token: CHANGE_ME   # generate with: uuidgen
 
+# --- SSH (used by init.yml) --------------------------------------------------
+ci_ssh_port: 22
+ci_authorized_keys:
+  - "ssh-ed25519 CHANGE_ME your-key-comment"
+
 # --- Reverse proxy / SSL -----------------------------------------------------
 # Place your certificate and key on the target host before running the playbook.
 # Set ci_ssl_certificate_file to enable HTTPS; leave empty for HTTP-only.

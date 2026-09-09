@@ -17,6 +17,13 @@
     - rewrite
   notify: Reload apache2
 
+- name: Enable ssl module
+  community.general.apache2_module:
+    name: ssl
+    state: present
+  when: ci_ssl_certificate_file | length > 0
+  notify: Reload apache2
+
 - name: Disable default site
   ansible.builtin.command:
     cmd: a2dissite 000-default

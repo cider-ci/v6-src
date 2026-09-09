@@ -1,2 +1,6 @@
 ---
 ci_reverse_proxy_backend_port: "{{ ci_server_http_port }}"
+ci_hostname: ""               # ServerName for vhosts; empty = no ServerName
+ci_ssl_certificate_file: ""   # absolute path on target host; empty = HTTP-only
+ci_ssl_certificate_key_file: ""
+ci_force_redirect_to_https: false

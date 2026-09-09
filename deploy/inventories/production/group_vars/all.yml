@@ -1,0 +1,31 @@
+---
+ansible_user: root
+
+# --- Paths -------------------------------------------------------------------
+# Build the jar locally first: ./bin/cljs-release && clj -T:build-leihs uber
+ci_server_jar_path: "{{ playbook_dir }}/../target/cider-ci.jar"
+ci_executor_jar_path: "{{ playbook_dir }}/../target/cider-ci.jar"
+
+# --- Database ----------------------------------------------------------------
+ci_server_db_name: cider_ci_v6
+ci_db_password: CHANGE_ME
+
+# --- Initial admin account ---------------------------------------------------
+ci_admin_login: admin
+ci_admin_password: CHANGE_ME
+
+# --- Server ------------------------------------------------------------------
+ci_server_http_port: 3838
+# Bind to loopback only — Apache terminates SSL and proxies to this port
+ci_server_http_bind: "127.0.0.1"
+
+# --- Executor ----------------------------------------------------------------
+ci_executor_token: CHANGE_ME   # generate with: uuidgen
+
+# --- Reverse proxy / SSL -----------------------------------------------------
+# Place your certificate and key on the target host before running the playbook.
+# Set ci_ssl_certificate_file to enable HTTPS; leave empty for HTTP-only.
+ci_hostname: cider-ci.example.org
+ci_ssl_certificate_file: /etc/ssl/certs/cider-ci.crt
+ci_ssl_certificate_key_file: /etc/ssl/private/cider-ci.key
+ci_force_redirect_to_https: true

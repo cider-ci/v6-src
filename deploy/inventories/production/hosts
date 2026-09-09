@@ -1,0 +1,5 @@
+[cider_ci_server]
+# ci-server ansible_host=YOUR_SERVER_IP_OR_HOSTNAME
+
+[cider_ci_executors]
+# ci-executor ansible_host=YOUR_EXECUTOR_IP_OR_HOSTNAME

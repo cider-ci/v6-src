@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd ../../.. > /dev/null 2>&1 && pwd -P)"
+PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd ../../../.. > /dev/null 2>&1 && pwd -P)"
 "$PROJECT_DIR/.venv/bin/ansible-playbook" -i "$PROJECT_DIR/deploy/inventories/zhdk" "$PROJECT_DIR/deploy/init.yml" "$@"
 
 # vi: ft=sh

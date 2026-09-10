@@ -96,10 +96,10 @@
             regexp: ForwardToSyslog
           register: journald_config
 
-        - name: Reload systemd-journald
+        - name: Restart systemd-journald
           ansible.builtin.systemd:
             name: systemd-journald
-            state: reloaded
+            state: restarted
           when: journald_config.changed
 
     # Without this, cron accumulates bounce mail when no MTA is configured

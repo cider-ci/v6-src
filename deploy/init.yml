@@ -113,12 +113,25 @@
 
     - name: Firewall
       block:
-        - name: Install ufw
+        - name: Install ufw and iptables
           ansible.builtin.apt:
-            name: ufw
+            pkg: [ufw, iptables]
             state: present
             update_cache: yes
             cache_valid_time: 3600
+
+        # Hetzner (and some other cloud) kernels lack nf_tables support;
+        # iptables defaults to the nf_tables backend and ufw fails.
+        # Switch to the legacy backend before ufw touches the ruleset.
+        - name: Use iptables-legacy backend
+          ansible.builtin.alternatives:
+            name: iptables
+            path: /usr/sbin/iptables-legacy
+
+        - name: Use ip6tables-legacy backend
+          ansible.builtin.alternatives:
+            name: ip6tables
+            path: /usr/sbin/ip6tables-legacy
 
         - name: Disable ufw before reconfiguring rules
           community.general.ufw:

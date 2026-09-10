@@ -1,0 +1,44 @@
+---
+# Obtain or renew a Let's Encrypt certificate for ci_hostname via certbot.
+#
+# Prerequisites:
+#   - init.yml has run (port 80 open in ufw)
+#   - Apache is running (server.yml has run at least once in HTTP-only mode,
+#     or apache2 is installed and serving port 80)
+#   - ci_hostname resolves in public DNS to this host's IP
+#
+# After this playbook, re-run server.yml to activate the HTTPS vhost.
+#
+# Required inventory variables:
+#   ci_hostname         — FQDN to certify
+#   ci_certbot_email    — contact address for Let's Encrypt expiry notices
+
+- hosts: cider_ci_server
+  tasks:
+
+    - name: Install certbot and Apache plugin
+      ansible.builtin.apt:
+        pkg:
+          - certbot
+          - python3-certbot-apache
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # certbot certonly --apache handles the ACME HTTP-01 challenge via the
+    # running Apache instance without modifying the permanent vhost config.
+    # The --keep-until-expiring flag makes subsequent runs idempotent.
+    - name: Obtain / renew certificate
+      ansible.builtin.command: >
+        certbot certonly --apache
+        --non-interactive
+        --agree-tos
+        --keep-until-expiring
+        --email {{ ci_certbot_email }}
+        -d {{ ci_hostname }}
+      register: certbot_result
+      changed_when: "'no action taken' not in certbot_result.stdout"
+
+    - name: Show certbot output
+      ansible.builtin.debug:
+        msg: "{{ certbot_result.stdout_lines }}"

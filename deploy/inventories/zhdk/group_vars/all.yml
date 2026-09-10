@@ -27,6 +27,9 @@ ci_authorized_keys:
 
 # --- Reverse proxy / SSL -----------------------------------------------------
 ci_hostname: ci.zhdk.cider-ci.com
-ci_ssl_certificate_file: /etc/ssl/certs/ci.zhdk.cider-ci.com.crt
-ci_ssl_certificate_key_file: /etc/ssl/private/ci.zhdk.cider-ci.com.key
+ci_ssl_certificate_file: /etc/letsencrypt/live/ci.zhdk.cider-ci.com/fullchain.pem
+ci_ssl_certificate_key_file: /etc/letsencrypt/live/ci.zhdk.cider-ci.com/privkey.pem
 ci_force_redirect_to_https: true
+
+# --- Certbot (Let's Encrypt) -------------------------------------------------
+ci_certbot_email: Thomas.Schank@zhdk.ch

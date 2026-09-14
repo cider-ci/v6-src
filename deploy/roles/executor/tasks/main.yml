@@ -150,10 +150,13 @@
   become_user: "{{ ci_executor_exec_user }}"
   register: mise_install_result
   changed_when: "'installed' in mise_install_result.stderr"
+  # Ruby 3.1.x fails to build on Debian 13 (ruby-build tries to compile OpenSSL 3.0.x
+  # from source, which fails with Trixie's toolchain). Executor core only needs Java.
+  ignore_errors: true
 
-- name: Install geckodriver for aarch64 from GitHub releases
+- name: Install geckodriver for x86_64 from GitHub releases
   ansible.builtin.unarchive:
-    src: "https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux-aarch64.tar.gz"
+    src: "https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz"
     dest: "/usr/local/bin"
     remote_src: yes
     mode: '0755'

@@ -23,7 +23,7 @@
         db: "{{ ci_server_db_name }}"
         query: |
           INSERT INTO executors (name, token_hash, token_part, max_load, traits, enabled)
-          VALUES ('trixie2',
+          VALUES ('{{ ci_executor_name | default("trixie2") }}',
                   encode(sha256(%(token)s::bytea), 'hex'),
                   substring(%(token)s, 1, 8),
                   4.0, '{bash}', true)

@@ -7,18 +7,18 @@ ci_executor_jar_path: "{{ playbook_dir }}/../target/cider-ci.jar"
 
 # --- Database ----------------------------------------------------------------
 ci_server_db_name: cider_ci_v6
-ci_db_password: CHANGE_ME
+# ci_db_password — defined in secrets.yml (transcrypt-encrypted)
 
 # --- Initial admin account ---------------------------------------------------
 ci_admin_login: admin
-ci_admin_password: CHANGE_ME
+# ci_admin_password — defined in secrets.yml (transcrypt-encrypted)
 
 # --- Server ------------------------------------------------------------------
 ci_server_http_port: 3838
 ci_server_http_bind: "127.0.0.1"
 
 # --- Executor ----------------------------------------------------------------
-ci_executor_token: CHANGE_ME   # generate with: uuidgen
+# ci_executor_token — defined in secrets.yml (transcrypt-encrypted)
 
 # --- SSH (used by init.yml) --------------------------------------------------
 ci_ssh_port: 22

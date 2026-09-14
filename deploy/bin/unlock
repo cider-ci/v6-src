@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEPLOY_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
+
+TRANSCRYPT_KEY=$(gpg -d -q "$DEPLOY_DIR/.transcrypt_key.txt.asc")
+
+transcrypt -y -c aes-256-cbc -p "${TRANSCRYPT_KEY}" --force
+
+# vi: ft=sh

@@ -26,8 +26,10 @@
           VALUES ('{{ ci_executor_name | default("trixie2") }}',
                   encode(sha256(%(token)s::bytea), 'hex'),
                   substring(%(token)s, 1, 8),
-                  4.0, '{bash}', true)
-          ON CONFLICT DO NOTHING;
+                  {{ ci_executor_max_load | default(4) }}, '{bash}', true)
+          ON CONFLICT (token_hash) DO UPDATE
+            SET max_load = EXCLUDED.max_load,
+                name     = EXCLUDED.name;
 
           INSERT INTO repositories (id, name, git_url)
           VALUES ('cider-ci-demo-project', 'Demo Project',

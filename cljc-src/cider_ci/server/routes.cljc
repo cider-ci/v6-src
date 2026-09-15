@@ -182,6 +182,11 @@
                  :auth-http-unsafe #{:public}
                  :auth-http-safe #{:public}}]
    users
+   ["/projects/push-notification/:token"
+    {:name             :project-push-notification
+     :bypass-spa       true
+     :auth-http-safe   #{:public}
+     :auth-http-unsafe #{:public}}]
    workspace
    jobs-dashboard])
 

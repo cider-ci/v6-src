@@ -110,6 +110,10 @@
         bg    (case state "ok" "bg-success" "bg-warning")]
     [:span.badge {:class bg} (or state "unknown")]))
 
+(defn- push-webhook-url [token]
+  (str js/window.location.origin
+       (path :project-push-notification {:token (str token)})))
+
 (defn- project-metadata []
   (let [p @_data*]
     [:dl.row
@@ -132,7 +136,13 @@
         [:dt.col-sm-3 "Max commit age"] [:dd.col-sm-9 [:code (:branch_trigger_max_commit_age p)]]])
      (when (:remote_fetch_interval p)
        [:<>
-        [:dt.col-sm-3 "Fetch interval"] [:dd.col-sm-9 [:code (:remote_fetch_interval p)]]])]))
+        [:dt.col-sm-3 "Fetch interval"] [:dd.col-sm-9 [:code (:remote_fetch_interval p)]]])
+     (when (and (-> @state/user* :is_admin) (:update_notification_token p))
+       [:<>
+        [:dt.col-sm-3 "Push webhook URL"]
+        [:dd.col-sm-9
+         [:code.text-break (push-webhook-url (:update_notification_token p))]
+         [:div.form-text "POST to this URL to trigger an immediate fetch (e.g. from a GitHub/GitLab webhook)."]]])]))
 
 (defn- detail-page []
   (fn []

@@ -10,6 +10,7 @@
 (defn- repository-sql [project-id]
   (-> (sql/select
         :id :name :git_url
+        :update_notification_token
         :branch_trigger_include_match :branch_trigger_exclude_match
         [[:raw "branch_trigger_max_commit_age::text"] :branch_trigger_max_commit_age]
         [[:raw "remote_fetch_interval::text"] :remote_fetch_interval]

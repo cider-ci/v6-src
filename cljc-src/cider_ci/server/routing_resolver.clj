@@ -12,6 +12,7 @@
     [cider-ci.server.resources.projects.commit :as project-commit]
     [cider-ci.server.resources.projects.configuration :as project-configuration]
     [cider-ci.server.resources.projects.fetch :as project-fetch]
+    [cider-ci.server.resources.projects.push-notification :as project-push-notification]
     [cider-ci.server.projects.repositories.http-backend :as project-git]
     [cider-ci.server.resources.projects.jobs :as project-jobs]
     [cider-ci.server.resources.projects.main :as projects]
@@ -52,6 +53,7 @@
    :project-commit #'project-commit/handler
    :project-commit-configuration #'project-configuration/handler
    :project-fetch #'project-fetch/handler
+   :project-push-notification #'project-push-notification/handler
    :project-git   #'project-git/http-handler
    :project-jobs            #'project-jobs/handler
    :project-job             #'project-jobs/handler

@@ -4,7 +4,7 @@
     [cider-ci.server.projects.repositories.sql.repository :refer [get-repository-by-update-notification-token]]
     [cider-ci.server.projects.repositories.state.main :as state]))
 
-(defn handler [{{token :token} :path-params request-method :request-method}]
+(defn handler [{{{token :token} :path-params} :route request-method :request-method}]
   (if (= request-method :post)
     (if-let [repo (get-repository-by-update-notification-token token)]
       (do

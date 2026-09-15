@@ -114,12 +114,29 @@
   (str js/window.location.origin
        (path :project-push-notification {:token (str token)})))
 
+(defn- remote-hooks-url [git-url]
+  (when git-url
+    (cond
+      (re-find #"github\.com" git-url)
+      (when-let [[_ owner repo] (re-find #"github\.com[/:]([^/]+)/([^/\.]+)" git-url)]
+        {:label "GitHub webhook settings"
+         :url   (str "https://github.com/" owner "/" repo "/settings/hooks/")})
+      (re-find #"gitlab\.com" git-url)
+      (when-let [[_ owner repo] (re-find #"gitlab\.com[/:]([^/]+)/([^/\.]+)" git-url)]
+        {:label "GitLab webhook settings"
+         :url   (str "https://gitlab.com/" owner "/" repo "/-/hooks")}))))
+
+(defn- git-url-cell [git-url]
+  (if (re-find #"^https?://" (or git-url ""))
+    [:a {:href git-url :target "_blank" :rel "noopener noreferrer"} git-url]
+    [:code git-url]))
+
 (defn- project-metadata []
   (let [p @_data*]
     [:dl.row
      [:dt.col-sm-3 "ID"]      [:dd.col-sm-9 [:code (:id p)]]
      [:dt.col-sm-3 "Name"]    [:dd.col-sm-9 (:name p)]
-     [:dt.col-sm-3 "Git URL"] [:dd.col-sm-9 [:code (:git_url p)]]
+     [:dt.col-sm-3 "Git URL"] [:dd.col-sm-9 [git-url-cell (:git_url p)]]
      [:dt.col-sm-3 "Fetch state"]
      [:dd.col-sm-9
       [fetch-status-badge (:fetch-and-update p)]
@@ -138,11 +155,17 @@
        [:<>
         [:dt.col-sm-3 "Fetch interval"] [:dd.col-sm-9 [:code (:remote_fetch_interval p)]]])
      (when (and (-> @state/user* :is_admin) (:update_notification_token p))
-       [:<>
-        [:dt.col-sm-3 "Push webhook URL"]
-        [:dd.col-sm-9
-         [:code.text-break (push-webhook-url (:update_notification_token p))]
-         [:div.form-text "POST to this URL to trigger an immediate fetch (e.g. from a GitHub/GitLab webhook)."]]])]))
+       (let [hooks-link (remote-hooks-url (:git_url p))
+             webhook    (push-webhook-url (:update_notification_token p))]
+         [:<>
+          [:dt.col-sm-3 "Push webhook URL"]
+          [:dd.col-sm-9
+           [:code.text-break webhook]
+           (when hooks-link
+             [:span.ms-2
+              [:a {:href (:url hooks-link) :target "_blank" :rel "noopener noreferrer"}
+               (:label hooks-link)]])
+           [:div.form-text "POST to this URL to trigger an immediate fetch on push."]]]))]))
 
 (defn- detail-page []
   (fn []

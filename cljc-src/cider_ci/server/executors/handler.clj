@@ -168,8 +168,12 @@
                 {{:keys [trial-id attachment-path]} :path-params} :route
                 :as request}]
   (let [auth-header      (get headers "authorization")
-        public-scheme    (or (some-> headers (get "x-forwarded-proto") keyword) scheme :http)
-        default-port?    (or (and (= public-scheme :https) (= server-port 443))
+        forwarded-proto  (some-> headers (get "x-forwarded-proto") keyword)
+        public-scheme    (or forwarded-proto scheme :http)
+        ; When behind a proxy, trust the proxy owns the port mapping — omit it.
+        ; Without a proxy, omit port only when it matches the scheme default.
+        default-port?    (or (some? forwarded-proto)
+                             (and (= public-scheme :https) (= server-port 443))
                              (and (= public-scheme :http)  (= server-port 80)))
         server-base-url  (str (name public-scheme) "://" server-name
                               (when-not default-port? (str ":" server-port)))]

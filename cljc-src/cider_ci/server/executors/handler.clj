@@ -168,7 +168,11 @@
                 {{:keys [trial-id attachment-path]} :path-params} :route
                 :as request}]
   (let [auth-header      (get headers "authorization")
-        server-base-url  (str (name (or scheme :http)) "://" server-name ":" server-port)]
+        public-scheme    (or (some-> headers (get "x-forwarded-proto") keyword) scheme :http)
+        default-port?    (or (and (= public-scheme :https) (= server-port 443))
+                             (and (= public-scheme :http)  (= server-port 80)))
+        server-base-url  (str (name public-scheme) "://" server-name
+                              (when-not default-port? (str ":" server-port)))]
     (if-let [executor (auth/find-executor tx auth-header)]
       (case route-name
         :executor-sync

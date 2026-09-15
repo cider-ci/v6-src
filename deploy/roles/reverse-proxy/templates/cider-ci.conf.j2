@@ -38,6 +38,8 @@
 
     Header always set Strict-Transport-Security "max-age=63072000"
 
+    RequestHeader set X-Forwarded-Proto "https"
+
     ProxyPass        / http://localhost:{{ ci_reverse_proxy_backend_port }}/ nocanon retry=0
     ProxyPassReverse / http://localhost:{{ ci_reverse_proxy_backend_port }}/
 

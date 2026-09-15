@@ -25,7 +25,7 @@
 (defn get-repository-by-update-notification-token [token]
   (catcher/snatch
     {}
-    (->> ["SELECT * from repositories WHERE update_notification_token = ?" token]
+    (->> ["SELECT * from repositories WHERE update_notification_token = CAST(? AS uuid)" token]
          (query (get-ds)) first )))
 
 

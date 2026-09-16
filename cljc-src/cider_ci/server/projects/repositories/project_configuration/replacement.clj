@@ -6,7 +6,6 @@
   (:require
     [cider-ci.server.projects.repositories.project-configuration.shared :refer :all]
     [clojure.data.json :as json]
-    [logbug.catcher :as catcher]
     ))
 
 (defn check-read-and-repace-spec! [read-and-replace-spec spec]

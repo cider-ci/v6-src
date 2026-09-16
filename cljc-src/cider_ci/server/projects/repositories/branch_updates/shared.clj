@@ -8,7 +8,6 @@
   (:require
     [cider-ci.server.projects.repositories.branch-updates.db-schema :as db-schema]
     [cider-ci.server.projects.repositories.state.main :as state]
-    [logbug.debug :as debug]
     [tick.core :refer [now]]
     [schema.core :as schema]))
 

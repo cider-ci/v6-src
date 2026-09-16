@@ -12,9 +12,6 @@
     [clojure.core.memoize :as memo]
     [clojure.data.json :as json]
     [clojure.tools.logging :as logging]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
-    [logbug.thrown :as thrown]
     [ring.util.response :refer [charset]]
     ))
 

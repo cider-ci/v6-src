@@ -16,7 +16,6 @@
     [cider-ci.server.projects.repositories.state.shared :refer [update-rows-in-db]]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :as daemon :refer [defdaemon]]
-    [logbug.debug :as debug]
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [debug info warn error spy]]))
 

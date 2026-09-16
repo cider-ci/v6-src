@@ -6,7 +6,6 @@
   (:refer-clojure :exclude [str keyword])
   (:require [cider-ci.utils.core :refer [keyword str]])
   (:require
-    [logbug.thrown :as thrown]
     [cider-ci.utils.system :as system]
     ))
 

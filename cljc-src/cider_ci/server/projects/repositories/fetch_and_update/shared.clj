@@ -5,7 +5,6 @@
    [cider-ci.server.projects.repositories.state.main :as state]
    [cider-ci.utils.core :refer [keyword str]]
    [taoensso.timbre :as timbre :refer [debug info]]
-   [logbug.debug :as debug]
    [schema.core :as schema]
    [tick.core :as tick]))
 

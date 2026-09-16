@@ -14,7 +14,6 @@
     [clj-time.core :as time-core]
     [clj-time.format :as time-format]
     [clojure.string :as string :refer [split]]
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 

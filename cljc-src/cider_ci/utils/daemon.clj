@@ -4,7 +4,6 @@
 
 (ns cider-ci.utils.daemon
   (:require
-    [logbug.catcher :as catcher]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -26,9 +25,10 @@
                runner# (future (info "daemon " ~daemon-name " started")
                                (loop []
                                  (when-not @done#
-                                   (catcher/snatch {:throwable Throwable}
+                                   (try
                                      ~@body
-                                     (Thread/sleep (long (Math/ceil (* ~secs-pause 1000)))))
+                                     (Thread/sleep (long (Math/ceil (* ~secs-pause 1000))))
+                                     (catch Throwable _))
                                    (recur))))]
            (reset! ~stop (fn []
                            (reset! done# true)

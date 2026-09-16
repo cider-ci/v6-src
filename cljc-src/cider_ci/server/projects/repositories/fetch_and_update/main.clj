@@ -9,8 +9,6 @@
     [cider-ci.server.projects.repositories.state.main :as state]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error]]
     [tick.core :refer [now]])
   (:import
@@ -34,10 +32,10 @@
 (defn execute-fetch-and-update [repository]
   (let [id (:id repository)]
     (locking (str "fetch-and-update-lock_" id)
-      (catcher/snatch
-        {:return-fn (fn [e] (catch-fetch-and-update-exception e repository))}
+      (try
         (fetch/fetch repository)
-        (branch-updates/update repository)))))
+        (branch-updates/update repository)
+        (catch Throwable e (catch-fetch-and-update-exception e repository))))))
 
 (defn- submit-pending-repositories []
   (doseq [repository (map second (:repositories (state/get-db)))]

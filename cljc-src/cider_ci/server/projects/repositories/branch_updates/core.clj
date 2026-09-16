@@ -10,8 +10,6 @@
     [cider-ci.server.projects.repositories.branch-updates.update :as update]
     [cider-ci.server.projects.repositories.shared :refer :all]
     [cider-ci.server.projects.repositories.state.main :as state]
-    [logbug.debug :as debug]
-    [logbug.catcher :as catcher]
     [cider-ci.utils.core :refer [keyword str]]
     [cider-ci.utils.daemon :refer [defdaemon]]
     [taoensso.timbre :refer [debug info warn error]]
@@ -37,9 +35,8 @@
 (defn- execute-update-branches [repository]
   (let [id (:id repository)]
     (locking (str "fetch-and-update-lock_" id)
-      (catcher/snatch
-        {:return-fn #(catch-branch-updates-exception % repository)}
-        (update/update repository))
+      (try (update/update repository)
+           (catch Throwable e (catch-branch-updates-exception e repository)))
       (comment (try
                  (update/update repository)
                  (catch Exception e

@@ -4,7 +4,6 @@
     [cider-ci.utils.daemon :as daemon :refer [defdaemon]]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
-    [logbug.thrown :as thrown]
     [next.jdbc :as jdbc]
     [clojure.core.memoize :as memoize]
     [tick.core :refer [now]]

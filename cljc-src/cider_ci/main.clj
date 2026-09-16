@@ -9,9 +9,6 @@
     [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
-    [logbug.thrown :as thrown]
     [taoensso.timbre :refer [debug info warn error]])
   (:gen-class))
 

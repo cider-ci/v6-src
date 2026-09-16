@@ -8,7 +8,6 @@
     [clojure.string :refer [upper-case]]
     [clojure.tools.logging :as logging :refer [debug info]]
     [environ.core :refer [env]]
-    [logbug.catcher :as catcher]
     [nrepl.server :as nrepl-server :refer [start-server stop-server]]
     ))
 

@@ -8,7 +8,6 @@
     [cider-ci.server.projects.repositories.commits :as commits]
     [cider-ci.server.projects.repositories.sql.branches :as sql.branches]
     [cider-ci.utils.core :refer [keyword str]]
-    [logbug.debug :as debug]
     [next.jdbc.sql :refer [insert! query update!]]
     [taoensso.timbre :refer [debug info warn error spy]]))
 

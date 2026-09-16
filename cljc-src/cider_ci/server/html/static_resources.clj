@@ -2,7 +2,6 @@
   (:require
     [clojure.core.memoize :as memoize]
     [digest]
-    [logbug.debug :as debug]
     [ring.middleware.resource :as resource]
     [ring.util.codec :as codec]
     [ring.util.request :as request]
@@ -126,7 +125,3 @@
 
 
 
-;#### debug ###################################################################
-;(debug/debug-ns 'cider-ci.utils.shutdown)
-;(debug/debug-ns *ns*)
-;(logbug.debug/wrap-with-log-debug #'resource)

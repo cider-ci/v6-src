@@ -13,8 +13,6 @@
     [clojure.data.json :as json]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :as jdbc-sql]
     [taoensso.timbre :refer [debug info warn error]]
@@ -95,27 +93,26 @@
 ;##############################################################################
 
 (defn parse-path-content [path content]
-  (catcher/with-logging {}
-    (let [path (clojure.string/lower-case path)]
-      (try
-        (cond
-          (re-matches #".*(yml|yaml)" path) (yaml/parse-string content)
-          (re-matches #".*json" path) (json/read-str content :key-fn keyword)
-          :else (throw (ex-info "Project Configuration Parse Error"
-                                {:status 422
-                                 :title "Project Configuration Parse Error"
-                                 :description
-                                 (str "Only YAML and JSON documents are allowed. "
-                                      "The project configuration requested to parse "
-                                      path)})))
-        (catch Exception e
-          (throw (ex-info "Project Configuration Parse Error"
-                          {:status 422
-                           :title "Project Configuration Parse Error"
-                           :description
-                           (str "Parser error for file " path ". \n"
-                                "The original error message is: "
-                                (.getMessage e))})))))))
+  (let [path (clojure.string/lower-case path)]
+    (try
+      (cond
+        (re-matches #".*(yml|yaml)" path) (yaml/parse-string content)
+        (re-matches #".*json" path) (json/read-str content :key-fn keyword)
+        :else (throw (ex-info "Project Configuration Parse Error"
+                              {:status 422
+                               :title "Project Configuration Parse Error"
+                               :description
+                               (str "Only YAML and JSON documents are allowed. "
+                                    "The project configuration requested to parse "
+                                    path)})))
+      (catch Exception e
+        (throw (ex-info "Project Configuration Parse Error"
+                        {:status 422
+                         :title "Project Configuration Parse Error"
+                         :description
+                         (str "Parser error for file " path ". \n"
+                              "The original error message is: "
+                              (.getMessage e))})))))
 
 (defn find-repo-for-id! [git-id]
   (or (projects.core/resolve-project git-id)

@@ -9,7 +9,6 @@
     [next.jdbc.sql :refer [insert! query]]
     [clojure.java.jdbc :as jdbc]
     [cider-ci.server.db.core :as db]
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 

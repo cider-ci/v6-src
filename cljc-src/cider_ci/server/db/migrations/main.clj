@@ -10,7 +10,6 @@
     [environ.core :refer [env]]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :as jdbc-sql]
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 

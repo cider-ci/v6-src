@@ -8,7 +8,6 @@
     [cider-ci.utils.core :refer [keyword str]]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
-    [logbug.debug :as debug]
     [next.jdbc :as jdbc]
     [next.jdbc.sql :refer [insert! query update!]]
     [taoensso.timbre :refer [debug info warn error spy]]

@@ -7,8 +7,6 @@
   (:require
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.utils.core :refer [keyword str]]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
     [next.jdbc.sql :refer [insert! query update!]]
     ))
 
@@ -23,10 +21,10 @@
                       " WHERE (commits.id = ? OR commits.tree_id = ?)") id id])))
 
 (defn get-repository-by-update-notification-token [token]
-  (catcher/snatch
-    {}
+  (try
     (->> ["SELECT * from repositories WHERE update_notification_token = CAST(? AS uuid)" token]
-         (query (get-ds)) first )))
+         (query (get-ds)) first)
+    (catch Throwable _ nil)))
 
 
 ;#### debug ###################################################################

@@ -4,7 +4,6 @@
 
 (ns cider-ci.server.projects.repositories.state.db
   (:require
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 

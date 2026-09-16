@@ -8,19 +8,17 @@
    [cider-ci.utils.duration :as duration]
    [tick.core :as tick]
    [clojure.java.jdbc :as jdbc]
-   [taoensso.timbre :as timbre :refer [debug info]]
-   [logbug.catcher :as catcher :refer [snatch]]
-   [logbug.debug :as debug]))
+   [taoensso.timbre :as timbre :refer [debug info]]))
 
 (declare start-fetch-and-update-repositories)
 
 ;### update repository ########################################################
 
 (defn- git-fetch-and-update-interval [repository]
-  (let [secs (snatch
-              {:return-expr 60}
-              (duration/parse-string-to-seconds
-               (:remote_fetch_interval repository)))]
+  (let [secs (try
+               (duration/parse-string-to-seconds
+                (:remote_fetch_interval repository))
+               (catch Throwable _ 60))]
     (tick/new-duration secs :seconds)))
 
 (defn last-succeeded-or-failed-fetch-at

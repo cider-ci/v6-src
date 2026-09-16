@@ -12,8 +12,6 @@
         hiccup/hiccup {:mvn/version "2.0.0"}
         http-kit/http-kit {:mvn/version "2.8.1"}
         lambdaisland/uri {:mvn/version "1.19.155"}
-        logbug/logbug {;:mvn/version "5.0.0"
-                       :local/root "../../CLOJURE/logbug"}
         me.raynes/fs {:mvn/version "1.4.6"}
         metosin/reitit {:mvn/version "0.10.0"}
         mvxcvi/clj-pgp {:mvn/version "1.2.0"}

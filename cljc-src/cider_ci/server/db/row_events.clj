@@ -4,8 +4,6 @@
     [cider-ci.utils.uuid :refer [uuid]]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
-    [logbug.catcher :as catcher :refer [snatch]]
-    [logbug.debug :as debug :refer [I> I>> identity-with-logging]]
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [debug info warn error spy]]
     [tick.core :as tick]
@@ -28,7 +26,7 @@
            (when-let [last-row (-> table-name last-processed-row-query
                                    (sql-format)
                                    (#(jdbc/execute-one! (get-ds) %)))]
-             (let [ok? (snatch {:return-expr false} (row-handler last-row) true)]
+             (let [ok? (try (row-handler last-row) true (catch Throwable _ false))]
                (when ok? last-row))))))
 
 
@@ -63,7 +61,7 @@
                         (sql-format :inline false))
                     (jdbc/execute! (get-ds))
                     (reduce (fn [last-ok row]
-                              (let [ok? (snatch {:return-expr false} (row-handler row) true)]
+                              (let [ok? (try (row-handler row) true (catch Throwable _ false))]
                                 (if ok? row last-ok)))
                             nil))
                last-processed-row))))

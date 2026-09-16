@@ -9,8 +9,6 @@
     [cider-ci.server.projects.repositories.state.repositories :as state.repositories]
     [cider-ci.utils.core :refer [keyword str]]
     [tick.core :refer [now]]
-    [logbug.catcher :as catcher :refer [snatch]]
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 

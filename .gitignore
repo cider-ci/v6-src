@@ -8,6 +8,7 @@
 /data
 /log
 /node_modules
+/cider-ci/public/
 /resources/cider-ci/public/css/
 /resources/cider-ci/public/js/
 /target

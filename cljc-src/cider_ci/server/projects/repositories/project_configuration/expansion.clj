@@ -7,8 +7,7 @@
    [cider-ci.server.projects.repositories.project-configuration.replacement :as replacement]
    [cider-ci.server.projects.repositories.project-configuration.shared :refer [get-content parse-path-content resolve-submodule-git-ref]]
    [cider-ci.utils.core :refer [deep-merge]]
-   [logbug.debug :as debug :refer [I> I>> identity-with-logging]]
-   [logbug.catcher :as catcher]))
+   [taoensso.timbre :refer [warn]]))
 
 
 (defn- get-include-content-for-path [git-ref-id path]
@@ -76,17 +75,17 @@
 ;### expand ###################################################################
 
 (defn expand [git-ref-id spec]
-  (catcher/with-logging {}
+  (try
     (cond
-      (map? spec) (I>> identity-with-logging
-                       spec
+      (map? spec) (->> spec
                        (include-maps git-ref-id)
                        (replacement/read-and-replace git-ref-id))
       (coll? spec) (->> spec
                         (map #(if (coll? %)
                                 (expand git-ref-id %)
                                 %)))
-      :else spec)))
+      :else spec)
+    (catch Throwable e (warn e))))
 
 
 ;### Debug ####################################################################

@@ -4,7 +4,6 @@
     [madek.media-service.authentication.token :refer [find-token-secret-in-header]]
     [madek.media-service.utils.core :refer [keyword presence str]]
     [madek.media-service.utils.http.shared :refer [ANTI_CRSF_TOKEN_COOKIE_NAME HTTP_UNSAFE_METHODS HTTP_SAFE_METHODS]]
-    [logbug.debug]
     )
   (:import
     [java.util UUID]
@@ -56,4 +55,3 @@
   (fn [request]
     (anti-csrf-middleware handler request)))
 
-(logbug.debug/debug-ns *ns*)

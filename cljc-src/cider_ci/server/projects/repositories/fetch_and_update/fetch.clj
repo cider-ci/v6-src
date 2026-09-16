@@ -5,7 +5,6 @@
    [cider-ci.server.projects.repositories.fetch-and-update.shared :refer [git-url db-update-fetch-and-update]]
    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
    [cider-ci.utils.system :as system]
-   [logbug.debug :as debug]
    [me.raynes.fs :as fs]
    [taoensso.timbre :as timbre :refer [debug info]]
    [tick.core :as tick]))

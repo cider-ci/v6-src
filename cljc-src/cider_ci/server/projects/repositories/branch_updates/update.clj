@@ -16,7 +16,6 @@
    [cider-ci.utils.system :as system]
    [honey.sql :refer [format] :rename {format sql-format}]
    [honey.sql.helpers :as sql]
-   [logbug.debug :as debug :refer [I> I>> identity-with-logging]]
    [next.jdbc :as jdbc]
    [clojure.string]
    [tick.core :refer [now]]
@@ -47,9 +46,7 @@
 ;### branches #################################################################
 
 (defn- get-git-branches [repository-path]
-  (I>> identity-with-logging
-       (->
-       ; I> identity-with-logging
+  (->> (->
         (system/exec!
          ["git" "branch" "--list" "--no-abbrev" "--no-color" "-v"]
          {:timeout "1 Minutes", :dir repository-path, :add-env {"TERM" "VT-100"}})

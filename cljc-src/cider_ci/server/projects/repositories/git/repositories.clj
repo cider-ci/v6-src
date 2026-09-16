@@ -10,8 +10,6 @@
     [cider-ci.utils.system :as system]
     [clojure.core.memoize :as memo]
     [clojure.string :as string :refer [blank? split trim]]
-    [logbug.catcher :as catcher]
-    [logbug.debug :as debug]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:import
     [java.io File]))
@@ -58,19 +56,18 @@
                          (-> wrapped-exec deref :exception)))))))
 
 (defn- ls-tree_unmemoized [repository id include-regex exclude-regex]
-  (catcher/with-logging {}
-    (->> (-> (system/exec!
-               ["git" "ls-tree" "-r" "--name-only" id]
-               {:dir (repository-fs-path repository)})
-             :out
-             (split #"\n"))
-         (map trim)
-         (filter #(and include-regex
-                       (not (clojure.string/blank? include-regex))
-                       (re-find (re-pattern include-regex) %)))
-         (filter #(or (not exclude-regex)
-                      (clojure.string/blank? exclude-regex)
-                      (not (re-find (re-pattern exclude-regex) %)))))))
+  (->> (-> (system/exec!
+             ["git" "ls-tree" "-r" "--name-only" id]
+             {:dir (repository-fs-path repository)})
+           :out
+           (split #"\n"))
+       (map trim)
+       (filter #(and include-regex
+                     (not (clojure.string/blank? include-regex))
+                     (re-find (re-pattern include-regex) %)))
+       (filter #(or (not exclude-regex)
+                    (clojure.string/blank? exclude-regex)
+                    (not (re-find (re-pattern exclude-regex) %))))))
 
 (def ls-tree
   (memo/lru ls-tree_unmemoized :lru/threshold 128))

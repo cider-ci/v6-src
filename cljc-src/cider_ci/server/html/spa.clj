@@ -8,7 +8,6 @@
     [cider-ci.utils.url :as url]
     [clojure.java.io :as io]
     [hiccup.page :refer [html5 include-js include-css]]
-    [logbug.debug :as debug :refer [debug-ns]]
     [taoensso.timbre :refer [debug info warn error spy]]
     ))
 
@@ -57,7 +56,3 @@
   (fn [request]
     (dispatch handler request)))
 
-;#### debug ###################################################################
-;(debug/debug-ns 'cider-ci.utils.shutdown)
-;(debug/debug-ns *ns*)
-;(logbug.debug/wrap-with-log-debug #'resource)

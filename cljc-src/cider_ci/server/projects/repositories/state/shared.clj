@@ -1,7 +1,6 @@
 (ns cider-ci.server.projects.repositories.state.shared
   (:require
     [clojure.set :refer [difference]]
-    [logbug.debug :as debug]
     ))
 
 (defn- remove-rows [now-rows update-rows]

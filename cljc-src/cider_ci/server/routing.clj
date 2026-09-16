@@ -7,8 +7,6 @@
     [cider-ci.server.http.authentication :as authentication]
     [cider-ci.server.http.authorization :as authorization]
     [cider-ci.server.routing-resolver :as routing-resolver]
-    [logbug.debug :as debug :refer [I>]]
-    [logbug.ring :refer [wrap-handler-with-logging]]
     [ring.middleware.accept]
     [ring.middleware.content-type :refer [wrap-content-type]]
     [ring.middleware.cookies]

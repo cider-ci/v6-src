@@ -108,6 +108,10 @@
       - curl
       - libgtk-3-0
       - libdbus-glib-1-2
+      - build-essential
+      - libssl-dev
+      - libreadline-dev
+      - zlib1g-dev
     state: present
     update_cache: yes
 

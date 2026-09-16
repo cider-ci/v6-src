@@ -1,11 +1,27 @@
 scripts:
+
+  firefox-setup:
+    exclusive_executor_resource: cider-ci-v6-firefox
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      mise plugin install firefox https://github.com/DrTom/asdf-firefox.git || true
+      mise install firefox
+
+  geckodriver-setup:
+    exclusive_executor_resource: cider-ci-v6-geckodriver
+    body: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      mise plugin install geckodriver https://github.com/DrTom/asdf-geckodriver.git || true
+      mise install geckodriver || true
+
   bundle-install:
     exclusive_executor_resource: cider-ci-v6-bundle
     body: |
       #!/usr/bin/env bash
       set -euo pipefail
-      # Install only the tools needed for testing (geckodriver is system-wide).
-      mise install ruby firefox
+      mise install ruby
       eval "$(mise activate bash)"
       bundle install --quiet
 
@@ -13,6 +29,10 @@ scripts:
     start_when:
       bundle-installed:
         script_key: bundle-install
+      firefox-ready:
+        script_key: firefox-setup
+      geckodriver-ready:
+        script_key: geckodriver-setup
       server-is-ready:
         script_key: server-ready
     body: |

@@ -28,7 +28,7 @@
                                    (try
                                      ~@body
                                      (Thread/sleep (long (Math/ceil (* ~secs-pause 1000))))
-                                     (catch Throwable _))
+                                     (catch Throwable _#))
                                    (recur))))]
            (reset! ~stop (fn []
                            (reset! done# true)

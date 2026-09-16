@@ -226,21 +226,21 @@
                            sql-format)))
       (throw (ex-info "Job not found" {:status 404})))
     (jdbc/with-transaction [tx (get-ds)]
+      ;; Add a new pending trial for each task that hasn't passed and isn't already
+      ;; pending or actively executing. Existing trial history is preserved.
       (jdbc/execute! tx
-        ["UPDATE trials t
-          SET state = 'pending', executor_id = NULL, dispatched_at = NULL,
-              started_at = NULL, finished_at = NULL, error = NULL, result = NULL, updated_at = now()
-          FROM tasks tsk
-          WHERE t.task_id = tsk.id AND tsk.job_id = ?
-            AND t.state NOT IN ('pending', 'passed')"
+        ["INSERT INTO trials (task_id, state)
+          SELECT id, 'pending' FROM tasks
+          WHERE job_id = ?
+            AND state IN ('failed', 'defective', 'aborted')"
          job-uuid])
       (jdbc/execute! tx
         ["UPDATE tasks SET state = 'pending', updated_at = now()
-          WHERE job_id = ? AND state NOT IN ('pending', 'passed')"
+          WHERE job_id = ? AND state IN ('failed', 'defective', 'aborted')"
          job-uuid])
-      (jdbc/execute! tx
-        ["UPDATE jobs SET state = 'pending', updated_at = now()
-          WHERE id = ? AND state NOT IN ('pending', 'passed')"
+      (jdbc/execute-one! tx
+        ["UPDATE jobs SET state = 'executing', updated_at = now()
+          WHERE id = ? AND state IN ('failed', 'defective', 'aborted')"
          job-uuid]))
     {:status 200 :body {:status "retrying"}}))
 

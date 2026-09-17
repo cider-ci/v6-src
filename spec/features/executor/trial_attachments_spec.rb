@@ -57,6 +57,7 @@ feature 'Trial Attachments' do
   scenario 'executor uploads attachment; logged-in user downloads it' do
     visit "/projects/#{ATTACH_PROJECT_ID}/commits/#{ATTACH_HEAD_COMMIT}/jobs"
     all('tr', text: 'Introduction Demo').find { |r| r.has_button?('Run', wait: false) }.find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp     = executor_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
     trial    = JSON.parse(resp.body)['trials_to_execute'].first
@@ -74,6 +75,7 @@ feature 'Trial Attachments' do
   scenario 'overwriting an attachment replaces content' do
     visit "/projects/#{ATTACH_PROJECT_ID}/commits/#{ATTACH_HEAD_COMMIT}/jobs"
     all('tr', text: 'Introduction Demo').find { |r| r.has_button?('Run', wait: false) }.find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp     = executor_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
     trial_id = JSON.parse(resp.body)['trials_to_execute'].first['id']
@@ -98,6 +100,7 @@ feature 'Trial Attachments' do
   scenario 'executor uploads tree attachment; logged-in user downloads it' do
     visit "/projects/#{ATTACH_PROJECT_ID}/commits/#{ATTACH_HEAD_COMMIT}/jobs"
     all('tr', text: 'Introduction Demo').find { |r| r.has_button?('Run', wait: false) }.find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp     = executor_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
     trial    = JSON.parse(resp.body)['trials_to_execute'].first
@@ -120,6 +123,7 @@ feature 'Trial Attachments' do
   scenario 'tree attachment is deduplicated by tree_id across trials' do
     visit "/projects/#{ATTACH_PROJECT_ID}/commits/#{ATTACH_HEAD_COMMIT}/jobs"
     all('tr', text: 'Introduction Demo').find { |r| r.has_button?('Run', wait: false) }.find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp     = executor_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
     trial_id = JSON.parse(resp.body)['trials_to_execute'].first['id']

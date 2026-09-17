@@ -117,6 +117,7 @@ feature 'Jobs' do
     token = setup_executor_token
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
     find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp  = executor_api(:post, '/executor/sync', { available_load: 1.0 }, token)
     trial = JSON.parse(resp.body)['trials_to_execute'].first
@@ -259,6 +260,7 @@ feature 'Jobs' do
     token = setup_executor_token
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{JOBS_HEAD_COMMIT}/jobs"
     find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp  = executor_api(:post, '/executor/sync', { available_load: 1.0 }, token)
     trial = JSON.parse(resp.body)['trials_to_execute'].first

@@ -74,14 +74,12 @@
              {:status 404 :body "Executor not found"})
       :patch (let [enabled  (:enabled body)
                    new-name (presence (:name body))
-                   max-load (some-> (:max_load body) double)
                    traits   (when (contains? body :traits)
                                (parse-traits (or (:traits body) "")))]
-               (when (or (some? enabled) new-name max-load)
+               (when (or (some? enabled) new-name)
                  (let [updates (cond-> {:updated_at [:raw "now()"]}
                                  (some? enabled) (assoc :enabled enabled)
-                                 new-name        (assoc :name new-name)
-                                 max-load        (assoc :max_load max-load))]
+                                 new-name        (assoc :name new-name))]
                    (jdbc/execute-one! tx
                      (-> (sql/update :executors)
                          (sql/set updates)

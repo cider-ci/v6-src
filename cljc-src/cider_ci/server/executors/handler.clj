@@ -11,38 +11,50 @@
 
 
 (defn- dispatch-trials [tx executor available-load server-base-url]
-  (let [limit  (max 1 (int (or available-load 1.0)))
-        trials (jdbc/execute! tx
-                 ["SELECT t.id, t.token, t.task_id,
-                          tsk.name     AS task_name,
-                          tsk.spec     AS task_spec,
-                          j.id         AS job_id,
-                          j.commit_id,
-                          j.project_id
-                   FROM trials t
-                   JOIN tasks    tsk ON tsk.id = t.task_id
-                   JOIN jobs     j   ON j.id   = tsk.job_id
-                   JOIN executors e  ON e.id   = ?::uuid
-                   WHERE t.state = 'pending'
-                     AND tsk.traits <@ e.traits
-                     AND tsk.load <= ?
-                     AND (
-                       tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
-                       OR NOT EXISTS (
-                         SELECT 1 FROM trials t2
-                         WHERE t2.task_id = t.task_id
-                           AND t2.dispatched_at > now() - (tsk.spec->>'dispatch_storm_delay_seconds')::float * interval '1 second'
-                       )
-                     )
-                   LIMIT ?
-                   FOR UPDATE OF t SKIP LOCKED"
-                  (:id executor) available-load limit])]
-    (doseq [trial trials]
-      (jdbc/execute-one! tx
-        ["UPDATE trials
-          SET state = 'dispatching', executor_id = ?, dispatched_at = now(), updated_at = now()
-          WHERE id = ?"
-         (:id executor) (:id trial)]))
+  ; Dispatch one trial at a time, subtracting each trial's load from the
+  ; remaining budget. This prevents dispatching more concurrent trials than
+  ; the executor can actually handle (e.g. LIMIT int(32) → 32 concurrent JVMs).
+  (let [raw-trials
+        (loop [remaining (double (or available-load 0.0))
+               trials    []]
+          (if (< remaining 0.5)
+            trials
+            (let [trial (first (jdbc/execute! tx
+                          ["SELECT t.id, t.token, t.task_id,
+                                   tsk.name AS task_name,
+                                   tsk.spec AS task_spec,
+                                   tsk.load AS task_load,
+                                   j.id     AS job_id,
+                                   j.commit_id,
+                                   j.project_id
+                            FROM trials t
+                            JOIN tasks    tsk ON tsk.id = t.task_id
+                            JOIN jobs     j   ON j.id   = tsk.job_id
+                            JOIN executors e  ON e.id   = ?::uuid
+                            WHERE t.state = 'pending'
+                              AND tsk.traits <@ e.traits
+                              AND tsk.load <= ?
+                              AND (
+                                tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
+                                OR NOT EXISTS (
+                                  SELECT 1 FROM trials t2
+                                  WHERE t2.task_id = t.task_id
+                                    AND t2.dispatched_at > now() - (tsk.spec->>'dispatch_storm_delay_seconds')::float * interval '1 second'
+                                )
+                              )
+                            LIMIT 1
+                            FOR UPDATE OF t SKIP LOCKED"
+                           (:id executor) remaining]))]
+              (if (nil? trial)
+                trials
+                (do
+                  (jdbc/execute-one! tx
+                    ["UPDATE trials
+                      SET state = 'dispatching', executor_id = ?, dispatched_at = now(), updated_at = now()
+                      WHERE id = ?"
+                     (:id executor) (:id trial)])
+                  (recur (- remaining (double (or (:task_load trial) 1.0)))
+                         (conj trials trial)))))))]
     (mapv (fn [t]
             {:id         (str (:id t))
              :token      (str (:token t))
@@ -54,7 +66,7 @@
              :project_id (:project_id t)
              :git_url    (str server-base-url "/projects/" (:project_id t) "/git")
              :patch_path (str "/executor/trials/" (:id t))})
-          trials)))
+          raw-trials)))
 
 
 

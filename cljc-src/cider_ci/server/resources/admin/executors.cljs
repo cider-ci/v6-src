@@ -164,7 +164,7 @@
         (navigate! (path :executors {})))))
 
 (defn- add-page []
-  (let [form* (reagent/atom {:name "" :traits "" :max_load 4.0})]
+  (let [form* (reagent/atom {:name "" :traits ""})]
     (fn []
       [:div.page
        [:nav.mb-3
@@ -180,9 +180,6 @@
           :label "Traits (comma-separated)"
           :type :text]
          [:p.form-text.text-muted "Trait names are stored in lowercase."]
-         [forms/input-component form* [:max_load]
-          :label "Max load"
-          :type :number]
          [forms/submit-component
           :btn-classes [:btn :btn-primary]
           :disabled (not (presence (:name @form*)))
@@ -271,7 +268,7 @@
          [:div "Loading..."]
          (let [ex @_single*]
            (when (nil? @form*)
-             (reset! form* {:name (:name ex) :traits (:traits ex) :max_load (:max_load ex)}))
+             (reset! form* {:name (:name ex) :traits (:traits ex)}))
            (if (nil? @form*)
              [:div "Loading..."]
              [:<>
@@ -285,9 +282,10 @@
                  :label "Traits (comma-separated)"
                  :type :text]
                 [:p.form-text.text-muted "Trait names are stored in lowercase."]
-                [forms/input-component form* [:max_load]
-                 :label "Max load"
-                 :type :number]
+                [:div.mb-3
+                 [:label.form-label "Max load"]
+                 [:p.form-control-plaintext (:max_load ex)]
+                 [:p.form-text.text-muted "Set by the executor process (env var " [:code "CIDER_CI_EXECUTOR_MAX_LOAD"] "); not editable here."]]
                 [forms/submit-component
                  :btn-classes [:btn :btn-primary]
                  :disabled (not (presence (:name @form*)))

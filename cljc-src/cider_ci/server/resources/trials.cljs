@@ -236,7 +236,7 @@
   (let [trial-id  (:trial_id trial)
         task-spec (:task_spec trial)
         ports     (:ports task-spec)
-        env-vars  (:environment_variables task-spec)
+        env-vars  (into {} (map (fn [[k v]] [(name k) v]) (:environment_variables task-spec)))
         all-vars  (merge {"CIDER_CI"               "true"
                           "CONTINUOUS_INTEGRATION"  "true"
                           "CIDER_CI_TRIAL_ID"       trial-id

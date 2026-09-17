@@ -72,16 +72,24 @@ Capybara.register_driver :firefox do |app|
   )
 end
 
-# Firefox 115+ fission recycles content processes after ~7 navigations.
-# When that happens, Marionette raises NoSuchWindowError from reset!.
-# Clear @browser so Capybara creates a fresh session for the next test.
-# Do NOT call browser.quit here — geckodriver hangs if the connection is
-# already broken, blocking the test runner indefinitely.
+# Firefox 115+ fission recycles content processes after ~7 navigations,
+# causing NoSuchWindowError from reset! and mid-test interactions.
+# We must close the old geckodriver session (browser.quit) before creating
+# a new one — otherwise geckodriver becomes confused and the next test gets
+# InvalidSessionIdError. However, after fission recycling Firefox can take
+# 120+ seconds to process the quit command (Marionette queue is busy with
+# content-process cleanup). We cap the wait at 15 s with Timeout.
 module FirefoxFissionResetPatch
   def reset!
     super
   rescue Selenium::WebDriver::Error::NoSuchWindowError
-    @browser = nil
+    begin
+      Timeout.timeout(15) { browser.quit }
+    rescue
+      nil
+    ensure
+      @browser = nil
+    end
   end
 end
 Capybara::Selenium::Driver.prepend(FirefoxFissionResetPatch)

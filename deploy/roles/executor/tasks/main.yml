@@ -159,13 +159,14 @@
   # from source, which fails with Trixie's toolchain). Executor core only needs Java.
   ignore_errors: true
 
-- name: Install geckodriver for x86_64 from GitHub releases
-  ansible.builtin.unarchive:
-    src: "https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz"
-    dest: "/usr/local/bin"
-    remote_src: yes
-    mode: '0755'
-    creates: /usr/local/bin/geckodriver
+- name: Install geckodriver 0.37.1 for x86_64 from GitHub releases
+  ansible.builtin.shell:
+    cmd: >
+      curl -fsSL
+      https://github.com/mozilla/geckodriver/releases/download/v0.37.1/geckodriver-v0.37.1-linux64.tar.gz
+      | tar -xz -C /usr/local/bin &&
+      touch /usr/local/bin/.geckodriver-v0.37.1
+    creates: /usr/local/bin/.geckodriver-v0.37.1
 
 - name: Enable and start cider-ci-executor
   ansible.builtin.service:

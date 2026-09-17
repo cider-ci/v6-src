@@ -329,6 +329,18 @@
      [:p.text-muted "No tasks for this job."])])
 
 
+(defn- trial-fail-rate [tasks]
+  (let [all-trials (mapcat :trials tasks)
+        terminal   (filter #(terminal-states (:state %)) all-trials)
+        n-total    (count terminal)
+        n-failed   (count (remove #(= "passed" (:state %)) terminal))]
+    (when (pos? n-total)
+      (let [pct (Math/round (* 100.0 (/ n-failed n-total)))]
+        [:p.small.mb-2
+         {:class (if (zero? n-failed) "text-muted" "text-danger")}
+         (str n-failed "/" n-total " trials failed (" pct "%)")]))))
+
+
 (defn- post-job-action! [route-kw]
   (-> (js/fetch (path route-kw {:project-id (project-id)
                                 :commit-id  (commit-id)
@@ -364,6 +376,7 @@
          " / "
          [:code (:key job)]]
         [:h3 (:name job) " " [state-badge (:state job)]]
+        [trial-fail-rate (:tasks job)]
         [:div.mb-3
          (when abortable?
            [:button.btn.btn-sm.btn-outline-warning.me-2

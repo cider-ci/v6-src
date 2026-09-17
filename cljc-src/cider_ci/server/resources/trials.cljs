@@ -232,6 +232,50 @@
        [tree-attachment-item tree-id a])]))
 
 
+(defn- debug-section [trial]
+  (let [trial-id  (:trial_id trial)
+        task-spec (:task_spec trial)
+        ports     (:ports task-spec)
+        env-vars  (:environment_variables task-spec)
+        all-vars  (merge {"CIDER_CI"               "true"
+                          "CONTINUOUS_INTEGRATION"  "true"
+                          "CIDER_CI_TRIAL_ID"       trial-id
+                          "CIDER_CI_WORKING_DIR"    (str "/tmp/cider-ci-" trial-id)}
+                         env-vars
+                         (when (seq ports)
+                           (into {} (map (fn [[k v]]
+                                           [(clojure.string/upper-case (name k))
+                                            (str (:min v) "–" (:max v) " (range)")])
+                                         ports))))]
+    [:div.mt-5
+     [:hr]
+     [:h5.text-muted "Debug Information"]
+     [:dl.row.small
+      [:dt.col-sm-3 "Executor"]
+      [:dd.col-sm-9 (or (:executor_name trial) [:span.text-muted "—"])]
+      [:dt.col-sm-3 "Working directory"]
+      [:dd.col-sm-9 [:code (str "/tmp/cider-ci-" trial-id)]]
+      (when (seq ports)
+        [:<>
+         [:dt.col-sm-3 "Assigned ports"]
+         [:dd.col-sm-9
+          [:dl.row.mb-0
+           (for [[k v] ports]
+             ^{:key (name k)}
+             [:<>
+              [:dt.col-sm-4 [:code (clojure.string/upper-case (name k))]]
+              [:dd.col-sm-8 (str (:min v) "–" (:max v))]])]]])
+      [:dt.col-sm-3 "Environment variables"]
+      [:dd.col-sm-9
+       [:table.table.table-sm.table-bordered.font-monospace
+        [:tbody
+         (for [[k v] (sort-by key all-vars)]
+           ^{:key k}
+           [:tr
+            [:td.fw-bold k]
+            [:td v]])]]]]]))
+
+
 (defn page []
   [:div.page.trial
    [state/hidden-routing-state-component :did-change start-polling!]
@@ -273,6 +317,12 @@
           [:div.alert.alert-danger.mt-3 err])
         (when (seq scripts)
           [:<>
+           (when task-spec
+             (try
+               (when-let [dag (scripts-dag/scripts-dag task-spec scripts)]
+                 [:div.mt-3 dag])
+               (catch :default e
+                 [:div.text-danger.small (str "DAG error: " (.-message e))])))
            [:h5.mt-4 "Scripts"]
            [:table.table.table-sm
             [:thead
@@ -283,12 +333,7 @@
            [scripts-gantt-chart trial scripts]])
         [attachments-panel trial-id attachments]
         [tree-attachments-panel tree-id tree-attachments]
-        (when task-spec
-          (try
-            (when-let [dag (scripts-dag/scripts-dag task-spec scripts)]
-              [:div.mt-3 dag])
-            (catch :default e
-              [:div.text-danger.small (str "DAG error: " (.-message e))])))
+        [debug-section trial]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])
 

@@ -14,11 +14,11 @@ task_defaults:
 
   ports:
     CI_SERVER_PORT:
-      min: 5000
-      max: 5999
+      min: 7100
+      max: 7999
     CI_GECKODRIVER_PORT:
-      min: 6000
-      max: 6999
+      min: 8100
+      max: 8999
 
   trial_attachments:
     screenshots:

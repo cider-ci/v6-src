@@ -24,14 +24,13 @@ feature 'Executor management UI' do
       expect(page).to have_content 'New'
       expect(page).to have_field 'Name'
       expect(page).to have_field 'Traits (comma-separated)'
-      expect(page).to have_field 'Max load'
+      expect(page).not_to have_field 'Max load'
     end
 
     scenario 'creates an executor and shows one-time token on the list page' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'build-box'
       fill_in 'Traits (comma-separated)', with: 'bash, ruby'
-      fill_in 'Max load', with: '8'
       click_button 'Add Executor'
 
       expect(page).to have_content 'Executor created. Copy this token now'
@@ -43,7 +42,6 @@ feature 'Executor management UI' do
     scenario 'token alert can be dismissed' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'temp-executor'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       expect(page).to have_content 'Executor created. Copy this token now'
@@ -55,13 +53,11 @@ feature 'Executor management UI' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'detail-check'
       fill_in 'Traits (comma-separated)', with: 'bash'
-      fill_in 'Max load', with: '2'
       click_button 'Add Executor'
 
       within('table') do
         expect(page).to have_content 'detail-check'
         expect(page).to have_content 'bash'
-        expect(page).to have_content '2'
         expect(page).to have_css '.badge', text: 'enabled'
       end
     end
@@ -70,7 +66,6 @@ feature 'Executor management UI' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'edit-me'
       fill_in 'Traits (comma-separated)', with: 'bash'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       click_on 'edit-me'
@@ -84,7 +79,6 @@ feature 'Executor management UI' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'edit-me'
       fill_in 'Traits (comma-separated)', with: 'bash'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       click_on 'edit-me'
@@ -92,13 +86,14 @@ feature 'Executor management UI' do
 
       expect(page).to have_field 'Name', with: 'edit-me'
       expect(page).to have_field 'Traits (comma-separated)', with: 'bash'
+      expect(page).not_to have_field 'Max load'
+      expect(page).to have_content 'Max load'
     end
 
     scenario 'can update executor name and traits from the edit page' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'old-name'
       fill_in 'Traits (comma-separated)', with: 'bash'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       click_on 'old-name'
@@ -116,7 +111,6 @@ feature 'Executor management UI' do
     scenario 'can disable and re-enable an executor from the edit page' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'toggle-exec'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       click_on 'toggle-exec'
@@ -133,7 +127,6 @@ feature 'Executor management UI' do
     scenario 'can delete an executor from the edit page' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'removable'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       click_on 'removable'
@@ -150,13 +143,11 @@ feature 'Executor management UI' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'bash-only'
       fill_in 'Traits (comma-separated)', with: 'bash'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       click_link 'Add Executor'
       fill_in 'Name', with: 'ruby-only'
       fill_in 'Traits (comma-separated)', with: 'ruby'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       expect(page).to have_content 'bash-only'
@@ -180,7 +171,6 @@ feature 'Executor management UI' do
       click_link 'Add Executor'
       fill_in 'Name', with: 'bash-box'
       fill_in 'Traits (comma-separated)', with: 'bash'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       visit '/executors/?traits=ruby'
@@ -209,7 +199,6 @@ feature 'Executor management UI' do
       visit '/executors/'
       click_link 'Add Executor'
       fill_in 'Name', with: 'view-only-box'
-      fill_in 'Max load', with: '4'
       click_button 'Add Executor'
 
       set_session_cookie @user

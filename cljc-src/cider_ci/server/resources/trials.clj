@@ -16,6 +16,7 @@
                t.error,
                t.result,
                t.task_id::text,
+               t.executor_id::text,
                tsk.name        AS task_name,
                tsk.spec        AS task_spec,
                j.id::text      AS job_id,
@@ -23,11 +24,13 @@
                j.key           AS job_key,
                j.project_id,
                j.commit_id,
-               c.tree_id
+               c.tree_id,
+               ex.name         AS executor_name
              FROM trials t
              JOIN tasks   tsk ON tsk.id = t.task_id
              JOIN jobs    j   ON j.id   = tsk.job_id
-             LEFT JOIN commits c   ON c.id   = j.commit_id
+             LEFT JOIN commits   c  ON c.id  = j.commit_id
+             LEFT JOIN executors ex ON ex.id = t.executor_id
              WHERE t.id = ?::uuid"
             trial-id])))
 

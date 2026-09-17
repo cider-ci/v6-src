@@ -23,6 +23,15 @@ module Helpers
       Capybara.current_session.driver.browser.manage.add_cookie(
         name: "cider-ci-session",
         value: user.session_token)
+    rescue Selenium::WebDriver::Error::NoSuchWindowError,
+           Selenium::WebDriver::Error::InvalidSessionIdError
+      # Firefox fission recycled the content process; start a fresh browser session.
+      begin; Capybara.current_session.driver.browser.quit; rescue; end
+      Capybara.reset_sessions!
+      visit '/'
+      Capybara.current_session.driver.browser.manage.add_cookie(
+        name: "cider-ci-session",
+        value: user.session_token)
     end
 
   end

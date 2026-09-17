@@ -39,6 +39,7 @@ Capybara.register_driver :firefox do |app|
     "browser.download.dir" => BROWSER_DOWNLOAD_DIR.to_s,
     "dom.ipc.processCount.web" => 1,
     "dom.ipc.processCount.webIsolated" => 1,
+    "dom.ipc.processCount.maxCycleCount" => 999,
     "browser.tabs.unloadOnLowMemory" => false,
     "browser.sessionstore.resume_from_crash" => false
   }

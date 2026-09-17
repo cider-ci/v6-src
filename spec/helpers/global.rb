@@ -19,7 +19,7 @@ module Helpers
     end
 
     def set_session_cookie user
-      visit '/' unless current_path.presence
+      visit '/'
       Capybara.current_session.driver.browser.manage.add_cookie(
         name: "cider-ci-session",
         value: user.session_token)

@@ -40,7 +40,8 @@ Capybara.register_driver :firefox do |app|
     "dom.ipc.processCount.web" => 1,
     "dom.ipc.processCount.webIsolated" => 1,
     "browser.tabs.unloadOnLowMemory" => false,
-    "browser.sessionstore.resume_from_crash" => false
+    "browser.sessionstore.resume_from_crash" => false,
+    "fission.autostart" => false
   }
   profile_config.each { |k, v| profile[k] = v }
 

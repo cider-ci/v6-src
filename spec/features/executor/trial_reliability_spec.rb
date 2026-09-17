@@ -27,17 +27,19 @@ feature 'Trial reliability' do
     database[:trials].insert(id: @trial_id, task_id: @task_id, state: 'failed')
   end
 
-  scenario 'Retry button resets a failed job back to pending' do
+  scenario 'Retry button adds a new pending trial and sets the job to executing' do
     job_url = "/projects/#{project_id}/commits/#{commit_id}/jobs/#{@job_id}"
     visit job_url
 
     expect(page).to have_css '.badge', text: 'failed'
     first('button', text: /Retry/).click
 
-    expect(page).to have_css '.badge', text: 'pending'
-    expect(database[:jobs][id: @job_id][:state]).to eq 'pending'
+    expect(page).to have_css '.badge', text: 'executing'
+    expect(database[:jobs][id: @job_id][:state]).to eq 'executing'
     expect(database[:tasks][id: @task_id][:state]).to eq 'pending'
-    expect(database[:trials][id: @trial_id][:state]).to eq 'pending'
+    # existing trial history is preserved; a new pending trial is added
+    expect(database[:trials][id: @trial_id][:state]).to eq 'failed'
+    expect(database[:trials].where(task_id: @task_id, state: 'pending').count).to eq 1
   end
 
   scenario 'Stale dispatching trials are reset to pending after timeout' do

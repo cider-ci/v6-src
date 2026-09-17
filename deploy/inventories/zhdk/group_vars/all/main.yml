@@ -20,7 +20,7 @@ ci_server_http_bind: "127.0.0.1"
 # --- Executor ----------------------------------------------------------------
 # ci_executor_token — defined in secrets.yml (transcrypt-encrypted)
 ci_executor_name: ex01.ci.zhdk.cider-ci.com
-ci_executor_max_load: 32
+ci_executor_max_load: 16
 ci_executor_server_url: "https://ci.zhdk.cider-ci.com"
 
 # --- SSH (used by init.yml) --------------------------------------------------

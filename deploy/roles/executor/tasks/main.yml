@@ -108,6 +108,7 @@
       - curl
       - libgtk-3-0
       - libdbus-glib-1-2
+      - libasound2t64
       - build-essential
       - libssl-dev
       - libreadline-dev

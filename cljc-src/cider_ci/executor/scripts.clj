@@ -121,22 +121,16 @@
    serializes via a per-resource Clojure agent; otherwise runs in a future.
    The resource name may contain {{KEY}} references resolved against the merged env."
   [trial-id key-str spec env-vars work-dir]
-  (let [timed-run (fn []
-                    (let [t0     (java.time.Instant/now)
-                          result (run-one! trial-id key-str spec env-vars work-dir)]
-                      (assoc result
-                             :started_at  (str t0)
-                             :finished_at (str (java.time.Instant/now)))))]
-    (if-let [raw-resource (:exclusive_executor_resource spec)]
-      (let [merged-env    (merge env-vars (:environment_variables spec))
-            resource-name (template-resource-name merged-env raw-resource)
-            p             (promise)
-            agt           (get-exclusive-agent! resource-name)]
-        (send-off agt (fn [_]
-                        (deliver p (timed-run))
-                        nil))
-        p)
-      (future (timed-run)))))
+  (if-let [raw-resource (:exclusive_executor_resource spec)]
+    (let [merged-env    (merge env-vars (:environment_variables spec))
+          resource-name (template-resource-name merged-env raw-resource)
+          p             (promise)
+          agt           (get-exclusive-agent! resource-name)]
+      (send-off agt (fn [_]
+                      (deliver p (run-one! trial-id key-str spec env-vars work-dir))
+                      nil))
+      p)
+    (future (run-one! trial-id key-str spec env-vars work-dir))))
 
 
 (defn- run-one! [trial-id key-str spec env-vars work-dir]

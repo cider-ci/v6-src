@@ -55,10 +55,15 @@ Capybara.register_driver :firefox do |app|
 
   # driver = Selenium::WebDriver.for :firefox, options: opts
   # Capybara::Selenium::Driver.new(app, browser: browser, options: opts)
+  service = Selenium::WebDriver::Firefox::Service.new(
+    port: Integer(ENV.fetch("CI_GECKODRIVER_PORT", 4444))
+  )
+
   Capybara::Selenium::Driver.new(
     app,
     browser: :firefox,
-    options: opts
+    options: opts,
+    service: service
   )
 end
 

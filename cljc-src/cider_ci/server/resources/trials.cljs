@@ -125,15 +125,14 @@
                       label     (str (:key s) " (" dur-s "s)")
                       mid-y     (+ (* i (+ row-h row-m)) (/ row-h 2))
                       left?     (<= x0 (/ svg-w 2))
-                      [lx anch] (if left? [(+ x0 5) "start"] [(- x0 5) "end"])
-                      [_ tcol]  (get gantt-colors (:state s) ["#dee2e6" "#495057"])]
+                      [lx anch] (if left? [(+ x0 5) "start"] [(- x0 5) "end"])]
                   ^{:key (str "lbl-" (:key s))}
                   [:text {:x lx :y mid-y
                           :dominant-baseline "central"
                           :text-anchor anch
                           :font-size 11
                           :font-family "monospace"
-                          :fill tcol}
+                          :fill "#212529"}
                    label]))
               all-scripts))]]))))
 

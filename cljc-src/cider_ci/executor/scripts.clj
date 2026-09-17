@@ -121,16 +121,22 @@
    serializes via a per-resource Clojure agent; otherwise runs in a future.
    The resource name may contain {{KEY}} references resolved against the merged env."
   [trial-id key-str spec env-vars work-dir]
-  (if-let [raw-resource (:exclusive_executor_resource spec)]
-    (let [merged-env    (merge env-vars (:environment_variables spec))
-          resource-name (template-resource-name merged-env raw-resource)
-          p             (promise)
-          agt           (get-exclusive-agent! resource-name)]
-      (send-off agt (fn [_]
-                      (deliver p (run-one! trial-id key-str spec env-vars work-dir))
-                      nil))
-      p)
-    (future (run-one! trial-id key-str spec env-vars work-dir))))
+  (let [timed-run (fn []
+                    (let [t0     (java.time.Instant/now)
+                          result (run-one! trial-id key-str spec env-vars work-dir)]
+                      (assoc result
+                             :started_at  (str t0)
+                             :finished_at (str (java.time.Instant/now)))))]
+    (if-let [raw-resource (:exclusive_executor_resource spec)]
+      (let [merged-env    (merge env-vars (:environment_variables spec))
+            resource-name (template-resource-name merged-env raw-resource)
+            p             (promise)
+            agt           (get-exclusive-agent! resource-name)]
+        (send-off agt (fn [_]
+                        (deliver p (timed-run))
+                        nil))
+        p)
+      (future (timed-run)))))
 
 
 (defn- run-one! [trial-id key-str spec env-vars work-dir]
@@ -154,18 +160,23 @@
                    (let [env (.environment pb)]
                      (doseq [[k v] final-env]
                        (.put env k v))))
-            proc (.start pb)]
+            proc       (.start pb)
+            started-at (java.time.Instant/now)]
         (swap! running-procs* assoc-in [trial-id key-str] proc)
         (try
           (cond
             (not (.waitFor proc timeout-sec TimeUnit/SECONDS))
             (do (.destroyForcibly proc)
-                {:state "defective"
-                 :error (str "Script timed out after " timeout-sec "s")
-                 :log-file log-file})
+                {:state      "defective"
+                 :error      (str "Script timed out after " timeout-sec "s")
+                 :started_at (str started-at)
+                 :finished_at (str (java.time.Instant/now))
+                 :log-file   log-file})
             :else
             {:state       (if (zero? (.exitValue proc)) "passed" "failed")
              :exit_status (.exitValue proc)
+             :started_at  (str started-at)
+             :finished_at (str (java.time.Instant/now))
              :log-file    log-file})
           (finally
             (swap! running-procs* update trial-id dissoc key-str)))))

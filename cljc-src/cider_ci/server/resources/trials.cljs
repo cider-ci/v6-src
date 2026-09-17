@@ -60,6 +60,84 @@
                   (recur))))))))))
 
 
+(def ^:private gantt-colors
+  {"passed"      ["#198754" "#fff"]
+   "failed"      ["#dc3545" "#fff"]
+   "defective"   ["#212529" "#fff"]
+   "executing"   ["#0d6efd" "#fff"]
+   "pending"     ["#6c757d" "#fff"]
+   "skipped"     ["#e9ecef" "#495057"]
+   "aborted"     ["#ffc107" "#212529"]
+   "unavailable" ["#dee2e6" "#495057"]})
+
+
+(defn- scripts-gantt-chart [trial scripts]
+  (let [now-ms  (.now js/Date)
+        timed   (->> (seq scripts)
+                     (filter #(:started_at (val %)))
+                     (map (fn [[k v]]
+                            {:key         (name k)
+                             :state       (:state v)
+                             :started-ms  (.getTime (js/Date. (:started_at v)))
+                             :finished-ms (if (:finished_at v)
+                                            (.getTime (js/Date. (:finished_at v)))
+                                            now-ms)})))]
+    (when (and (seq timed) (:started_at trial))
+      (let [trial-start-ms (.getTime (js/Date. (:started_at trial)))
+            first-start-ms (apply min (map :started-ms timed))
+            prepare        {:key "prepare" :state "unavailable"
+                            :started-ms  trial-start-ms
+                            :finished-ms (max trial-start-ms first-start-ms)}
+            all-scripts    (sort-by :started-ms (conj timed prepare))
+            t-min          (apply min (map :started-ms all-scripts))
+            t-max          (apply max (map :finished-ms all-scripts))
+            total-ms       (max 1 (- t-max t-min))
+            svg-w          800
+            row-h          20
+            row-m          5
+            svg-h          (* (count all-scripts) (+ row-h row-m))
+            x-pos          (fn [ms] (* (/ (- ms t-min) total-ms) svg-w))
+            bar-w          (fn [s] (max 2 (- (* (/ (- (:finished-ms s) (:started-ms s)) total-ms) svg-w) 1)))]
+        [:<>
+         [:h5.mt-4 "Script Timeline"]
+         [:svg {:view-box (str "0 0 " svg-w " " svg-h)
+                :width    "100%"
+                :style    {:display "block"}}
+          (doall
+            (map-indexed
+              (fn [i _]
+                ^{:key (str "bg-" i)}
+                [:rect {:x 0 :y (* i (+ row-h row-m)) :width svg-w :height row-h :fill "#f8f9fa"}])
+              all-scripts))
+          (doall
+            (map-indexed
+              (fn [i s]
+                (let [[fill _] (get gantt-colors (:state s) ["#dee2e6" "#495057"])]
+                  ^{:key (str "bar-" (:key s))}
+                  [:rect {:x (x-pos (:started-ms s)) :y (+ (* i (+ row-h row-m)) 1)
+                          :width (bar-w s) :height (- row-h 2) :fill fill :rx 2}]))
+              all-scripts))
+          (doall
+            (map-indexed
+              (fn [i s]
+                (let [x0        (x-pos (:started-ms s))
+                      dur-s     (.round js/Math (/ (- (:finished-ms s) (:started-ms s)) 1000))
+                      label     (str (:key s) " (" dur-s "s)")
+                      mid-y     (+ (* i (+ row-h row-m)) (/ row-h 2))
+                      left?     (<= x0 (/ svg-w 2))
+                      [lx anch] (if left? [(+ x0 5) "start"] [(- x0 5) "end"])
+                      [_ tcol]  (get gantt-colors (:state s) ["#dee2e6" "#495057"])]
+                  ^{:key (str "lbl-" (:key s))}
+                  [:text {:x lx :y mid-y
+                          :dominant-baseline "central"
+                          :text-anchor anch
+                          :font-size 11
+                          :font-family "monospace"
+                          :fill tcol}
+                   label]))
+              all-scripts))]]))))
+
+
 (defn- state-badge [s]
   (let [cls (case s
               "passed"    "bg-success"
@@ -155,6 +233,91 @@
        [tree-attachment-item tree-id a])]))
 
 
+(defn- gantt-state-fill [s]
+  (case s
+    "passed"      "#198754"
+    "failed"      "#dc3545"
+    "executing"   "#0d6efd"
+    "defective"   "#212529"
+    "aborted"     "#ffc107"
+    "skipped"     "#dee2e6"
+    "unavailable" "#6c757d"
+    "#adb5bd"))
+
+(defn- gantt-dur-label [ms]
+  (let [s (.round js/Math (/ ms 1000))]
+    (if (>= s 60)
+      (str (.floor js/Math (/ s 60)) "m " (mod s 60) "s")
+      (str s "s"))))
+
+(defn- parse-ms [s]
+  (when s (.getTime (js/Date. s))))
+
+(defn- gantt-chart [trial task-spec]
+  (let [scripts-result (-> trial :result :scripts)
+        scripts-spec   (-> task-spec :scripts)
+        trial-started  (parse-ms (:started_at trial))]
+    (when (and trial-started (seq scripts-result))
+      (let [timed (->> (seq scripts-result)
+                       (keep (fn [[k r]]
+                               (when-let [started (parse-ms (:started_at r))]
+                                 (let [finished (or (parse-ms (:finished_at r)) (.getTime (js/Date.)))
+                                       spec-e   (get scripts-spec k)]
+                                   {:key      (name k)
+                                    :name     (or (:name spec-e) (name k))
+                                    :state    (:state r)
+                                    :started  started
+                                    :finished finished
+                                    :duration (max 1 (- finished started))})))))
+            first-started (when (seq timed) (apply min (map :started timed)))
+            prepare (when (and first-started (< trial-started first-started))
+                      {:key      "prepare"
+                       :name     "prepare"
+                       :state    "unavailable"
+                       :started  trial-started
+                       :finished first-started
+                       :duration (max 1 (- first-started trial-started))})
+            all   (sort-by :started (cond-> timed prepare (conj prepare)))]
+        (when (seq all)
+          (let [t0        (apply min (map :started all))
+                t1        (apply max (map :finished all))
+                total     (max 1 (- t1 t0))
+                width     1024
+                row-h     21
+                row-gap   7
+                height    (* (count all) (+ row-h row-gap))
+                scale     (fn [ms] (* (/ (- ms t0) total) width))]
+            [:div.mt-4
+             [:h5 "Script Timing"]
+             [:div {:style {:overflow-x "auto"}}
+              [:svg {:viewBox      (str "0 0 " width " " height)
+                     :width        "100%"
+                     :style        {:display "block" :min-width "320px"}
+                     :xmlns        "http://www.w3.org/2000/svg"}
+               (doall
+                 (for [[i s] (map-indexed vector all)]
+                   (let [x     (scale (:started s))
+                         y     (* i (+ row-h row-gap))
+                         bar-w (max 1 (- (* (/ (:duration s) total) width) 2))
+                         mid?  (<= x (/ width 2))
+                         lx    (if mid? (+ x 5) (- x 5))
+                         anch  (if mid? "start" "end")
+                         lbl   (str (:name s) " (" (gantt-dur-label (:duration s)) ")")]
+                     ^{:key (:key s)}
+                     [:g
+                      [:rect {:x 0 :y (dec y) :width width :height row-h
+                               :fill "#f8f9fa"}]
+                      [:rect {:x x :y (inc y) :width bar-w :height (- row-h 2)
+                               :fill (gantt-state-fill (:state s)) :rx 2}]
+                      [:text {:x lx :y (+ y (/ row-h 2))
+                               :textAnchor anch
+                               :dominantBaseline "central"
+                               :fontSize 11
+                               :fontFamily "sans-serif"
+                               :fill "#212529"}
+                       lbl]])))]]]))))))
+
+
 (defn page []
   [:div.page.trial
    [state/hidden-routing-state-component :did-change start-polling!]
@@ -202,7 +365,8 @@
              [:tr [:th "Script"] [:th "State"] [:th "Exit"] [:th "Log"] [:th "Error"]]]
             [:tbody
              (for [entry (seq scripts)]
-               [script-row entry trial-id script-logs])]]])
+               [script-row entry trial-id script-logs])]]
+           [scripts-gantt-chart trial scripts]])
         [attachments-panel trial-id attachments]
         [tree-attachments-panel tree-id tree-attachments]
         (when task-spec

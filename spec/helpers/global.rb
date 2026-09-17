@@ -25,9 +25,11 @@ module Helpers
         value: user.session_token)
     rescue Selenium::WebDriver::Error::NoSuchWindowError,
            Selenium::WebDriver::Error::InvalidSessionIdError
-      # Firefox fission recycled the content process; start a fresh browser session.
-      begin; Capybara.current_session.driver.browser.quit; rescue; end
-      Capybara.reset_sessions!
+      # Firefox fission recycled the content process during visit.
+      # Clear @browser directly — do NOT call quit, it will hang on a
+      # broken geckodriver connection. Capybara creates a fresh Firefox
+      # session on the next visit call.
+      Capybara.current_session.driver.instance_variable_set(:@browser, nil)
       visit '/'
       Capybara.current_session.driver.browser.manage.add_cookie(
         name: "cider-ci-session",

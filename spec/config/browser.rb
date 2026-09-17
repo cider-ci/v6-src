@@ -71,15 +71,15 @@ Capybara.register_driver :firefox do |app|
   )
 end
 
-# Firefox 115+ fission architecture recycles content processes after ~7
-# navigations. When that happens the old browsing context is discarded and
-# Marionette raises NoSuchWindowError. Patching reset! to catch that error
-# and quit the browser so Capybara starts a fresh session on the next test.
+# Firefox 115+ fission recycles content processes after ~7 navigations.
+# When that happens, Marionette raises NoSuchWindowError from reset!.
+# Clear @browser so Capybara creates a fresh session for the next test.
+# Do NOT call browser.quit here — geckodriver hangs if the connection is
+# already broken, blocking the test runner indefinitely.
 module FirefoxFissionResetPatch
   def reset!
     super
   rescue Selenium::WebDriver::Error::NoSuchWindowError
-    begin; browser.quit; rescue; end
     @browser = nil
   end
 end

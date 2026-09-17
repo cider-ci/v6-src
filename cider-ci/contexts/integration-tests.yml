@@ -5,7 +5,7 @@ script_defaults:
 task_defaults:
   traits: [Bash, mise]
   max_trials: 2
-  load: 1.5
+  load: 3.0
   include:
     - cider-ci/task_components/build.yml
     - cider-ci/task_components/database.yml

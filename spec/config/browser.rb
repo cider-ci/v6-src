@@ -36,14 +36,18 @@ Capybara.register_driver :firefox do |app|
   profile_config = {
     "browser.helperApps.neverAsk.saveToDisk" => "image/jpeg,application/pdf,application/json",
     "browser.download.folderList" => 2, # custom location
-    "browser.download.dir" => BROWSER_DOWNLOAD_DIR.to_s
+    "browser.download.dir" => BROWSER_DOWNLOAD_DIR.to_s,
+    "dom.ipc.processCount.web" => 1,
+    "dom.ipc.processCount.webIsolated" => 1,
+    "browser.tabs.unloadOnLowMemory" => false,
+    "browser.sessionstore.resume_from_crash" => false
   }
   profile_config.each { |k, v| profile[k] = v }
 
   opts = Selenium::WebDriver::Firefox::Options.new(
     binary: firefox_bin_path,
     profile: profile,
-    log_level: :trace,
+    log_level: :error,
     accept_insecure_certs: true
   )
 

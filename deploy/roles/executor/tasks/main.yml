@@ -168,6 +168,14 @@
       touch /usr/local/bin/.geckodriver-v0.37.1
     creates: /usr/local/bin/.geckodriver-v0.37.1
 
+- name: Raise inotify max_user_instances for concurrent Firefox sessions
+  ansible.posix.sysctl:
+    name: fs.inotify.max_user_instances
+    value: "8192"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-cider-ci-firefox.conf
+    reload: yes
+
 - name: Enable and start cider-ci-executor
   ansible.builtin.service:
     name: cider-ci-executor

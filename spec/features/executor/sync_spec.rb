@@ -50,9 +50,11 @@ feature 'Executor Sync' do
   scenario 'PATCH trial to executing propagates state up to task and job' do
     visit "/projects/#{EXECUTOR_PROJECT_ID}/commits/#{EXECUTOR_HEAD_COMMIT}/jobs"
     find('tr', text: 'Introduction Demo').find('button', text: 'Run').click
+    expect(page).to have_content 'Recorded Jobs'
 
     resp = api_call(:post, '/executor/sync', { available_load: 1.0 }, @token)
     sync_data = JSON.parse(resp.body)
+    expect(sync_data['trials_to_execute']).not_to be_empty
     trial = sync_data['trials_to_execute'].first
 
     resp = api_call(:patch, "/executor/trials/#{trial['id']}", { state: 'executing' }, @token)

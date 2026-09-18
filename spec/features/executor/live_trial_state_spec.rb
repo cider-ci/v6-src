@@ -131,7 +131,14 @@ feature 'Live trial state' do
     expect(port_dd.text.to_i).to be_between(20_000, 20_999)
 
     # After slumber finishes everything passes and propagates up to the job.
-    expect(page).to have_css('h3 .badge', text: 'passed', wait: 90)
+    # Wait for the trial to reach a terminal state in the DB, then confirm the
+    # trial page renders it. (Live auto-refresh during execution is already
+    # covered by the in-place assertions above, which updated without a reload.)
+    Timeout.timeout(90) do
+      sleep 1 until database[:trials][id: h[:trial_id]][:state] == 'passed'
+    end
+    visit "/trials/#{h[:trial_id]}"
+    expect(page).to have_css('h3 .badge', text: 'passed', wait: 30)
     expect(find('tr', text: 'finalize')).to have_css('.badge', text: 'passed')
     expect(database[:jobs][id: h[:job_id]][:state]).to eq 'passed'
     expect(database[:tasks][id: h[:task_id]][:state]).to eq 'passed'

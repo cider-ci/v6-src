@@ -5,7 +5,7 @@
     [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
     [cider-ci.server.routes :refer [path]]
     [cider-ci.server.state :as state]
-    [cljs.core.async :refer [go-loop <! chan]]
+    [cljs.core.async :refer [go go-loop <! chan]]
     [cljs.core.async :as async]
     [cljs.pprint :refer [pprint]]
     [reagent.core :as reagent]))
@@ -46,9 +46,14 @@
             _               (http-client/request {:url                     route
                                                   :chan                     ch
                                                   :modal-on-response-error (not already-loaded?)})
-            resp            (<! ch)]
+            ;; Race the response against a timeout so a stalled request can
+            ;; never freeze the polling loop (cljs-http has no default timeout).
+            [resp _]        (async/alts! [ch (async/timeout 15000)])]
         (when (= (:route @state/routing*) route)
-          (when (< (:status resp) 300)
+          ;; Only overwrite good data on a successful (2xx) response; ignore
+          ;; timeouts and error bodies so a transient failure doesn't blank
+          ;; or revert the page.
+          (when (and (map? resp) (:status resp) (< (:status resp) 300))
             (swap! _data* assoc route (:body resp)))
           (when (= @_fetch-id* my-id)
             (let [s (-> @data* :trial_state)]

@@ -64,12 +64,18 @@
 
 
 (defn propagate-from-trial [tx trial-id]
-  (let [trial         (first (jdbc-sql/query tx
-                               (-> (sql/select :task_id)
-                                   (sql/from :trials)
-                                   (sql/where [:= :id trial-id])
-                                   sql-format)))
+  (let [trial         (first (jdbc/execute! tx
+                               ["SELECT t.task_id, tsk.job_id
+                                 FROM trials t
+                                 JOIN tasks tsk ON tsk.id = t.task_id
+                                 WHERE t.id = ?" trial-id]))
         task-id       (:task_id trial)
+        ;; Serialize sibling-trial propagation on the job row: without this,
+        ;; two trials finishing concurrently each miss the other's uncommitted
+        ;; task update and leave the job stuck in 'executing'.
+        _             (jdbc/execute-one! tx
+                        ["SELECT id FROM jobs WHERE id = ? FOR UPDATE"
+                         (:job_id trial)])
         task          (first (jdbc-sql/query tx
                                (-> (sql/select :spec)
                                    (sql/from :tasks)

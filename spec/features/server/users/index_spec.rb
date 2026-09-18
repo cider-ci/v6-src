@@ -42,11 +42,13 @@ feature 'Users' do
   end
 
   context 'As an unauthenticated user' do
-    scenario 'cannot access users index page' do
+    scenario 'is redirected to the sign-in page' do
       visit '/users/'
       wait_until(10) do
-        page.has_content?('Authorization not satisfied') 
+        page.has_content?('Sign-in')
       end
+      expect(current_path).to eq '/sign-in'
+      expect(page.current_url).to include('return-to')
     end
   end
 end

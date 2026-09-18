@@ -26,7 +26,16 @@ feature 'Live trial state' do
     @admin = FactoryBot.create(:admin)
     set_session_cookie @admin
 
-    database[:repositories].insert(id: PROJECT_ID, name: 'Demo Project', git_url: 'local')
+    # branch_trigger_include_match matches no branch, so the demo project's
+    # jobs are never auto-triggered by the repository fetch loop. This keeps
+    # the executor free to run only the job this spec inserts — the ~22
+    # auto-triggered demo trials would otherwise saturate it and starve the
+    # slumber trial (their tasks have empty traits, which match any executor,
+    # so a unique executor trait cannot exclude them).
+    database[:repositories].insert(
+      id: PROJECT_ID, name: 'Demo Project', git_url: 'local',
+      branch_trigger_include_match: '^__none__$'
+    )
 
     @executor_name  = "livestate-executor-#{SecureRandom.hex(4)}"
     @executor_token = SecureRandom.hex(32)

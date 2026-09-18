@@ -156,19 +156,24 @@
                           port-env)]
     (swap! active-trials* assoc id trial-load)
     (try
-      (patch-trial! trial opts "executing" {})
+      ;; Report execution context (working dir, merged env incl. assigned ports)
+      ;; up front so it is visible on the trial page while the trial runs.
+      (patch-trial! trial opts "executing"
+                    {:exec_info {:working_dir           (.getAbsolutePath work-dir)
+                                 :environment_variables env-vars}})
 
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts))
 
       (let [scripts-fut (future (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id))]
-        ;; Stream partial script logs and heartbeat to the server while scripts are running.
-        (loop [n 0]
+        ;; Stream partial script logs and live script states to the server
+        ;; while scripts are running (each PATCH doubles as heartbeat).
+        (loop []
           (Thread/sleep 3000)
           (when-not (realized? scripts-fut)
             (upload-partial-script-logs! trial opts id)
-            (when (zero? (mod n 10))
-              (patch-trial! trial opts "executing" {}))
-            (recur (inc n))))
+            (patch-trial! trial opts "executing"
+                          {:scripts_results (strip-log-files (scripts/live-script-states id))})
+            (recur)))
         (let [{:keys [trial-state scripts]} @scripts-fut]
           (info "Trial" id "finished with" trial-state)
           (upload-script-logs! trial opts scripts)

@@ -14,8 +14,15 @@
 
 ;; Maps trial-id → {key-str → Process} for all actively running scripts.
 (defonce ^:private running-procs* (atom {}))
+;; Maps trial-id → {key-str → result-map}: live intermediate script states,
+;; updated on every scheduler iteration so they can be reported to the server
+;; while the trial is still running.
+(defonce ^:private live-results* (atom {}))
 ;; Set of trial-ids that have been asked to abort.
 (defonce ^:private aborting-trials* (atom #{}))
+
+(defn live-script-states [trial-id]
+  (get @live-results* trial-id {}))
 ;; Maps exclusive-resource-name → Clojure agent (for serial execution per resource).
 (defonce ^:private exclusive-resource-agents* (atom {}))
 
@@ -28,7 +35,8 @@
 
 (defn clear-abort! [trial-id]
   (swap! aborting-trials* disj trial-id)
-  (swap! running-procs* dissoc trial-id))
+  (swap! running-procs* dissoc trial-id)
+  (swap! live-results* dissoc trial-id))
 
 (defn- aborting? [trial-id]
   (contains? @aborting-trials* trial-id))
@@ -212,6 +220,7 @@
       {:trial-state "defective" :scripts {}}
       (loop [results  (into {} (for [[k _] scripts] [(name k) {:state "pending"}]))
              in-flight {}]
+        (swap! live-results* assoc trial-id results)
         (cond
           ;; Abort: skip pending, drain in-flight (processes already killed), return aborted
           (aborting? trial-id)
@@ -234,7 +243,10 @@
               (let [new-futs (into {} (mapv (fn [[k spec]]
                                               [(name k) (dispatch-script! trial-id (name k) spec env-vars work-dir)])
                                             startable))
-                    results  (reduce #(assoc-in %1 [(first %2) :state] "executing") results new-futs)]
+                    results  (reduce #(assoc %1 (first %2)
+                                             {:state      "executing"
+                                              :started_at (str (java.time.Instant/now))})
+                                     results new-futs)]
                 (recur results (merge in-flight new-futs)))
 
               (if (seq in-flight)

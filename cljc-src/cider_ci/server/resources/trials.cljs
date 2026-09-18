@@ -235,36 +235,50 @@
 (defn- debug-section [trial]
   (let [trial-id  (:trial_id trial)
         task-spec (:task_spec trial)
+        exec-info (get-in trial [:result :exec_info])
         ports     (:ports task-spec)
-        env-vars  (into {} (map (fn [[k v]] [(name k) v]) (:environment_variables task-spec)))
-        all-vars  (merge {"CIDER_CI"               "true"
-                          "CONTINUOUS_INTEGRATION"  "true"
-                          "CIDER_CI_TRIAL_ID"       trial-id
-                          "CIDER_CI_WORKING_DIR"    (str "/tmp/cider-ci-" trial-id)}
-                         env-vars
-                         (when (seq ports)
-                           (into {} (map (fn [[k v]]
-                                           [(clojure.string/upper-case (name k))
-                                            (str (:min v) "–" (:max v) " (range)")])
-                                         ports))))]
+        ;; Real env as reported by the executor (includes assigned port values);
+        ;; falls back to a spec-derived approximation until the trial starts.
+        real-env  (some->> (:environment_variables exec-info)
+                           (map (fn [[k v]] [(name k) (str v)]))
+                           (into {}))
+        spec-env  (into {} (map (fn [[k v]] [(name k) (str v)])
+                                (:environment_variables task-spec)))
+        all-vars  (or real-env
+                      (merge {"CIDER_CI"               "true"
+                              "CONTINUOUS_INTEGRATION"  "true"
+                              "CIDER_CI_TRIAL_ID"       trial-id}
+                             spec-env
+                             (when (seq ports)
+                               (into {} (map (fn [[k v]]
+                                               [(clojure.string/upper-case (name k))
+                                                (str (:min v) "–" (:max v) " (range)")])
+                                             ports)))))]
     [:div.mt-5
      [:hr]
      [:h5.text-muted "Debug Information"]
+     (when-not exec-info
+       [:p.small.text-muted
+        "Not yet reported by the executor — values below are derived from the task spec."])
      [:dl.row.small
       [:dt.col-sm-3 "Executor"]
       [:dd.col-sm-9 (or (:executor_name trial) [:span.text-muted "—"])]
       [:dt.col-sm-3 "Working directory"]
-      [:dd.col-sm-9 [:code (str "/tmp/cider-ci-" trial-id)]]
+      [:dd.col-sm-9 (if-let [wd (:working_dir exec-info)]
+                      [:code wd]
+                      [:span.text-muted "—"])]
       (when (seq ports)
         [:<>
          [:dt.col-sm-3 "Assigned ports"]
          [:dd.col-sm-9
           [:dl.row.mb-0
            (for [[k v] ports]
-             ^{:key (name k)}
-             [:<>
-              [:dt.col-sm-4 [:code (clojure.string/upper-case (name k))]]
-              [:dd.col-sm-8 (str (:min v) "–" (:max v))]])]]])
+             (let [port-key (clojure.string/upper-case (name k))]
+               ^{:key port-key}
+               [:<>
+                [:dt.col-sm-4 [:code port-key]]
+                [:dd.col-sm-8 (or (get real-env port-key)
+                                  (str (:min v) "–" (:max v) " (range)"))]]))]]])
       [:dt.col-sm-3 "Environment variables"]
       [:dd.col-sm-9
        [:table.table.table-sm.table-bordered.font-monospace

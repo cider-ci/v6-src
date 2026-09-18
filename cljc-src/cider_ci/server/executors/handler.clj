@@ -148,15 +148,23 @@
   (let [new-state       (:state body)
         error-msg       (:error body)
         scripts-results (:scripts_results body)
+        exec-info       (:exec_info body)
         trial-uuid      (java.util.UUID/fromString trial-id)]
     (when-not new-state
       (throw (ex-info "Missing state" {:status 400})))
-    (let [terminal? #{"passed" "failed" "defective" "aborted"}
+    (let [terminal?    #{"passed" "failed" "defective" "aborted"}
+          ;; Merge into the existing result (jsonb ||) so intermediate patches
+          ;; (live script states, exec_info) survive later ones.
+          result-patch (cond-> {}
+                         scripts-results (assoc :scripts scripts-results)
+                         exec-info       (assoc :exec_info exec-info))
           set-map   (cond-> {:state new-state :updated_at [:raw "now()"]}
                       (#{"executing"} new-state)   (assoc :started_at  [:raw "COALESCE(started_at, now())"])
                       (terminal? new-state)         (assoc :finished_at [:raw "now()"])
                       error-msg                     (assoc :error error-msg)
-                      scripts-results               (assoc :result [:lift {:scripts scripts-results}]))
+                      (seq result-patch)            (assoc :result
+                                                           [:|| [:coalesce :result [:lift {}]]
+                                                                [:lift result-patch]]))
           result    (jdbc/execute-one! tx
                       (-> (sql/update :trials)
                           (sql/set set-map)

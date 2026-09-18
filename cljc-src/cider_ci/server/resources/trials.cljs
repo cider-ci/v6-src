@@ -40,7 +40,7 @@
         my-id (random-uuid)]
     (reset! _fetch-id* my-id)
     (reset! _script-logs* {})
-    (go-loop []
+    (go-loop [n 0]
       (let [ch              (chan)
             already-loaded? (some? (get @_data* route))
             _               (http-client/request {:url                     route
@@ -52,12 +52,14 @@
             (swap! _data* assoc route (:body resp)))
           (when (= @_fetch-id* my-id)
             (let [s (-> @data* :trial_state)]
-              (when (= "executing" s)
+              ;; Log attachments are larger; fetch them only ~every 3s.
+              (when (and (= "executing" s) (zero? (mod n 12)))
                 (fetch-script-logs! (-> @data* :trial_id) (-> @data* :result :scripts)))
               (when-not (terminal-states s)
-                (<! (async/timeout (if (= "executing" s) 3000 5000)))
+                ;; Auto-refresh: next fetch 250ms after the last one arrived.
+                (<! (async/timeout 250))
                 (when (= @_fetch-id* my-id)
-                  (recur))))))))))
+                  (recur (inc n)))))))))))
 
 
 (def ^:private gantt-colors

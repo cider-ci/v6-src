@@ -154,7 +154,7 @@
 (def workspace
   ["/commits"
    ["/" {:name :commits
-         :auth-http-safe #{:public}}]])
+         :auth-http-safe #{:user}}]])
 
 (def jobs-dashboard
   ["/jobs"
@@ -192,6 +192,17 @@
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"}))
+
+
+(defn readable-without-auth?
+  "True if this route's page may be read (GET, i.e. http-safe) without being
+   signed in: its :auth-http-safe allows :public, or it is the sign-in page,
+   or it is a :no-sign-in-page route (e.g. initial setup). Used both server-
+   side (to redirect page loads) and client-side (to redirect in-app nav)."
+  [route-data]
+  (boolean (or (contains? (:auth-http-safe route-data) :public)
+               (= :sign-in (:name route-data))
+               (:no-sign-in-page route-data))))
 
 
 (def router (reitit/router routes {:conflicts nil}))

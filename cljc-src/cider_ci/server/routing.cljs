@@ -17,7 +17,7 @@
     ))
 
 
-(defn on-navigate [url match]
+(defn on-navigate-resolved [url match]
   (let [name (get-in match[:data :name])
         component (get route-page-table name)]
     (as-> match state
@@ -33,6 +33,17 @@
                                 (:path-params state)
                                 (:query-params state)))
       (reset! state/routing* state))))
+
+(defn on-navigate [url match]
+  (if (and match
+           (not (routes/readable-without-auth? (:data match)))
+           (empty? @state/user*))
+    ;; Not signed in and this route requires authentication: redirect to the
+    ;; sign-in page, remembering where the user wanted to go.
+    (let [return-to (str (:path url)
+                         (when-let [q (:query url)] (str "?" q)))]
+      (navigation/navigate! (path :sign-in {} {:return-to return-to})))
+    (on-navigate-resolved url match)))
 
 (defn navigate? [url]
   (debug 'navigate? url)

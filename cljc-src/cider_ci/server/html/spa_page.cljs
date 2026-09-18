@@ -34,7 +34,10 @@
         [:form.d-flex
          {:on-submit (fn [e]
                        (.preventDefault e)
-                       (navigate! (path :sign-in {} {:login (:login @data*)})))}
+                       (let [return-to (some-> @routing-state* :query-params :return-to)]
+                         (navigate! (path :sign-in {}
+                                          (cond-> {:login (:login @data*)}
+                                            return-to (assoc :return-to return-to))))))}
          [forms/input-component data* [:login]
           :label :none
           :outer-classes ""
@@ -105,7 +108,8 @@
    [:> bs/Container {:class "justify-content-end"}
     (if-let [user (-> @state/user*)]
       [navbar-user user]
-      [:<> (when-not  (-> @routing-state* :data :no-sign-in-page)
+      [:<> (when-not (or (-> @routing-state* :data :no-sign-in-page)
+                         (= :sign-in (:name @routing-state*)))
              [sign-in-form])])]])
 
 (defn page-nav []

@@ -62,4 +62,45 @@ feature 'Sign-in and sign-out'  do
 
     end
   end
+
+  context "protected pages require authentication" do
+
+    before :each do
+      database[:sessions].delete
+    end
+
+    scenario 'direct visit to a protected page redirects to sign-in and returns after login' do
+      visit '/commits/'
+
+      # redirected to the sign-in page, remembering the requested URL
+      expect(page).to have_content 'Sign-in'
+      expect(current_path).to eq '/sign-in'
+      expect(page.current_url).to include('return-to')
+
+      fill_in 'login',    with: @user.login
+      fill_in 'password', with: @user.password
+      click_on 'Submit'
+
+      # returned to the originally requested page, now signed in
+      expect(current_path).to eq '/commits/'
+      expect(page).to have_content @user.login
+    end
+
+    scenario 'in-app navigation to a protected page redirects an unauthenticated user to sign-in' do
+      visit '/'
+      expect(page).to have_content 'Cider-CI'
+
+      click_link 'Commits'
+
+      expect(page).to have_content 'Sign-in'
+      expect(current_path).to eq '/sign-in'
+      expect(page.current_url).to include('return-to')
+    end
+
+    scenario 'the main route stays readable without authentication' do
+      visit '/'
+      expect(current_path).to eq '/'
+      expect(page).not_to have_content 'Sign-in'
+    end
+  end
 end

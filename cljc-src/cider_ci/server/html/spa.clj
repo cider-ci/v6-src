@@ -4,6 +4,7 @@
     [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [keyword presence str]]
     [cider-ci.utils.json :as json]
+    [cider-ci.server.routes :as routes]
     [cider-ci.server.state :as state]
     [cider-ci.utils.url :as url]
     [clojure.java.io :as io]
@@ -46,10 +47,24 @@
               [:p "Loading application ..."]]]]
            js-includes)})
 
-(defn dispatch [root-handler request]
-  (if (and (-> request :route :data :bypass-spa not)
+(defn redirect-to-sign-in [request]
+  (let [return-to (str (:uri request)
+                       (when-let [qs (presence (:query-string request))]
+                         (str "?" qs)))]
+    {:status  302
+     :headers {"Location" (routes/path :sign-in {} {:return-to return-to})}}))
+
+(defn dispatch [root-handler {user :user route :route :as request}]
+  (if (and (-> route :data :bypass-spa not)
            (= :html (-> request :accept :mime)))
-    (html-handler request)
+    ;; Serve the SPA shell for a browser page load — but if the route requires
+    ;; authentication for reading and nobody is signed in, redirect to the
+    ;; sign-in page, remembering the requested URL so we can return afterwards.
+    (if (and route
+             (empty? user)
+             (not (routes/readable-without-auth? (:data route))))
+      (redirect-to-sign-in request)
+      (html-handler request))
     (root-handler request)))
 
 (defn wrap [handler]

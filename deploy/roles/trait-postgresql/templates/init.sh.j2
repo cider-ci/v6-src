@@ -7,10 +7,15 @@ BIN_DIR={{ ci_executor_trait_postgresql_bin_dir }}
 
 rm -rf "$DATA_DIR"
 
+# trust auth for host AND local (loopback-only, ephemeral per-trial cluster):
+# matches the legacy CI so project scripts that set PGUSER/PGPORT but not
+# PGPASSWORD can connect over both TCP (rspec) and the unix socket (psql/dropdb,
+# e.g. leihs seeds-check and delete-database). Peer auth would fail because the
+# OS user running trials (cider-ci) differs from the PG role (ci-exec-user).
 "$BIN_DIR/initdb" \
   -E UTF8 \
-  --auth-host=md5 \
-  --auth-local=peer \
+  --auth-host=trust \
+  --auth-local=trust \
   --username=postgres \
   "$DATA_DIR"
 

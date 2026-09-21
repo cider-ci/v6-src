@@ -133,6 +133,8 @@
     name:
       - postgresql-client
       - curl
+      - jq
+      - locales
       - libgtk-3-0
       - libdbus-glib-1-2
       - libasound2t64
@@ -142,6 +144,16 @@
       - zlib1g-dev
     state: present
     update_cache: yes
+
+- name: Generate locales required by projects (leihs createdb uses de_CH.UTF-8)
+  community.general.locale_gen:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - de_CH.UTF-8
+    - en_US.UTF-8
+  # A running PostgreSQL only sees a newly generated locale after a restart.
+  notify: Restart trait postgresql
 
 - name: Install mise (tool version manager) for exec-user
   ansible.builtin.shell:

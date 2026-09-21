@@ -46,6 +46,7 @@
     owner: root
     group: root
     mode: '0755'
+  notify: Restart trait postgresql
 
 - name: Deploy post script
   ansible.builtin.template:
@@ -66,6 +67,10 @@
       export PG{{ ci_executor_trait_postgresql_version_major }}PORT='{{ ci_executor_trait_postgresql_port }}'
       export PG{{ ci_executor_trait_postgresql_version_major }}PASSWORD='{{ ci_executor_trait_postgresql_exec_user_password }}'
       export PG{{ ci_executor_trait_postgresql_version_major }}DATABASE='{{ ci_executor_trait_postgresql_exec_user }}'
+      # Prefer the version-{{ ci_executor_trait_postgresql_version_major }} client binaries so pg_dump/pg_restore/psql
+      # match the server. Otherwise pg_wrapper may pick a newer client (17/18)
+      # whose dumps use params (e.g. transaction_timeout) the PG {{ ci_executor_trait_postgresql_version_major }} server rejects.
+      export PATH='{{ ci_executor_trait_postgresql_bin_dir }}:'"$PATH"
 
 - name: Install trait postgresql systemd service
   ansible.builtin.template:

@@ -101,6 +101,33 @@
     content: "bash\n"
     force: no
 
+- name: Register extra executor traits (dispatch markers for projects)
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "{{ item }}"
+    create: yes
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+  loop: "{{ ci_executor_extra_traits | default([]) }}"
+  notify: Restart cider-ci-executor
+
+- name: Install BASH_ENV snippet so non-login trial scripts get trait environment
+  ansible.builtin.copy:
+    dest: /etc/cider-ci/trial-bash-env.sh
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0644'
+    content: |
+      # Managed by Ansible. Sourced via BASH_ENV by the non-login bash that runs
+      # trial scripts. /etc/profile.d is only read by login shells, so trait
+      # roles (mise, asdf, postgresql, ...) expose their environment here too.
+      for _cider_ci_trait_env in /etc/profile.d/cider-ci-trait-*.sh; do
+        [ -r "$_cider_ci_trait_env" ] && . "$_cider_ci_trait_env"
+      done
+      unset _cider_ci_trait_env
+  notify: Restart cider-ci-executor
+
 - name: Install system packages required for integration tests
   ansible.builtin.apt:
     name:

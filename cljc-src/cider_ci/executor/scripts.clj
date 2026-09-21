@@ -151,7 +151,13 @@
                         (:template_environment_variables spec) apply-templates)
           log-file    (File. (System/getProperty "java.io.tmpdir")
                              (str "cider-ci-script-" key-str "-" trial-id ".log"))
-          script-file (File. ^String work-dir (str "cider-ci-" key-str ".sh"))]
+          ;; Write the wrapper script OUTSIDE the working directory so it does
+          ;; not pollute the git checkout. Tasks that verify a clean tree
+          ;; (e.g. `git status --porcelain`) would otherwise see it as an
+          ;; untracked file. The process still runs with cwd = work-dir, so
+          ;; relative paths inside the script body resolve as before.
+          script-file (File. (System/getProperty "java.io.tmpdir")
+                             (str "cider-ci-script-" key-str "-" trial-id ".sh"))]
       (spit script-file (or (:body spec) ""))
       (.setExecutable script-file true)
       (let [pb   (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
@@ -181,7 +187,8 @@
              :finished_at (str (java.time.Instant/now))
              :log-file    log-file})
           (finally
-            (swap! running-procs* update trial-id dissoc key-str)))))
+            (swap! running-procs* update trial-id dissoc key-str)
+            (.delete script-file)))))
     (catch Exception e
       {:state "defective"
        :error (.getMessage e)})))

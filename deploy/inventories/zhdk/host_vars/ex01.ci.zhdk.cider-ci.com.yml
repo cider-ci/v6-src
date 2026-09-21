@@ -4,3 +4,13 @@ ci_executor_trait_postgresql: true
 ci_executor_trait_stress_ng: true
 ci_executor_trait_git: true
 
+# Dispatch-marker traits required by projects (e.g. leihs_database) so their
+# tasks match this executor. The actual Ruby toolchain is provided by mise
+# (see trait-mise); "asdf" here is a capability marker, not an asdf install.
+# "postgresql 15" mirrors the versioned trait the leihs config expects
+# (the postgresql trait role provisions PG 15 and its PG15* env vars).
+ci_executor_extra_traits:
+  - ruby
+  - "postgresql 15"
+  - asdf
+

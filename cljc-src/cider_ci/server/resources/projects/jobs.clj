@@ -304,12 +304,17 @@
 
     :project-jobs
     (with-open [repo (shared/file-repository (shared/path {:project-id project-id}))]
-      (case request-method
-        :get  (let [created (created-jobs project-id commit-id)]
-                {:status 200
-                 :body   {:available (available-jobs repo commit-id created)
-                          :created   created}})
-        :post (create-job repo project-id commit-id body session)
-        {:status 405 :body "Method not allowed"}))
+      (try
+        (case request-method
+          :get  (let [created (created-jobs project-id commit-id)]
+                  {:status 200
+                   :body   {:available (available-jobs repo commit-id created)
+                            :created   created}})
+          :post (create-job repo project-id commit-id body session)
+          {:status 405 :body "Method not allowed"})
+        ;; A full SHA always "resolves" in JGit; reading it throws when the
+        ;; commit has not been fetched yet. That is a 404, not a 500.
+        (catch org.eclipse.jgit.errors.MissingObjectException _
+          {:status 404 :body (str "Commit " commit-id " not (yet) present in the repository")})))
 
     {:status 500 :body "Unresolved route"}))

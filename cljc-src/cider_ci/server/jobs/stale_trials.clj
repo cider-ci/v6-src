@@ -59,12 +59,16 @@
     (let [tx      (jdbc/with-options raw-tx builder-fn-options-default)
           timeout (:settings/trial_dispatch_timeout (get-settings))
           rows    (jdbc/execute! tx
+                   ;; Cast explicitly: an unadorned `now() - ?` makes PostgreSQL
+                   ;; type ? as timestamptz, the difference becomes an interval
+                   ;; and `created_at < interval` fails. This silently broke the
+                   ;; whole recovery cycle (one try block) until 2026-09-22.
                    ["UPDATE trials
                      SET state = 'aborted', updated_at = now()
                      WHERE state = 'pending'
-                       AND created_at < now() - ?
+                       AND created_at < now() - CAST(? AS interval)
                      RETURNING id"
-                    timeout])]
+                    (str timeout)])]
       (when (seq rows)
         (info "Aborted" (count rows) "pending trial(s) that exceeded dispatch timeout")
         (doseq [{:keys [id]} rows]
@@ -92,15 +96,18 @@
           (propagation/propagate-from-trial tx id))))))
 
 
+(defn- guarded [step-name f]
+  ;; Each step is isolated so one failing query cannot skip the others.
+  (try (f (get-ds))
+       (catch Exception e
+         (warn "Stale trial recovery error in" step-name ":" (.getMessage e)))))
+
 (defdaemon "stale-trial-recovery" 60
-  (try
-    (reset-stale-dispatching! (get-ds))
-    (reset-lost-on-executor! (get-ds))
-    (reset-stale-executing! (get-ds))
-    (abort-pending-timed-out! (get-ds))
-    (reconcile-stuck-tasks! (get-ds))
-    (catch Exception e
-      (warn "Stale trial recovery error:" (.getMessage e)))))
+  (guarded "reset-stale-dispatching" reset-stale-dispatching!)
+  (guarded "reset-lost-on-executor" reset-lost-on-executor!)
+  (guarded "reset-stale-executing" reset-stale-executing!)
+  (guarded "abort-pending-timed-out" abort-pending-timed-out!)
+  (guarded "reconcile-stuck-tasks" reconcile-stuck-tasks!))
 
 
 (defn init []

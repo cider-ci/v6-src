@@ -37,7 +37,7 @@ feature 'Project detail page' do
     visit '/projects/'
     click_on 'Demo Repository'
 
-    expect(current_path).to eq "/projects/#{@project_id}"
+    expect(page).to have_current_path("/projects/#{@project_id}", ignore_query: true)
 
     expect(page).to have_content 'Demo Repository'
     expect(page).to have_content 'https://example.test/demo.git'

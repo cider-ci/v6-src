@@ -19,7 +19,7 @@ feature 'Project admin actions' do
     expect(page).to have_content 'Demo Repository'
     expect(page).to have_button 'Fetch now'
     click_button 'Fetch now'
-    expect(current_path).to eq "/projects/#{@project_id}"
+    expect(page).to have_current_path("/projects/#{@project_id}", ignore_query: true)
   end
 
   scenario 'admin can delete a project' do

@@ -21,7 +21,7 @@ feature 'Sign-in and sign-out'  do
       expect(page).to have_content 'Sign-in'
       fill_in 'password', with: @user.password
       click_on 'Submit'
-      expect(current_path).to eq '/'
+      expect(page).to have_current_path('/', ignore_query: true)
       expect(page).to have_content @user.login
       expect(database[:sessions].where(user_id: @user.id).first).to be
       click_on @user.login
@@ -37,7 +37,7 @@ feature 'Sign-in and sign-out'  do
       expect(page).to have_content 'Sign-in'
       fill_in 'password', with: @user.password
       click_on 'Submit'
-      expect(current_path).to eq '/'
+      expect(page).to have_current_path('/', ignore_query: true)
       expect(page).to have_content @user.login
       expect(database[:sessions].where(user_id: @user.id).first).to be
       click_on @user.login
@@ -74,7 +74,7 @@ feature 'Sign-in and sign-out'  do
 
       # redirected to the sign-in page, remembering the requested URL
       expect(page).to have_content 'Sign-in'
-      expect(current_path).to eq '/sign-in'
+      expect(page).to have_current_path('/sign-in', ignore_query: true)
       expect(page.current_url).to include('return-to')
 
       fill_in 'login',    with: @user.login
@@ -82,7 +82,7 @@ feature 'Sign-in and sign-out'  do
       click_on 'Submit'
 
       # returned to the originally requested page, now signed in
-      expect(current_path).to eq '/commits/'
+      expect(page).to have_current_path('/commits/', ignore_query: true)
       expect(page).to have_content @user.login
     end
 
@@ -93,13 +93,13 @@ feature 'Sign-in and sign-out'  do
       click_link 'Commits'
 
       expect(page).to have_content 'Sign-in'
-      expect(current_path).to eq '/sign-in'
+      expect(page).to have_current_path('/sign-in', ignore_query: true)
       expect(page.current_url).to include('return-to')
     end
 
     scenario 'the main route stays readable without authentication' do
       visit '/'
-      expect(current_path).to eq '/'
+      expect(page).to have_current_path('/', ignore_query: true)
       expect(page).not_to have_content 'Sign-in'
     end
   end

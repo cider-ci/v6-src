@@ -44,7 +44,7 @@ feature 'User CRUD' do
 
       find('tr.user', text: 'listuser').click
       wait_until(10) { page.has_css?('h2', text: 'listuser') }
-      expect(current_path).to eq("/users/#{user[:id]}")
+      expect(page).to have_current_path("/users/#{user[:id]}", ignore_query: true)
     end
   end
 end

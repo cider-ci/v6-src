@@ -17,7 +17,7 @@ feature 'User Account'  do
     scenario 'uses the navbar "My account" link' do
       click_on @user.login
       click_on "My account"
-      expect(current_path).to be== "/users/#{@user.id}"
+      expect(page).to have_current_path("/users/#{@user.id}", ignore_query: true)
     end
 
     scenario 'resets the password and signs in again' do

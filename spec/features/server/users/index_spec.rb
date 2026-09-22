@@ -21,7 +21,7 @@ feature 'Users' do
       end
       
       # For now, just verify the route resolves to something
-      expect(current_path).to eq '/users/'
+      expect(page).to have_current_path('/users/', ignore_query: true)
       
     end
 
@@ -47,7 +47,7 @@ feature 'Users' do
       wait_until(10) do
         page.has_content?('Sign-in')
       end
-      expect(current_path).to eq '/sign-in'
+      expect(page).to have_current_path('/sign-in', ignore_query: true)
       expect(page.current_url).to include('return-to')
     end
   end

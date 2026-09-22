@@ -91,7 +91,7 @@ feature 'Branch detail page' do
     visit "/projects/#{@project_id}"
     click_on 'main'
 
-    expect(current_path).to eq "/projects/#{@project_id}/branches/main"
+    expect(page).to have_current_path("/projects/#{@project_id}/branches/main", ignore_query: true)
     expect(page).to have_content 'main'
   end
 

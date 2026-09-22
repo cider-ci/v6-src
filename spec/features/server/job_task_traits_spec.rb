@@ -16,7 +16,8 @@ feature 'Job task traits' do
   before :each do
     @admin = FactoryBot.create(:admin)
     set_session_cookie @admin
-    database[:repositories].insert(id: TRAITS_PROJECT_ID, name: 'Demo Project', git_url: 'local')
+    database[:repositories].insert(id: TRAITS_PROJECT_ID, name: 'Demo Project', git_url: 'local',
+    branch_trigger_include_match: '^__none__$') # no auto-triggered demo jobs: specs click Run themselves
     visit "/projects/#{TRAITS_PROJECT_ID}/commits/#{TRAITS_HEAD_COMMIT}/jobs"
   end
 

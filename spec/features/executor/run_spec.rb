@@ -16,7 +16,8 @@ feature 'Executor Run' do
     database[:repositories].insert(
       id:      project_id,
       name:    'Demo Project',
-      git_url: 'local'
+      git_url: 'local',
+      branch_trigger_include_match: '^__none__$' # no auto-triggered demo jobs: specs click Run themselves
     )
 
     @executor_token = SecureRandom.hex(32)

@@ -13,7 +13,8 @@ feature 'Blob view' do
     database[:repositories].insert(
       id:      DEMO_PROJECT_ID,
       name:    'Demo Project',
-      git_url: 'local'
+      git_url: 'local',
+      branch_trigger_include_match: '^__none__$' # no auto-triggered demo jobs: specs click Run themselves
     )
   end
 

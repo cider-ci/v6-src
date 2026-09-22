@@ -10,20 +10,20 @@ require 'spec_helper'
 # task requiring e.g. `incus` could be dispatched to an executor without it.
 feature 'Job task traits' do
 
-  PROJECT_ID  = 'cider-ci-demo-project'
-  HEAD_COMMIT = 'eb15b2b3a521854ef2cb2cd8134fd3675f5053ec'
+  TRAITS_PROJECT_ID  = 'cider-ci-demo-project'
+  TRAITS_HEAD_COMMIT = 'eb15b2b3a521854ef2cb2cd8134fd3675f5053ec'
 
   before :each do
     @admin = FactoryBot.create(:admin)
     set_session_cookie @admin
-    database[:repositories].insert(id: PROJECT_ID, name: 'Demo Project', git_url: 'local')
-    visit "/projects/#{PROJECT_ID}/commits/#{HEAD_COMMIT}/jobs"
+    database[:repositories].insert(id: TRAITS_PROJECT_ID, name: 'Demo Project', git_url: 'local')
+    visit "/projects/#{TRAITS_PROJECT_ID}/commits/#{TRAITS_HEAD_COMMIT}/jobs"
   end
 
   # traits::text[] -> sorted array of lowercase names, independent of the
   # Sequel pg_array extension being loaded.
   def task_traits(job_key)
-    job_id = database[:jobs].where(project_id: PROJECT_ID, commit_id: HEAD_COMMIT, key: job_key).get(:id)
+    job_id = database[:jobs].where(project_id: TRAITS_PROJECT_ID, commit_id: TRAITS_HEAD_COMMIT, key: job_key).get(:id)
     expect(job_id).not_to be_nil
     database.fetch("SELECT array_to_string(traits, ',') AS traits FROM tasks WHERE job_id = ?", job_id)
             .map { |r| r[:traits].to_s.split(',').sort }

@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
     [cider-ci.server.db.core :refer [get-ds]]
+    [cider-ci.server.jobs.auto-trigger :as auto-trigger]
     [cider-ci.server.jobs.decompose :as decompose]
     [cider-ci.server.jobs.generate :as generate]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
@@ -112,14 +113,9 @@
                     sql-format))
               (doseq [task-spec task-specs]
                 (let [new-task-id (java.util.UUID/randomUUID)]
-                  (jdbc/execute-one! tx
-                    (-> (sql/insert-into :tasks)
-                        (sql/values [{:id         new-task-id
-                                      :job_id     new-job-id
-                                      :tasks/name (:name task-spec)
-                                      :state      "pending"
-                                      :spec       [:lift task-spec]}])
-                        sql-format))
+                  ;; Shared with the auto-trigger: also sets traits + load, so
+                  ;; UI-triggered tasks are trait-gated like auto-triggered ones.
+                  (auto-trigger/insert-task! tx new-job-id new-task-id task-spec)
                   (let [eager    (or (:eager_trials task-spec) 1)
                         max-t    (or (:max_trials task-spec) 2)
                         n-trials (max 1 (min eager max-t))]

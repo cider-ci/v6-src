@@ -146,9 +146,13 @@
     (let [timeout-sec (parse-timeout (:timeout spec))
           ;; Merge script-level environment_variables on top of task-level env.
           merged-env  (merge env-vars (:environment_variables spec))
-          ;; Normalise to {string->string}; apply {{KEY}} substitution when opted in.
+          ;; Normalise to {string->string}; apply {{KEY}} substitution.
+          ;; Legacy semantics: template_environment_variables defaults to TRUE
+          ;; when a script does not set it (the legacy server injected true in
+          ;; builder/task.clj); only an explicit false disables substitution.
+          ;; Projects rely on this, e.g. LEIHS_ADMIN_DIR: '{{CIDER_CI_WORKING_DIR}}'.
           final-env   (cond-> (env-str-map merged-env)
-                        (:template_environment_variables spec) apply-templates)
+                        (get spec :template_environment_variables true) apply-templates)
           log-file    (File. (System/getProperty "java.io.tmpdir")
                              (str "cider-ci-script-" key-str "-" trial-id ".log"))
           ;; Write the wrapper script OUTSIDE the working directory so it does

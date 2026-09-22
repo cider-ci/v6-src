@@ -13,4 +13,7 @@ ci_executor_extra_traits:
   - ruby
   - "postgresql 15"
   - asdf
+  # leihs specs jobs require Firefox-ESR; Firefox is provided via mise
+  # (executor role installs the firefox plugin) and xvfb is installed.
+  - firefox-esr
 

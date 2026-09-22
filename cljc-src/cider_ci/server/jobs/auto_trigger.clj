@@ -31,16 +31,34 @@
         (throw e)))))
 
 
-(defn- task-traits-literal [task-spec]
-  (let [traits (:traits task-spec)]
-    (if (map? traits)
-      (str "{"
-           (->> traits
-                (filter (comp true? val))
-                (map (comp str/lower-case name key))
-                (str/join ","))
-           "}")
-      "{}")))
+(defn task-traits-literal
+  "PostgreSQL text[] literal of a task spec's traits, lowercased. Accepts the
+   map form {Trait: true, Other: false} (only truthy entries count) and the
+   list form [Trait Other] (all entries). Anything else yields the empty set,
+   which matches every executor — so both forms must be handled or trait
+   gating silently disappears (e.g. leihs `traits: [asdf]`)."
+  [task-spec]
+  (let [traits (:traits task-spec)
+        names  (cond
+                 (map? traits)        (->> traits (filter (comp true? val)) (map key))
+                 (sequential? traits) traits
+                 :else                [])]
+    (str "{" (->> names (map (comp str/lower-case str/trim name)) (str/join ",")) "}")))
+
+
+(defn insert-task!
+  "Inserts one task row for job-id from a decomposed task spec, deriving the
+   traits (text[]) and load columns from the spec. Shared by the auto-trigger
+   and the UI create-job path so trait gating cannot silently diverge between
+   them (the UI path used to omit traits entirely, so its tasks matched any
+   executor regardless of the required traits)."
+  [tx job-id task-id task-spec]
+  (jdbc/execute-one! tx
+    ["INSERT INTO tasks (id, job_id, name, state, spec, traits, load)
+      VALUES (?, ?, ?, 'pending', ?, CAST(? AS text[]), ?)"
+     task-id job-id (:name task-spec) task-spec
+     (task-traits-literal task-spec)
+     (double (or (:load task-spec) 1.0))]))
 
 
 (defn create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
@@ -55,12 +73,7 @@
       (info "Auto-triggered job" key "for" project-id commit-id)
       (doseq [task-spec (decompose/decompose expanded)]
         (let [new-task-id (java.util.UUID/randomUUID)]
-          (jdbc/execute-one! tx
-            ["INSERT INTO tasks (id, job_id, name, state, spec, traits, load)
-              VALUES (?, ?, ?, 'pending', ?, CAST(? AS text[]), ?)"
-             new-task-id new-job-id (:name task-spec) task-spec
-             (task-traits-literal task-spec)
-             (double (or (:load task-spec) 1.0))])
+          (insert-task! tx new-job-id new-task-id task-spec)
           (jdbc/execute-one! tx
             ["INSERT INTO trials (task_id, state) VALUES (?, 'pending')"
              new-task-id]))))))

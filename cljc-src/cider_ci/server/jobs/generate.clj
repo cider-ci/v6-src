@@ -1,13 +1,34 @@
 (ns cider-ci.server.jobs.generate
   (:require
     [cider-ci.server.projects.repositories.git.repositories :as git]
+    [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
     [taoensso.timbre :refer [warn]]))
+
+(defn- resolve-source
+  "Where to list files: the project's own repository/commit, or — when the
+   generate_tasks spec carries `submodule: [seg ...]` — the submodule's
+   repository/commit resolved through .gitmodules + gitlinks (legacy parity)."
+  [project-id commit-id generate-spec]
+  (let [segments (let [s (:submodule generate-spec)]
+                   (cond (sequential? s) (vec s)
+                         (string? s)     [s]
+                         :else           []))]
+    (if (empty? segments)
+      {:repo-id project-id :commit-id commit-id}
+      (with-open [repo (submodules/open-repo project-id)]
+        (submodules/resolve-submodule-chain {:repo repo :commit-id commit-id} segments)))))
 
 (defn- file-list [project-id commit-id generate-spec]
   (let [include-match (or (:include_match generate-spec) "")
         exclude-match (:exclude_match generate-spec)]
     (try
-      (git/ls-tree project-id commit-id include-match exclude-match)
+      (let [{:keys [repo-id commit-id]} (resolve-source project-id commit-id generate-spec)]
+        (git/ls-tree repo-id commit-id include-match exclude-match))
+      (catch clojure.lang.ExceptionInfo e
+        ;; a bad submodule reference is a configuration error — surface it
+        (if (= 422 (:status (ex-data e)))
+          (throw e)
+          (do (warn "generate_tasks ls-tree failed:" (.getMessage e)) [])))
       (catch Exception e
         (warn "generate_tasks ls-tree failed:" (.getMessage e))
         []))))

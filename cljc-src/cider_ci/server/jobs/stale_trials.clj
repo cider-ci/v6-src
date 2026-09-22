@@ -1,7 +1,6 @@
 (ns cider-ci.server.jobs.stale-trials
   (:require
     [cider-ci.server.db.core :refer [builder-fn-options-default get-ds]]
-    [cider-ci.server.db.settings :refer [get-settings]]
     [cider-ci.server.jobs.propagation :as propagation]
     [cider-ci.utils.daemon :refer [defdaemon]]
     [next.jdbc :as jdbc]
@@ -56,19 +55,17 @@
 
 (defn- abort-pending-timed-out! [ds]
   (jdbc/with-transaction [raw-tx ds]
-    (let [tx      (jdbc/with-options raw-tx builder-fn-options-default)
-          timeout (:settings/trial_dispatch_timeout (get-settings))
-          rows    (jdbc/execute! tx
-                   ;; Cast explicitly: an unadorned `now() - ?` makes PostgreSQL
-                   ;; type ? as timestamptz, the difference becomes an interval
-                   ;; and `created_at < interval` fails. This silently broke the
-                   ;; whole recovery cycle (one try block) until 2026-09-22.
-                   ["UPDATE trials
-                     SET state = 'aborted', updated_at = now()
-                     WHERE state = 'pending'
-                       AND created_at < now() - CAST(? AS interval)
-                     RETURNING id"
-                    (str timeout)])]
+    (let [tx   (jdbc/with-options raw-tx builder-fn-options-default)
+          ;; Read the interval directly in SQL: it is typed correctly there,
+          ;; whereas passing the cached settings value as a parameter broke
+          ;; twice (timestamptz inference, then a nil -> "" cast).
+          rows (jdbc/execute! tx
+                 ["UPDATE trials
+                   SET state = 'aborted', updated_at = now()
+                   WHERE state = 'pending'
+                     AND created_at < now() - (SELECT trial_dispatch_timeout
+                                               FROM settings WHERE id = 0)
+                   RETURNING id"])]
       (when (seq rows)
         (info "Aborted" (count rows) "pending trial(s) that exceeded dispatch timeout")
         (doseq [{:keys [id]} rows]

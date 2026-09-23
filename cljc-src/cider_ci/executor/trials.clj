@@ -54,18 +54,41 @@
         (.delete f)))
     (.delete dir)))
 
+(defn- delete-script-tmp-files!
+  "Removes the wrapper scripts and log files a trial's scripts left in tmpdir
+   (cider-ci-script-<key>-<trial-id>.sh|.log). upload-script-logs! deletes the
+   logs it uploaded, but aborted/defective trials, upload failures and executor
+   restarts left thousands of stale logs behind (1276 files on ex01)."
+  [trial-id]
+  (let [tmpdir  (File. (System/getProperty "java.io.tmpdir"))
+        log-sfx (str "-" trial-id ".log")
+        sh-sfx  (str "-" trial-id ".sh")]
+    (doseq [^File f (or (.listFiles tmpdir) [])
+            :let [n (.getName f)]
+            :when (and (.isFile f)
+                       (.startsWith n "cider-ci-script-")
+                       (or (.endsWith n log-sfx) (.endsWith n sh-sfx)))]
+      (.delete f))))
+
 (defn sweep-working-dirs!
-  "Deletes stale cider-ci working dirs left over from a previous crashed executor.
-   Skipped when running inside a CIDER-CI trial to avoid deleting the parent
-   trial's working directory."
+  "Deletes stale cider-ci working dirs and script tmp files left over from a
+   previous crashed/restarted executor. Skipped when running inside a CIDER-CI
+   trial to avoid deleting the parent trial's working directory."
   []
   (when-not (System/getenv "CIDER_CI")
-    (let [tmpdir (File. (System/getProperty "java.io.tmpdir"))]
-      (doseq [^File f (.listFiles tmpdir)
-              :when (and (.isDirectory f)
-                         (.startsWith (.getName f) "cider-ci-"))]
-        (info "Sweeping stale working dir:" (.getName f))
-        (delete-dir! f)))))
+    (let [tmpdir (File. (System/getProperty "java.io.tmpdir"))
+          stale  (->> (or (.listFiles tmpdir) [])
+                      (filter (fn [^File f]
+                                (let [n (.getName f)]
+                                  (or (and (.isDirectory f) (.startsWith n "cider-ci-"))
+                                      (and (.isFile f) (.startsWith n "cider-ci-script-")))))))]
+      (doseq [^File f stale]
+        (if (.isDirectory f)
+          (do (info "Sweeping stale working dir:" (.getName f))
+              (delete-dir! f))
+          (.delete f)))
+      (when (seq stale)
+        (info "Swept" (count stale) "stale working dir(s)/script file(s)")))))
 
 
 (defn- upload-trial-attachments! [trial opts ^File work-dir task-spec]
@@ -190,4 +213,5 @@
         (scripts/clear-abort! id)
         (when port-env (ports/release! port-env))
         (swap! active-trials* dissoc id)
-        (delete-dir! work-dir)))))
+        (delete-dir! work-dir)
+        (delete-script-tmp-files! id)))))

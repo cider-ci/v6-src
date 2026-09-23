@@ -82,10 +82,11 @@ feature 'Script stdin is EOF' do
         }
       }
     }.to_json
-    database.run(
-      "UPDATE tasks SET spec = '#{spec_json}'::jsonb, traits = '{#{STDIN_TRAIT}}'::text[] " \
-      "WHERE id = '#{task_id}'"
-    )
+    # bound parameters: the script body contains quotes
+    database.run(Sequel.lit(
+      'UPDATE tasks SET spec = ?::jsonb, traits = ?::text[] WHERE id = ?',
+      spec_json, "{#{STDIN_TRAIT}}", task_id
+    ))
     database[:trials].insert(id: trial_id, task_id: task_id, state: 'pending')
     trial_id
   end

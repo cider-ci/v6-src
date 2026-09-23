@@ -136,6 +136,7 @@
       - jq
       - locales
       - xvfb
+      - xauth      # xvfb-run needs it (leihs specs: `xvfb-run -a ... rspec`)
       - libgtk-3-0
       - libdbus-glib-1-2
       - libasound2t64

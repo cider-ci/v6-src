@@ -121,7 +121,7 @@ feature 'Live trial state' do
     expect(page).to have_content 'Debug Information'
     expect(page).to have_content(@executor_name)
     # Real working directory (contains the trial id)
-    expect(page).to have_css('code', text: /cider-ci-#{h[:trial_id]}/)
+    expect(page).to have_css('code', text: %r{cider-ci/#{h[:trial_id]}\z})
     # Real environment variables
     expect(page).to have_content 'LIVE_TEST_MARKER'
     expect(page).to have_content 'live-42'

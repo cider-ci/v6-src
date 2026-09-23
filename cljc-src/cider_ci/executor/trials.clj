@@ -70,18 +70,38 @@
                        (or (.endsWith n log-sfx) (.endsWith n sh-sfx)))]
       (.delete f))))
 
+(defn working-dirs-root
+  "Parent of all trial working directories: <java.io.tmpdir>/cider-ci."
+  ^File []
+  (File. (System/getProperty "java.io.tmpdir") "cider-ci"))
+
+(defn working-dir
+  "Trial working directory. Its basename IS the trial id (legacy parity:
+   <working_dir>/<trial-id>). Project scripts rely on that, e.g. leihs'
+   container-build pushes $CIDER_CI_WORKING_DIR into a container and then
+   addresses it as /tmp/$CIDER_CI_TRIAL_ID."
+  ^File [trial-id]
+  (File. (working-dirs-root) (str trial-id)))
+
+(def ^:private legacy-work-dir-pattern
+  ;; pre-2026-09-23 naming: <tmpdir>/cider-ci-<uuid>
+  #"cider-ci-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
 (defn sweep-working-dirs!
-  "Deletes stale cider-ci working dirs and script tmp files left over from a
-   previous crashed/restarted executor. Skipped when running inside a CIDER-CI
-   trial to avoid deleting the parent trial's working directory."
+  "Deletes stale trial working dirs (current and legacy naming) and script tmp
+   files left over from a previous crashed/restarted executor. Skipped when
+   running inside a CIDER-CI trial to avoid deleting the parent trial's
+   working directory."
   []
   (when-not (System/getenv "CIDER_CI")
     (let [tmpdir (File. (System/getProperty "java.io.tmpdir"))
-          stale  (->> (or (.listFiles tmpdir) [])
-                      (filter (fn [^File f]
-                                (let [n (.getName f)]
-                                  (or (and (.isDirectory f) (.startsWith n "cider-ci-"))
-                                      (and (.isFile f) (.startsWith n "cider-ci-script-")))))))]
+          stale  (concat
+                   (filter #(.isDirectory ^File %) (or (.listFiles (working-dirs-root)) []))
+                   (->> (or (.listFiles tmpdir) [])
+                        (filter (fn [^File f]
+                                  (let [n (.getName f)]
+                                    (or (and (.isDirectory f) (re-matches legacy-work-dir-pattern n))
+                                        (and (.isFile f) (.startsWith n "cider-ci-script-"))))))))]
       (doseq [^File f stale]
         (if (.isDirectory f)
           (do (info "Sweeping stale working dir:" (.getName f))
@@ -168,7 +188,7 @@
 (defn execute! [{:keys [id git_url commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
   (let [trial-load (double (or (:load task_spec) 1.0))
-        work-dir   (File. (System/getProperty "java.io.tmpdir") (str "cider-ci-" id))
+        work-dir   (working-dir id)
         port-env   (when (seq (:ports task_spec))
                      (ports/reserve! (:ports task_spec)))
         env-vars   (merge {"CIDER_CI"             "true"
@@ -185,6 +205,7 @@
                     {:exec_info {:working_dir           (.getAbsolutePath work-dir)
                                  :environment_variables env-vars}})
 
+      (.mkdirs (working-dirs-root))
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts))
 
       (let [scripts-fut (future (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id))]

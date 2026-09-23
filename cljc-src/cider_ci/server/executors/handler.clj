@@ -26,10 +26,12 @@
                                    tsk.load AS task_load,
                                    j.id     AS job_id,
                                    j.commit_id,
-                                   j.project_id
+                                   j.project_id,
+                                   r.git_url AS repository_git_url
                             FROM trials t
                             JOIN tasks    tsk ON tsk.id = t.task_id
                             JOIN jobs     j   ON j.id   = tsk.job_id
+                            JOIN repositories r ON r.id = j.project_id
                             JOIN executors e  ON e.id   = ?::uuid
                             WHERE t.state = 'pending'
                               AND tsk.traits <@ e.traits
@@ -64,7 +66,12 @@
              :job_id     (str (:job_id t))
              :commit_id  (:commit_id t)
              :project_id (:project_id t)
+             ;; git_url: where the executor fetches from (server proxy, token
+             ;; authenticated). repository_git_url: the project's real remote,
+             ;; used as `origin` of the working dir (legacy parity) so trial
+             ;; scripts can `git fetch origin ...` without executor credentials.
              :git_url    (str server-base-url "/projects/" (:project_id t) "/git")
+             :repository_git_url (:repository_git_url t)
              :patch_path (str "/executor/trials/" (:id t))})
           raw-trials)))
 

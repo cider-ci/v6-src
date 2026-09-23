@@ -185,7 +185,7 @@
   (into {} (for [[k v] script-results] [k (dissoc v :log-file)])))
 
 
-(defn execute! [{:keys [id git_url commit_id task_spec] :as trial} opts]
+(defn execute! [{:keys [id git_url repository_git_url commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
   (let [trial-load (double (or (:load task_spec) 1.0))
         work-dir   (working-dir id)
@@ -206,7 +206,8 @@
                                  :environment_variables env-vars}})
 
       (.mkdirs (working-dirs-root))
-      (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts))
+      (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
+                                repository_git_url)
 
       (let [scripts-fut (future (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id))]
         ;; Stream partial script logs and live script states to the server

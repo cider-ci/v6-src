@@ -132,13 +132,16 @@
 
 
 (defn prepare-working-dir!
-  "Clones commit-id into work-dir via the local bare-clone cache.
-   git-options may contain {:submodules {:include_match ... :exclude_match ...}}
-   token, when provided, is sent as a Bearer token on HTTP git operations."
-  [git-url commit-id ^File work-dir git-options token]
+  "Clones commit-id into work-dir via the local bare-clone cache, fetching
+   from git-url (the CIDER-CI server's git proxy; token, when provided, is sent
+   as a Bearer token). The working dir's `origin` is then set to origin-url —
+   the project's real repository URL (legacy parity) — so trial scripts can run
+   `git fetch origin ...` without executor credentials; falls back to git-url.
+   git-options may contain {:submodules {:include_match ... :exclude_match ...}}"
+  [git-url commit-id ^File work-dir git-options token & [origin-url]]
   (let [cache (ensure-cache! git-url commit-id token)]
     (run! ["git" "clone" "--shared" "--no-checkout"
            (.getAbsolutePath cache) (.getAbsolutePath work-dir)] nil)
     (run! ["git" "checkout" commit-id] work-dir)
-    (run! ["git" "remote" "set-url" "origin" git-url] work-dir)
+    (run! ["git" "remote" "set-url" "origin" (or (not-empty origin-url) git-url)] work-dir)
     (init-submodules! work-dir (:submodules git-options) token git-url)))

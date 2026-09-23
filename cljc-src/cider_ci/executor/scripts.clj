@@ -166,6 +166,10 @@
       (.setExecutable script-file true)
       (let [pb   (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
                    (.directory (File. ^String work-dir))
+                   ;; stdin must be EOF, not an open pipe: tools that read
+                   ;; configuration from a non-tty stdin (e.g. `incus launch`)
+                   ;; otherwise block forever and the script times out.
+                   (.redirectInput (java.lang.ProcessBuilder$Redirect/from (File. "/dev/null")))
                    (.redirectErrorStream true)
                    (.redirectOutput (java.lang.ProcessBuilder$Redirect/appendTo log-file)))
             _    (when (seq final-env)

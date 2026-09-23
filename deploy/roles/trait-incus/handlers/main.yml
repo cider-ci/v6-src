@@ -1,0 +1,5 @@
+---
+- name: Restart cider-ci-executor for incus group membership
+  ansible.builtin.service:
+    name: cider-ci-executor
+    state: restarted

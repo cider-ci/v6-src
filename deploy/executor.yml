@@ -36,3 +36,7 @@
     - role: trait-git
       when: ci_executor_trait_git | default(false)
       tags: [trait-git]
+
+    - role: trait-incus
+      when: ci_executor_trait_incus | default(false)
+      tags: [trait-incus]

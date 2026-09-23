@@ -1,0 +1,13 @@
+---
+# Incus trait: system containers for "build from scratch in a clean container"
+# style jobs (e.g. leihs container-build: `incus launch --ephemeral images:...`).
+# Ported from the legacy ZHdK inventory role traits/incus (bookworm + backports,
+# btrfs pool on a btrfs filesystem). Differences here: Debian trixie ships
+# incus 6.0 LTS in main (no backports needed) and ex01's root fs is ext4, so
+# the btrfs pool is loop-file backed with an explicit size.
+ci_executor_trait_incus_storage_driver: btrfs
+ci_executor_trait_incus_storage_size: 200GiB
+ci_executor_trait_incus_network: incusbr0
+# Open ufw for the container bridge when ufw is installed (default deny
+# incoming / routed would otherwise break DHCP/DNS and NAT for containers).
+ci_executor_trait_incus_manage_ufw: true

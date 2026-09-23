@@ -1,0 +1,38 @@
+# Managed by Ansible (trait-incus). Preseed for `incus admin init --preseed`.
+config: {}
+networks:
+- name: {{ ci_executor_trait_incus_network }}
+  type: bridge
+  project: default
+  description: "CIDER-CI trial containers"
+  config:
+    ipv4.address: auto
+    ipv4.nat: "true"
+    ipv6.address: auto
+    ipv6.nat: "true"
+storage_pools:
+- name: default
+  driver: {{ ci_executor_trait_incus_storage_driver }}
+  description: ""
+  config:
+{% if ci_executor_trait_incus_storage_driver in ['btrfs', 'zfs', 'lvm'] %}
+    # no `source`: incus creates a loop-file backed pool of this size
+    size: {{ ci_executor_trait_incus_storage_size }}
+{% else %}
+    {}
+{% endif %}
+profiles:
+- name: default
+  description: ""
+  config: {}
+  devices:
+    eth0:
+      name: eth0
+      network: {{ ci_executor_trait_incus_network }}
+      type: nic
+    root:
+      path: /
+      pool: default
+      type: disk
+projects: []
+cluster: null

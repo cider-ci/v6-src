@@ -1,0 +1,91 @@
+---
+# Legacy parity: bookworm needs backports for incus. Trixie has it in main.
+- name: Enable backports (Debian bookworm only)
+  ansible.builtin.apt_repository:
+    repo: deb http://deb.debian.org/debian bookworm-backports main contrib non-free-firmware
+    state: present
+    filename: backports
+    update_cache: yes
+  when: ansible_distribution == "Debian" and ansible_distribution_release == "bookworm"
+
+# The `incus` meta package pulls in qemu (VM support) — not wanted on an
+# executor; see legacy role comment / linuxcontainers discussion 23209.
+- name: Remove incus meta package (depends on qemu)
+  ansible.builtin.apt:
+    name: incus
+    state: absent
+
+- name: Install incus daemon, client and helpers
+  ansible.builtin.apt:
+    name:
+      - incus-base
+      - incus-client
+      - jq
+      - dnsmasq-base
+      - btrfs-progs
+    state: present
+    install_recommends: yes
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Ensure incus daemon is enabled and running
+  ansible.builtin.service:
+    name: incus
+    state: started
+    enabled: yes
+
+- name: Write incus preseed configuration
+  ansible.builtin.template:
+    src: incus-init.yml.j2
+    dest: /root/incus-init.yml
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Check whether the default storage pool already exists
+  ansible.builtin.command: incus storage show default
+  register: incus_default_pool
+  failed_when: false
+  changed_when: false
+
+- name: Initialise incus from preseed (first run only)
+  ansible.builtin.shell: incus admin init --preseed < /root/incus-init.yml
+  args:
+    executable: /bin/bash
+  when: incus_default_pool.rc != 0
+
+- name: Check whether ufw is installed
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: incus_ufw_bin
+
+- name: Allow container traffic to the host on the incus bridge (DHCP, DNS)
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: "{{ ci_executor_trait_incus_network }}"
+  when: ci_executor_trait_incus_manage_ufw and incus_ufw_bin.stat.exists
+
+- name: Allow routed (NAT) traffic from and to the incus bridge
+  community.general.ufw:
+    rule: allow
+    route: yes
+    direction: "{{ item }}"
+    interface: "{{ ci_executor_trait_incus_network }}"
+  loop: [in, out]
+  when: ci_executor_trait_incus_manage_ufw and incus_ufw_bin.stat.exists
+
+# Trial scripts run as the executor service user (v6 has no separate exec
+# user for scripts), so that user needs the incus admin socket.
+- name: Add executor service user to the incus-admin group
+  ansible.builtin.user:
+    name: "{{ cider_ci_user }}"
+    groups: incus-admin
+    append: yes
+  notify: Restart cider-ci-executor for incus group membership
+
+- name: Register incus trait in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "incus"
+  notify: Restart cider-ci-executor for incus group membership

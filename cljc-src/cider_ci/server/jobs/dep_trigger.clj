@@ -65,16 +65,27 @@
       (warn "dep-trigger: error for" project-id commit-id ":" (.getMessage e)))))
 
 
-(defn- recently-active-commits [ds]
+(defn- active-commits
+  "Commits with jobs updated within the given interval (SQL interval literal)."
+  [ds interval]
   (jdbc/execute! ds
     ["SELECT DISTINCT project_id, commit_id FROM jobs
-      WHERE updated_at >= NOW() - INTERVAL '2 minutes'"]))
+      WHERE updated_at >= NOW() - CAST(? AS interval)"
+     interval]))
 
+;; Every cycle looks at commits whose jobs changed in the last 2 minutes. A
+;; trigger missed in that window (job creation failed, server down) would
+;; otherwise be lost for good — leihs' manage-scenarios stayed uncreated after
+;; the list-form tasks bug was fixed. So every 30th cycle (~5 min) the sweep
+;; widens to the last 24 hours; `not (contains? by-key key)` keeps it idempotent.
+(defonce ^:private cycle-counter* (atom 0))
 
 (defdaemon "job-dep-trigger" 10
   (try
-    (doseq [{:keys [project_id commit_id]} (recently-active-commits (get-ds))]
-      (trigger-dependents! (get-ds) project_id commit_id))
+    (let [n        (swap! cycle-counter* inc)
+          interval (if (zero? (mod n 30)) "24 hours" "2 minutes")]
+      (doseq [{:keys [project_id commit_id]} (active-commits (get-ds) interval)]
+        (trigger-dependents! (get-ds) project_id commit_id)))
     (catch Exception e
       (warn "job-dep-trigger daemon error:" (.getMessage e)))))
 

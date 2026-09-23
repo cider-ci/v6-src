@@ -40,3 +40,7 @@
     - role: trait-incus
       when: ci_executor_trait_incus | default(false)
       tags: [trait-incus]
+
+    - role: trait-misc
+      when: ci_executor_trait_misc | default(false)
+      tags: [trait-misc]

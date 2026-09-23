@@ -5,6 +5,8 @@ ci_executor_trait_stress_ng: true
 ci_executor_trait_git: true
 # leihs container-build: `incus launch --ephemeral images:debian/bookworm/amd64`
 ci_executor_trait_incus: true
+# ImageMagick, ExifTool, Graphviz, Hunspell, Xvfb (legacy traits/misc)
+ci_executor_trait_misc: true
 
 # Dispatch-marker traits required by projects (e.g. leihs_database) so their
 # tasks match this executor. The actual Ruby toolchain is provided by mise

@@ -1,0 +1,38 @@
+---
+# Ported from the legacy ZHdK inventory role traits/misc: assorted tools that
+# projects rely on implicitly (leihs legacy uploads images via ImageMagick,
+# reads metadata via ExifTool, ...). libgconf-2-4 (GNOME 2 config, gone in
+# trixie) is not ported — nothing uses it any more.
+- name: Install misc tools (ImageMagick, ExifTool, Graphviz, Hunspell, Xvfb, curl)
+  ansible.builtin.apt:
+    name:
+      - curl
+      - graphviz
+      - hunspell
+      - hunspell-de-ch
+      - hunspell-de-de
+      - hunspell-en-us
+      - hunspell-tools
+      - imagemagick
+      - libimage-exiftool-perl
+      - xvfb
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+# Same trait vocabulary as legacy (the server lowercases traits on both sides).
+# Picked up by the executor at its next restart, like the other trait roles.
+- name: Register misc traits in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "{{ item }}"
+  loop:
+    - curl
+    - exiftool
+    - graphviz
+    - hunspell
+    - hunspell de-ch
+    - hunspell de-de
+    - hunspell en-us
+    - imagemagick
+    - xvfb

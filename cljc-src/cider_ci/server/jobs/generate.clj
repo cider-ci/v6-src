@@ -1,5 +1,6 @@
 (ns cider-ci.server.jobs.generate
   (:require
+    [cider-ci.server.jobs.decompose :refer [tasks->map]]
     [cider-ci.server.projects.repositories.git.repositories :as git]
     [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
     [taoensso.timbre :refer [warn]]))
@@ -39,9 +40,8 @@
                     generated (->> files
                                    (map (fn [f] [f {:environment_variables {:CIDER_CI_TASK_FILE f}}]))
                                    (into {}))
-                    tasks     (if-let [existing (:tasks context)]
-                                (merge generated existing)
-                                generated)]
+                    ;; explicit tasks (map or list form) win over generated ones
+                    tasks     (merge generated (tasks->map (:tasks context)))]
                 (-> context
                     (assoc :tasks tasks)
                     (dissoc :generate_tasks)))

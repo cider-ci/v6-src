@@ -30,8 +30,28 @@
 
 (declare collect-from-context)
 
+(defn tasks->map
+  "Normalises the `tasks` value to a {key task-spec} map. YAML allows both a
+   map (`tasks: {key: spec}`) and a list (`tasks: [{name: ..., scripts: ...}]`,
+   e.g. leihs' generated scenario task files); legacy keyed list entries by
+   their :name. Plain strings in a list become a task with that body, keyed
+   by position."
+  [tasks]
+  (cond
+    (nil? tasks)        {}
+    (map? tasks)        tasks
+    (sequential? tasks) (->> tasks
+                             (map-indexed
+                               (fn [i t]
+                                 (let [k (or (and (map? t) (some-> (:name t) str not-empty))
+                                             (str "task-" i))]
+                                   [(keyword k) t])))
+                             (into {}))
+    :else (throw (ex-info (str "tasks must be a map or a list, got " (type tasks))
+                          {:status 422 :tasks tasks}))))
+
 (defn- from-tasks-map [tasks inherited-task-defaults script-defaults]
-  (->> tasks
+  (->> (tasks->map tasks)
        (map (fn [[k v]]
               (let [norm (normalize-task-value v)]
                 (-> (deep-merge inherited-task-defaults

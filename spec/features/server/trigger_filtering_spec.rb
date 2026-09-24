@@ -24,7 +24,7 @@ feature 'Trigger filtering' do
     sleep 1
   end
 
-  scenario 'trigger.branch.include_match filters which branches fire a job' do
+  scenario 'run_when branch include_match filters which branches fire a job' do
     setup_repo
     visit "/projects/#{project_id}"
     find('button', text: /Fetch/).click
@@ -34,6 +34,9 @@ feature 'Trigger filtering' do
 
     expect(database[:jobs].where(project_id: project_id, key: 'all-branches').count).to eq 2
     expect(database[:jobs].where(project_id: project_id, key: 'master-only').count).to eq 1
+    # legacy semantics: a job without a run_when branch entry is never
+    # auto-triggered by a push (leihs' all-broken-scenarios must stay manual)
+    expect(database[:jobs].where(project_id: project_id, key: 'no-trigger').count).to eq 0
   end
 
   scenario 'repo branch_trigger_include_match suppresses jobs on non-matching branches' do

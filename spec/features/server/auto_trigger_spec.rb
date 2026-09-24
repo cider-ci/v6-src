@@ -1,11 +1,15 @@
 require 'spec_helper'
 require 'timeout'
+require 'securerandom'
 
 feature 'Auto-trigger' do
 
-  let(:project_id)  { 'cider-ci-demo-project' }
-  let(:project_root){ Pathname.new(__FILE__).join('../../../..').realdirpath }
-  let(:git_url)     { "file://#{project_root}/data/repositories/#{project_id}" }
+  # The trigger-filter fixture has jobs with `run_when: {type: branch}`; the
+  # demo project's jobs have none and are therefore never auto-triggered by a
+  # branch update (legacy semantics).
+  let(:project_id)  { "auto-trigger-#{SecureRandom.hex(4)}" }
+  let(:fixture_dir) { Pathname.new(__FILE__).join('../../../fixtures/trigger-filter-repo.git').realdirpath }
+  let(:git_url)     { "file://#{fixture_dir}" }
 
   before :each do
     @admin = FactoryBot.create(:admin)
@@ -13,7 +17,7 @@ feature 'Auto-trigger' do
 
     database[:repositories].insert(
       id:                            project_id,
-      name:                          'Demo Project',
+      name:                          'Auto Trigger Fixture',
       git_url:                       git_url,
       branch_trigger_max_commit_age: nil
     )
@@ -38,6 +42,7 @@ feature 'Auto-trigger' do
     end
 
     expect(database[:jobs].where(project_id: project_id).count).to be > 0
+    expect(database[:jobs].where(project_id: project_id, key: 'no-trigger').count).to eq 0
 
     job = database[:jobs].where(project_id: project_id).first
     expect(job[:state]).to eq 'pending'

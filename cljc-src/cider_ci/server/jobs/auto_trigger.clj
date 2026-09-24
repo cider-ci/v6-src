@@ -90,31 +90,34 @@
       (not (false? (:within_age result))))))
 
 
-(defn- job-should-trigger? [{:keys [spec]} branch-name]
-  ;; Jobs with depends_on are triggered by the dep-trigger daemon, not by branch push.
-  (when-not (seq (:depends_on spec))
-  (let [run-when (get spec :run_when)
-        trigger  (get spec :trigger)]
-    (cond
-      ;; New format: run_when with named entries (type: branch/cron/job)
-      run-when
-      (let [branch-triggers (->> (vals run-when)
-                                 (filter #(= "branch" (get % :type))))]
-        (if (empty? branch-triggers)
-          false
-          (some (fn [{:keys [include_match]}]
-                  (if (str/blank? include_match)
-                    true
-                    (matches-pattern? include_match branch-name)))
-                branch-triggers)))
-      ;; Legacy format: trigger.branch.include_match
-      trigger
-      (let [include-match (get-in trigger [:branch :include_match])]
-        (if (str/blank? include-match)
-          true
-          (matches-pattern? include-match branch-name)))
-      ;; No trigger configuration: always fire on branch push
-      :else true))))
+(defn- branch-run-when-entries
+  "Branch-type run_when entries of a job spec. Accepts the map form
+   {name {type: branch ...}} and the list form [{type: branch ...}]; the older
+   `trigger: {branch: {include_match ...}}` shorthand is treated as one entry."
+  [spec]
+  (let [rw      (:run_when spec)
+        entries (cond (map? rw) (vals rw) (sequential? rw) rw :else [])
+        legacy  (when-let [b (get-in spec [:trigger :branch])] [(assoc b :type "branch")])]
+    (->> (concat entries legacy)
+         (filter #(= "branch" (some-> (get % :type) name))))))
+
+(defn- job-should-trigger?
+  "Legacy semantics (builder.jobs.triggers.tree-ids.branch-update): a branch
+   update triggers a job only if it has a run_when entry of type `branch`
+   whose include_match matches the branch and whose exclude_match does not.
+   Jobs without such an entry are never auto-triggered by a push — they run
+   via the dep-trigger (depends_on / run_when type job), cron, or manually.
+   (v6 used to fire every job lacking trigger configuration; that is why e.g.
+   leihs' `all-broken-scenarios` ran on every push here but not on the old CI.)"
+  [{:keys [spec]} branch-name]
+  (boolean
+    (and (empty? (:depends_on spec))
+         (some (fn [{:keys [include_match exclude_match]}]
+                 (and (or (str/blank? include_match)
+                          (matches-pattern? include_match branch-name))
+                      (not (and (not (str/blank? exclude_match))
+                                (matches-pattern? exclude_match branch-name)))))
+               (branch-run-when-entries spec)))))
 
 
 (defn trigger-for-commit! [ds project-id commit-id branch-name

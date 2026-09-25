@@ -23,8 +23,23 @@
 (defn- repo-lock [git-url]
   (get (swap! repo-locks* update git-url #(or % (Object.))) git-url))
 
+(def ^:private no-auto-gc-args
+  ;; Never let git start background maintenance in a trial working dir: after
+  ;; `git submodule update` (a fetch) git may detach `gc --auto`, which then
+  ;; repacks and deletes pack files WHILE trial scripts run — e.g. leihs'
+  ;; container-build lost .git/modules/database/objects/pack/*.pack mid
+  ;; `incus file push` ("Error: file does not exist"). Throwaway checkouts
+  ;; do not need gc at all.
+  ["-c" "gc.auto=0" "-c" "gc.autoDetach=false" "-c" "maintenance.auto=false"])
+
+(defn- with-git-defaults [cmd]
+  (if (= "git" (first cmd))
+    (into ["git"] (concat no-auto-gc-args (rest cmd)))
+    (vec cmd)))
+
 (defn- run! [cmd ^File dir]
-  (let [pb (ProcessBuilder. ^java.util.List (vec cmd))]
+  (let [cmd (with-git-defaults cmd)
+        pb  (ProcessBuilder. ^java.util.List (vec cmd))]
     (when dir (.directory pb dir))
     (doto (.environment pb)
       (.put "GIT_TERMINAL_PROMPT" "0"))

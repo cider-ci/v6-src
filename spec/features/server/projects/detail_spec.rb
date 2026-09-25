@@ -61,6 +61,19 @@ feature 'Project detail page' do
     expect(page).to have_content 'No branches yet'
   end
 
+  scenario 'admin sees the push webhook URL with a working copy button' do
+    visit "/projects/#{@project_id}"
+    token = database[:repositories].where(id: @project_id).get(:update_notification_token)
+    expect(page).to have_content 'Push webhook URL'
+    expect(page).to have_css('code', text: "/projects/push-notification/#{token}")
+
+    # The button gives visible feedback after copying (clipboard contents are
+    # not readable from the test browser without a permission prompt).
+    find('button[title="Copy to clipboard"]').click
+    expect(page).to have_content 'Copied'
+    expect(page).not_to have_content('Copied', wait: 5)
+  end
+
   scenario 'admin can edit project settings' do
     visit "/projects/#{@project_id}"
     click_on 'Edit'

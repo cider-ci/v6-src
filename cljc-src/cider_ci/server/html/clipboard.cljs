@@ -4,6 +4,7 @@
     [cider-ci.server.html.icons :as icons]
     [cider-ci.utils.core :refer [str keyword deep-merge presence]]
     [cljs.core.async :refer [go]]
+    [reagent.core]
     [reagent.ratom :as ratom :refer [reaction]]
     [taoensso.timbre :as logging]))
 
@@ -41,10 +42,32 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn button-tiny [text]
-  [:button.btn.btn-outline-secondary.btn-sm.py-0.px-1
-   {:on-click #(copy-text text)}
-   [:span [icons/clipboard]]])
+(defn copy!
+  "Copies text: async Clipboard API when available (secure contexts),
+   execCommand fallback otherwise. Calls on-done when finished."
+  [text on-done]
+  (if-let [cb (some-> js/navigator .-clipboard)]
+    (-> (.writeText cb text)
+        (.then on-done)
+        (.catch (fn [_] (copy-text text) (on-done))))
+    (do (copy-text text) (on-done))))
+
+(defn button-tiny
+  "Icon-only copy button with short \"Copied\" feedback."
+  [text]
+  (let [copied?* (reagent.core/atom false)]
+    (fn [text]
+      [:button.btn.btn-outline-secondary.btn-sm.py-0.px-1
+       {:type "button"
+        :title "Copy to clipboard"
+        :aria-label "Copy to clipboard"
+        :on-click (fn [_]
+                    (copy! text (fn []
+                                  (reset! copied?* true)
+                                  (js/setTimeout #(reset! copied?* false) 1500))))}
+       (if @copied?*
+         [:span.text-success [icons/signed] " Copied"]
+         [:span [icons/clipboard]])])))
 
 
 (defn button [text]

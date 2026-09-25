@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.project
   (:require
    ["date-fns" :as date-fns]
+   [cider-ci.server.html.clipboard :as clipboard]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
@@ -161,6 +162,7 @@
           [:dt.col-sm-3 "Push webhook URL"]
           [:dd.col-sm-9
            [:code.text-break webhook]
+           [:span.ms-2 [clipboard/button-tiny webhook]]
            (when hooks-link
              [:span.ms-2
               [:a {:href (:url hooks-link) :target "_blank" :rel "noopener noreferrer"}

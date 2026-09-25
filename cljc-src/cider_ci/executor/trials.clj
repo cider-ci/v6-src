@@ -235,5 +235,9 @@
         (scripts/clear-abort! id)
         (when port-env (ports/release! port-env))
         (swap! active-trials* dissoc id)
-        (delete-dir! work-dir)
+        ;; CIDER_CI_EXECUTOR_KEEP_WORKING_DIRS=true keeps working dirs for
+        ;; post-mortem debugging (swept at the next executor start).
+        (if (= "true" (System/getenv "CIDER_CI_EXECUTOR_KEEP_WORKING_DIRS"))
+          (warn "Keeping working dir for debugging:" (.getAbsolutePath work-dir))
+          (delete-dir! work-dir))
         (delete-script-tmp-files! id)))))

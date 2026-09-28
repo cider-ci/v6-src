@@ -1,0 +1,21 @@
+---
+# Ruby trait: Debian's system Ruby (3.3 on trixie). A task that requires the
+# "ruby" trait is thereby guaranteed a working ruby/gem/bundle on PATH, even
+# before the project's bin/env/ruby-setup has installed its pinned version via
+# mise. Previously "ruby" was only a dispatch marker in ci_executor_extra_traits.
+
+- name: Install system Ruby
+  ansible.builtin.apt:
+    name:
+      - ruby
+      - ruby-dev
+      - ruby-bundler
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Register ruby trait in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "ruby"
+  notify: Restart cider-ci-executor

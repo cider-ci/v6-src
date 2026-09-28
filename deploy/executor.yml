@@ -25,6 +25,10 @@
       when: ci_executor_trait_mise | default(false)
       tags: [trait-mise]
 
+    - role: trait-ruby
+      when: ci_executor_trait_ruby | default(false)
+      tags: [trait-ruby]
+
     - role: trait-postgresql
       when: ci_executor_trait_postgresql | default(false)
       tags: [trait-postgresql]

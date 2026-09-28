@@ -1,5 +1,7 @@
 ---
 ci_executor_trait_mise: true
+# system Ruby (trixie: 3.3), so the "ruby" trait is real and not just a marker
+ci_executor_trait_ruby: true
 ci_executor_trait_postgresql: true
 ci_executor_trait_stress_ng: true
 ci_executor_trait_git: true
@@ -8,13 +10,13 @@ ci_executor_trait_incus: true
 # ImageMagick, ExifTool, Graphviz, Hunspell, Xvfb (legacy traits/misc)
 ci_executor_trait_misc: true
 
-# Dispatch-marker traits required by projects (e.g. leihs_database) so their
-# tasks match this executor. The actual Ruby toolchain is provided by mise
-# (see trait-mise); "asdf" here is a capability marker, not an asdf install.
+# Dispatch-marker traits required by projects so their tasks match this
+# executor. The projects pinned toolchains (Ruby, Java, Clojure, Node) are
+# installed on demand via mise (see trait-mise); "asdf" here is a capability
+# marker, not an asdf install. "ruby" is provided by trait-ruby above.
 # "postgresql 15" mirrors the versioned trait the leihs config expects
 # (the postgresql trait role provisions PG 15 and its PG15* env vars).
 ci_executor_extra_traits:
-  - ruby
   - "postgresql 15"
   - asdf
   # leihs specs jobs require Firefox-ESR; Firefox is provided via mise

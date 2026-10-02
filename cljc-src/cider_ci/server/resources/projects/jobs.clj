@@ -55,13 +55,30 @@
                            (filter #(= "job" (:type %)))
                            (keep :job_key)
                            (map name)
-                           vec)]
+                           vec)
+        ;; Full dependency / trigger entries for the dependency graph (edge
+        ;; labels and submodule-qualified source nodes, as in the legacy UI).
+        entries       (fn [m kind]
+                        (->> m
+                             (map (fn [[entry-name d]]
+                                    {:name      (name entry-name)
+                                     :kind      kind
+                                     :type      (some-> (:type d) name)
+                                     :job_key   (some-> (:job_key d) name)
+                                     :submodule (mapv name (or (:submodule d) []))
+                                     :states    (mapv name (or (:states d) []))
+                                     :include_match (:include_match d)
+                                     :exclude_match (:exclude_match d)
+                                     :value     (:value d)}))
+                             vec))]
     {:key          key-str
      :name         (:name job-entry)
      :runnable     runnable?
      :has_instance has-instance?
      :unmet_deps   (or unmet-deps [])
-     :dep_job_keys dep-job-keys}))
+     :dep_job_keys dep-job-keys
+     :depends_on   (entries depends-on "dependency")
+     :run_when     (entries (:run_when (:full-spec job-entry)) "trigger")}))
 
 (defn- available-jobs [repo commit-id created]
   (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))]

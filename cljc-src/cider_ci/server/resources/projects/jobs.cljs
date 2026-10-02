@@ -1,6 +1,6 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
-   ["@dagrejs/dagre" :as dagre]
+   ["elkjs/lib/elk.bundled.js" :as ELK]
    ["js-yaml" :as js-yaml]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
@@ -86,10 +86,8 @@
     [:span.badge {:class cls} s]))
 
 
-;;; Jobs DAG
-
-(def ^:private jdag-node-w 160)
-(def ^:private jdag-node-h 36)
+;;; Jobs DAG (ELK layered layout: no edge crossings where avoidable, edge
+;;; labels with dependency / trigger details, multi-line node labels)
 
 (def ^:private jdag-state-fill
   {"passed"    "#198754"
@@ -107,71 +105,210 @@
    "aborted"   "#6c757d"
    "defective" "#fff"})
 
-(defn- jdag-points->d [points]
-  (let [pts (map (fn [^js p] [(.-x p) (.-y p)]) points)]
-    (str "M " (str/join " L " (map #(str (first %) "," (second %)) pts)))))
+(def ^:private jdag-font-px 11)     ; node label
+(def ^:private jdag-label-px 9)     ; edge label
+(def ^:private jdag-max-line-chars 24)
 
-(defn- jdag-build-graph [jobs]
-  (let [^js dmod     dagre
-        ^js graphlib (.-graphlib dmod)
-        ^js g        (new (.-Graph graphlib))]
-    (.setGraph g #js {:rankdir "LR" :nodesep 20 :ranksep 60 :marginx 20 :marginy 16})
-    (.setDefaultEdgeLabel g (fn [] #js {}))
-    (doseq [j jobs]
-      (.setNode g (:key j) #js {:width jdag-node-w :height jdag-node-h}))
-    (doseq [j jobs
-            dep-key (:dep_job_keys j)
-            :when (seq dep-key)]
-      (.setEdge g dep-key (:key j) #js {}))
-    ((.-layout dmod) g)
-    g))
+(defn- jdag-wrap
+  "Greedy word wrap into lines of at most max-chars (long words stay whole)."
+  [s max-chars]
+  (let [words (str/split (str s) #"\s+")]
+    (->> words
+         (reduce (fn [lines w]
+                   (let [cur (peek lines)]
+                     (if (and cur (<= (+ (count cur) 1 (count w)) max-chars))
+                       (conj (pop lines) (str cur " " w))
+                       (conj lines w))))
+                 [])
+         (remove str/blank?)
+         vec)))
+
+(defn- jdag-text-width [lines px]
+  ;; ~0.58em per character for a sans-serif face; good enough for layout
+  (* 0.58 px (apply max 1 (map count lines))))
+
+(defn- jdag-node-size [lines]
+  {:width  (max 110 (+ 24 (jdag-text-width lines jdag-font-px)))
+   :height (+ 14 (* (count lines) (+ jdag-font-px 3)))})
+
+(def ^:private jdag-label-max-chars 22)
+
+(defn- jdag-edge-label-lines
+  "Lines of one edge label for a job dependency / job trigger entry (wrapped
+   narrowly: ELK puts labels between the layers, wide labels widen the graph)."
+  [{:keys [kind name states]}]
+  (->> (concat (jdag-wrap (str kind ": " name) jdag-label-max-chars)
+               (when (seq states) (jdag-wrap (str "states: " (str/join ", " states)) jdag-label-max-chars)))
+       vec))
+
+(defn- jdag-trigger-lines
+  "Node label of a branch / cron trigger source."
+  [{:keys [type include_match exclude_match value]}]
+  (case type
+    "branch" (cond-> [(str "push " (or include_match "^.*$"))]
+               (seq exclude_match) (conj (str "except " exclude_match)))
+    "cron"   [(str "cron " value)]
+    [type]))
+
+(defn- jdag-source-key
+  "Graph node id of a dependency / trigger source. Job entries in a
+   submodule get their own node (database/merged-to-master, as in the
+   legacy UI); identical branch / cron triggers share one source node."
+  [_job-key {:keys [type job_key submodule include_match exclude_match value]}]
+  (case type
+    "job" (str/join "/" (conj (vec submodule) job_key))
+    (str "trigger:" type ":" include_match ":" exclude_match ":" value)))
+
+(defn- jdag-elk-graph
+  "Builds the ELK input graph from the available jobs. Returns
+   {:graph js-graph :nodes {id {...}} :edges [{...}]}."
+  [jobs]
+  (let [job-keys  (set (map :key jobs))
+        entries   (for [j jobs
+                        e (concat (:depends_on j) (:run_when j))
+                        ;; a job-type run_when duplicating a depends_on entry
+                        ;; is folded into the same edge label below
+                        :when (not (and (= "trigger" (:kind e)) (= "job" (:type e))
+                                        (some #(and (= (:job_key %) (:job_key e))
+                                                    (= (:submodule %) (:submodule e)))
+                                              (:depends_on j))))]
+                    (assoc e :target (:key j) :source (jdag-source-key (:key j) e)))
+        ;; one edge per (source,target), labels merged
+        edges     (->> entries
+                       (group-by (juxt :source :target))
+                       (map (fn [[[src tgt] es]]
+                              {:id     (str src "->" tgt)
+                               :source src :target tgt
+                               ;; branch/cron triggers carry their text on the
+                               ;; source node, only job entries label the edge
+                               :lines  (vec (mapcat jdag-edge-label-lines
+                                                    (filter #(= "job" (:type %)) es)))})))
+        trigger-by-src (into {} (for [e entries :when (not= "job" (:type e))] [(:source e) e]))
+        job-nodes (for [j jobs]
+                    (let [lines (jdag-wrap (:name j) jdag-max-line-chars)]
+                      (merge {:id (:key j) :kind :job :job j :lines lines}
+                             (jdag-node-size lines))))
+        ext-nodes (for [src (distinct (map :source edges))
+                        :when (not (job-keys src))]
+                    (let [lines (if-let [t (get trigger-by-src src)]
+                                  (mapcat #(jdag-wrap % jdag-max-line-chars) (jdag-trigger-lines t))
+                                  (jdag-wrap src jdag-max-line-chars))
+                          lines (vec lines)]
+                      (merge {:id src :kind (if (get trigger-by-src src) :trigger :external) :lines lines}
+                             (jdag-node-size lines))))
+        nodes     (into {} (map (fn [n] [(:id n) n]) (concat job-nodes ext-nodes)))
+        graph     (clj->js
+                    {:id "root"
+                     :layoutOptions {"elk.algorithm" "layered"
+                                     "elk.direction" "RIGHT"
+                                     "elk.spacing.nodeNode" "18"
+                                     "elk.layered.spacing.nodeNodeBetweenLayers" "40"
+                                     "elk.layered.spacing.edgeNodeBetweenLayers" "24"
+                                     "elk.spacing.edgeLabel" "4"
+                                     "elk.edgeLabels.inline" "false"
+                                     "elk.layered.crossingMinimization.thoroughness" "30"
+                                     "elk.padding" "[top=8,left=8,bottom=8,right=8]"}
+                     :children (for [n (vals nodes)]
+                                 {:id (:id n) :width (:width n) :height (:height n)})
+                     :edges    (for [e edges]
+                                 {:id (:id e) :sources [(:source e)] :targets [(:target e)]
+                                  :labels (when (seq (:lines e))
+                                            [{:text   (str/join "\n" (:lines e))
+                                              :width  (jdag-text-width (:lines e) jdag-label-px)
+                                              :height (* (count (:lines e)) (+ jdag-label-px 2))}])})})]
+    {:graph graph :nodes nodes :edges edges}))
+
+(defonce ^:private jdag-layout* (reagent/atom nil))   ; {:key k :result js}
+(defonce ^:private jdag-elk (new ELK))
+
+(defn- jdag-ensure-layout! [jobs]
+  (let [k (hash (map (juxt :key :depends_on :run_when :name) jobs))]
+    (when (not= k (:key @jdag-layout*))
+      (let [{:keys [graph nodes edges]} (jdag-elk-graph jobs)]
+        (reset! jdag-layout* {:key k :nodes nodes :edges edges :result nil})
+        (-> (.layout jdag-elk graph)
+            (.then (fn [res] (swap! jdag-layout* #(if (= k (:key %)) (assoc % :result res) %))))
+            (.catch (fn [e] (js/console.error "ELK layout failed" e))))))))
+
+(defn- jdag-section->d [^js section]
+  (let [pts (concat [(.-startPoint section)]
+                    (array-seq (or (.-bendPoints section) #js []))
+                    [(.-endPoint section)])]
+    (str "M " (str/join " L " (map (fn [^js p] (str (.-x p) "," (.-y p))) pts)))))
+
+(defn- jdag-multiline-text [x y lines px fill anchor]
+  (let [lh (+ px 3)
+        y0 (- y (/ (* lh (dec (count lines))) 2))]
+    [:text {:x x :y y0 :dy "0.35em" :text-anchor anchor :font-size px
+            :font-family "sans-serif" :fill fill}
+     (for [[i l] (map-indexed vector lines)]
+       ^{:key i} [:tspan {:x x :dy (if (zero? i) "0.35em" lh)} l])]))
 
 (defn- jobs-dag [available created]
-  (when (some #(seq (:dep_job_keys %)) available)
-    (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))
-          ^js g          (jdag-build-graph available)
-          ^js gi         (.graph g)
-          svg-w          (+ (.-width gi) 4)
-          svg-h          (+ (.-height gi) 4)]
-      [:<>
-       [:h5.mt-3 "Job Dependencies"]
-       [:svg {:viewBox (str "0 0 " svg-w " " svg-h)
-              :width svg-w :height svg-h
-              :style {:display "block" :max-width "100%"}}
-        [:defs
-         [:marker {:id "jdag-arrow" :markerWidth 8 :markerHeight 6
-                   :refX 7 :refY 3 :orient "auto"}
-          [:polygon {:points "0,0 8,3 0,6" :fill "#888"}]]]
-        (doall
-          (for [^js e (.edges g)]
-            (let [pts (.-points (.edge g e))]
-              ^{:key (str (.-v e) "→" (.-w e))}
-              [:path {:d            (jdag-points->d pts)
-                      :fill         "none"
-                      :stroke       "#888"
-                      :stroke-width 1.5
-                      :marker-end   "url(#jdag-arrow)"}])))
-        (doall
-          (for [j available]
-            (let [key-str (:key j)
-                  ^js nd  (.node g key-str)
-                  nx      (- (.-x nd) (/ jdag-node-w 2))
-                  ny      (- (.-y nd) (/ jdag-node-h 2))
-                  state   (:state (get created-by-key key-str))
-                  fill    (get jdag-state-fill state "#dee2e6")
-                  tcol    (get jdag-state-text state "#6c757d")]
-              ^{:key key-str}
-              [:g {:transform (str "translate(" nx "," ny ")")}
-               [:rect {:width jdag-node-w :height jdag-node-h :rx 4
-                       :fill fill :stroke "#ced4da" :stroke-width 1}]
-               [:text {:x           (/ jdag-node-w 2)
-                       :y           (/ jdag-node-h 2)
-                       :dy          "0.35em"
-                       :text-anchor "middle"
-                       :font-size   11
-                       :font-family "sans-serif"
-                       :fill        tcol}
-                (:name j)]])))]])))
+  (jdag-ensure-layout! available)
+  (let [{:keys [nodes edges ^js result]} @jdag-layout*]
+    (when (and result (some (fn [e] (seq (:lines e))) edges) (seq edges))
+      (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))
+            by-id          (into {} (map (fn [^js c] [(.-id c) c]) (array-seq (.-children result))))
+            ;; bounds from everything that is drawn (nodes, edge points, labels)
+            xs-ys          (concat
+                             (mapcat (fn [^js c] [[(.-x c) (.-y c)] [(+ (.-x c) (.-width c)) (+ (.-y c) (.-height c))]])
+                                     (array-seq (.-children result)))
+                             (mapcat (fn [^js e]
+                                       (concat
+                                         (mapcat (fn [^js s] (map (fn [^js p] [(.-x p) (.-y p)])
+                                                                  (concat [(.-startPoint s)] (array-seq (or (.-bendPoints s) #js [])) [(.-endPoint s)])))
+                                                 (array-seq (.-sections e)))
+                                         (map (fn [^js l] [(+ (.-x l) (.-width l)) (+ (.-y l) (.-height l))]) (array-seq (or (.-labels e) #js [])))))
+                                     (array-seq (.-edges result))))
+            max-x          (+ 12 (apply max 0 (map first xs-ys)))
+            max-y          (+ 12 (apply max 0 (map second xs-ys)))
+            min-x          (min 0 (apply min 0 (map first xs-ys)))
+            min-y          (min 0 (apply min 0 (map second xs-ys)))
+            svg-w          (- max-x min-x)
+            svg-h          (- max-y min-y)]
+        [:<>
+         [:h5.mt-3 "Job Dependencies"]
+         [:svg.jobs-dag {:viewBox (str min-x " " min-y " " svg-w " " svg-h)
+                         :width svg-w :height svg-h
+                         :style {:display "block" :max-width "100%" :height "auto"}}
+          [:defs
+           [:marker {:id "jdag-arrow" :markerWidth 8 :markerHeight 6
+                     :refX 7 :refY 3 :orient "auto"}
+            [:polygon {:points "0,0 8,3 0,6" :fill "#888"}]]]
+          (doall
+            (for [^js e (array-seq (.-edges result))]
+              ^{:key (.-id e)}
+              [:g
+               (for [[i ^js s] (map-indexed vector (array-seq (.-sections e)))]
+                 ^{:key i}
+                 [:path {:d (jdag-section->d s) :fill "none" :stroke "#888"
+                         :stroke-width 1.5 :marker-end "url(#jdag-arrow)"}])
+               (for [[i ^js l] (map-indexed vector (array-seq (or (.-labels e) #js [])))]
+                 (let [lines (str/split (.-text l) #"\n")]
+                   ^{:key (str "l" i)}
+                   [:g
+                    [:rect {:x (- (.-x l) 2) :y (- (.-y l) 1) :width (+ 4 (.-width l)) :height (+ 2 (.-height l))
+                            :fill "#fff" :fill-opacity 0.85 :rx 2}]
+                    (jdag-multiline-text (+ (.-x l) (/ (.-width l) 2)) (+ (.-y l) (/ (.-height l) 2))
+                                         lines jdag-label-px "#6c757d" "middle")]))]))
+          (doall
+            (for [[id n] nodes]
+              (let [^js c (get by-id id)]
+                (when c
+                  ;; job node, external (submodule) job node, or trigger source
+                  (let [state (:state (get created-by-key id))
+                        job?  (= :job (:kind n))
+                        fill  (if job? (get jdag-state-fill state "#dee2e6") "#fff")
+                        tcol  (if job? (get jdag-state-text state "#6c757d") "#6c757d")
+                        px    (if (= :trigger (:kind n)) jdag-label-px jdag-font-px)]
+                    ^{:key id}
+                    [:g {:transform (str "translate(" (.-x c) "," (.-y c) ")")}
+                     [:rect {:width (.-width c) :height (.-height c) :rx (if job? 4 10)
+                             :fill fill :stroke "#ced4da" :stroke-width 1
+                             :stroke-dasharray (when-not job? "4 2")}]
+                     (jdag-multiline-text (/ (.-width c) 2) (/ (.-height c) 2)
+                                          (:lines n) px tcol "middle")])))))]]))))
 
 
 ;;; Jobs list page (route :project-jobs)

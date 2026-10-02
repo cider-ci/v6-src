@@ -112,6 +112,20 @@
   loop: "{{ ci_executor_extra_traits | default([]) }}"
   notify: Restart cider-ci-executor
 
+- name: Exclude CI working data from systemd-tmpfiles age cleanup
+  # trixie: `q /tmp 10d` / `q /var/tmp 30d` would delete untouched files
+  # (git cache packs, long-running trial dirs) from under the executor.
+  ansible.builtin.copy:
+    dest: /etc/tmpfiles.d/cider-ci.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (cider-ci executor): never age-clean these.
+      x /tmp/cider-ci
+      x /var/tmp/cider-ci-git-cache
+      x /tmp/cider-ci-script-*
+
 - name: Install BASH_ENV snippet so non-login trial scripts get trait environment
   ansible.builtin.copy:
     dest: /etc/cider-ci/trial-bash-env.sh

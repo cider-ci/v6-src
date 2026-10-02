@@ -4,7 +4,12 @@ ci_executor_trait_postgresql_port: "54{{ ci_executor_trait_postgresql_version_ma
 ci_executor_trait_postgresql_exec_user: "{{ ci_executor_exec_user }}"
 ci_executor_trait_postgresql_exec_user_password: "{{ ci_executor_exec_user }}"
 ci_executor_trait_postgresql_max_connections: 500
-ci_executor_trait_postgresql_data_dir: "/tmp/cider-ci-trait-postgresql-{{ ci_executor_trait_postgresql_version_major }}"
+# NOT under /tmp: Debian trixie's systemd-tmpfiles ages out /tmp entries older
+# than 10 days (`q /tmp 1777 root root 10d`); it deleted untouched catalog
+# files of a cluster initialised 11 days earlier ("could not open file
+# base/5/2601"). The directory is wiped and re-created by initdb on every
+# service start anyway.
+ci_executor_trait_postgresql_data_dir: "/var/lib/cider-ci/trait-postgresql-{{ ci_executor_trait_postgresql_version_major }}"
 ci_executor_trait_postgresql_config_dir: "/opt/cider-ci/traits/postgresql-{{ ci_executor_trait_postgresql_version_major }}"
 ci_executor_trait_postgresql_bin_dir: "/usr/lib/postgresql/{{ ci_executor_trait_postgresql_version_major }}/bin"
 ci_executor_trait_postgresql_service_name: "cider-ci-trait-postgresql-{{ ci_executor_trait_postgresql_version_major }}"

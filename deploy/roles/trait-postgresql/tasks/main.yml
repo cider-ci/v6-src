@@ -1,4 +1,12 @@
 ---
+- name: Ensure the parent of the ephemeral data dir exists
+  ansible.builtin.file:
+    path: "{{ ci_executor_trait_postgresql_data_dir | dirname }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0755'
+
 - name: Ensure cider-ci base dir is traversable by system users (e.g. postgres)
   ansible.builtin.file:
     path: "{{ cider_ci_base_dir }}"

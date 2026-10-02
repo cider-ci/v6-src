@@ -27,8 +27,10 @@ feature 'Job dependency graph' do
     # "job-dependent" depends on "job-prerequisite" (states: [passed]) -> one
     # labelled edge; the demo job names are long and get wrapped into tspans.
     within(svg) do
-      expect(page).to have_css('text', text: 'dependency: job-prerequisite-has-passed')
-      expect(page).to have_css('text', text: 'states: passed')
+      # edge labels are wrapped into tspans ("dependency:" / "job-prerequisite-has-passed")
+      expect(page).to have_css('tspan', text: 'dependency:')
+      expect(page).to have_css('tspan', text: 'job-prerequisite-has-passed')
+      expect(page).to have_css('tspan', text: 'states: passed')
       expect(page).to have_css('tspan', text: 'Jobs - Dependencies and')
       expect(page).to have_css('path[marker-end]')
     end
@@ -60,7 +62,7 @@ feature 'Job dependency graph' do
     expect(view_box_width('.jobs-dag-overlay svg.jobs-dag')).to be_within(0.01).of(initial)
 
     expect(page).to have_link('open in new tab', href: %r{/jobs/graph\z})
-    find('.jobs-dag-overlay svg.jobs-dag').send_keys(:escape)
+    find('body').send_keys(:escape)
     expect(page).not_to have_css('.jobs-dag-overlay')
   end
 
@@ -71,7 +73,7 @@ feature 'Job dependency graph' do
 
     expect(page).to have_content 'Dependencies'
     svg = find('svg.jobs-dag', wait: 20)
-    within(svg) { expect(page).to have_css('text', text: 'dependency: job-prerequisite-has-passed') }
+    within(svg) { expect(page).to have_css('tspan', text: 'job-prerequisite-has-passed') }
     # natural size: rendered width equals the viewBox width (no max-width scaling)
     rendered = page.evaluate_script("document.querySelector('svg.jobs-dag').getBoundingClientRect().width")
     expect(rendered).to be_within(1).of(view_box_width('svg.jobs-dag'))

@@ -3,7 +3,17 @@ scripts:
     body: |
       #!/usr/bin/env bash
       set -euo pipefail
-      createdb "cider_ci_v6_${CIDER_CI_TRIAL_ID}"
+      # Clone template0, not template1: createdb from template1 fails whenever
+      # any other session is connected to template1 (other projects' trials
+      # run `psql -d template1` on the shared executor cluster) — "source
+      # database template1 is being accessed by other users" took down a
+      # whole server-ui run. template0 never accepts connections. Retry a few
+      # times for any other transient contention.
+      for attempt in 1 2 3 4 5 6; do
+        if createdb -T template0 "cider_ci_v6_${CIDER_CI_TRIAL_ID}"; then exit 0; fi
+        [ "$attempt" = 6 ] && exit 1
+        sleep $((attempt * 5))
+      done
 
   migrate-database:
     start_when:

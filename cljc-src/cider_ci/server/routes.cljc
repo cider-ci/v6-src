@@ -37,6 +37,8 @@
       ["" {:name :project-jobs
            :auth-http-safe #{:user}
            :auth-http-unsafe #{:user}}]
+      ["/graph" {:name :project-jobs-graph
+                 :auth-http-safe #{:user}}]
       ["/:job-id"
        ["" {:name :project-job
             :auth-http-safe #{:user}}]

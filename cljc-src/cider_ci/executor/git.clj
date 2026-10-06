@@ -131,16 +131,27 @@
     (and (or (nil? include_match) (matches-pattern? path include_match))
          (or (nil? exclude_match) (not (matches-pattern? path exclude_match))))))
 
+(defn- init-submodules-filtered!
+  "Legacy semantics (executor.git.submodules/update): in dir, initialise every
+   submodule whose path (relative to dir, i.e. its own superproject) matches
+   include_match / exclude_match, then recurse into each initialised
+   submodule so nested submodules (admin/database, lending/shared-clj, ...)
+   are initialised too."
+  [^File dir submodule-opts auth]
+  (when (.exists (File. dir ".gitmodules"))
+    (let [paths   (submodule-paths dir)
+          matched (filter #(include-submodule? % submodule-opts) paths)]
+      (when (seq matched)
+        (info "Initialising" (count matched) "of" (count paths) "submodules in" (.getName dir))
+        (doseq [path matched]
+          (run! (vec (concat ["git"] auth ["submodule" "update" "--init" path])) dir)
+          (init-submodules-filtered! (File. dir ^String path) submodule-opts auth))))))
+
 (defn- init-submodules! [^File work-dir submodule-opts token git-url]
   (when (and (map? submodule-opts) (.exists (File. work-dir ".gitmodules")))
     (let [auth (auth-args token git-url)]
       (if (or (:include_match submodule-opts) (:exclude_match submodule-opts))
-        (let [paths   (submodule-paths work-dir)
-              matched (filter #(include-submodule? % submodule-opts) paths)]
-          (when (seq matched)
-            (info "Initialising" (count matched) "of" (count paths) "submodules (filtered)")
-            (doseq [path matched]
-              (run! (vec (concat ["git"] auth ["submodule" "update" "--init" path])) work-dir))))
+        (init-submodules-filtered! work-dir submodule-opts auth)
         (do
           (info "Initialising submodules")
           (run! (vec (concat ["git"] auth ["submodule" "update" "--init" "--recursive"])) work-dir))))))

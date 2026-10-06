@@ -1,0 +1,29 @@
+---
+- name: Install apache2 and mod_xsendfile
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - libapache2-mod-xsendfile
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Enable apache2 modules used by project reverse-proxy configs
+  community.general.apache2_module:
+    name: "{{ item }}"
+    state: present
+    ignore_configcheck: true
+  loop: "{{ ci_executor_trait_apache2_modules }}"
+
+# Trials run their own apache2 on a per-trial port; the distribution's
+# default instance on :80 is neither needed nor wanted on an executor.
+- name: Disable and stop the system apache2 service
+  ansible.builtin.service:
+    name: apache2
+    state: stopped
+    enabled: no
+
+- name: Register apache2 trait in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "apache 2"

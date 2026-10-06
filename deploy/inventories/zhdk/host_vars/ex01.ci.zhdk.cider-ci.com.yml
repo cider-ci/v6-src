@@ -9,6 +9,8 @@ ci_executor_trait_git: true
 ci_executor_trait_incus: true
 # ImageMagick, ExifTool, Graphviz, Hunspell, Xvfb (legacy traits/misc)
 ci_executor_trait_misc: true
+# leihs integration tests run their own apache2 reverse proxy per trial
+ci_executor_trait_apache2: true
 
 # Dispatch-marker traits required by projects so their tasks match this
 # executor. The projects pinned toolchains (Ruby, Java, Clojure, Node) are

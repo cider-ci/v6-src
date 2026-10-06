@@ -48,3 +48,7 @@
     - role: trait-misc
       when: ci_executor_trait_misc | default(false)
       tags: [trait-misc]
+
+    - role: trait-apache2
+      when: ci_executor_trait_apache2 | default(false)
+      tags: [trait-apache2]

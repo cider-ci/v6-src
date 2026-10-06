@@ -507,6 +507,7 @@
      [:code (:key j)]]]
    [:td (:name j)]
    [:td [state-badge (:state j)]]
+   [:td.text-end (:priority j)]
    [:td [:span.text-muted (str (:created_at j))]]])
 
 
@@ -517,7 +518,7 @@
      [:table.table.table-sm
       [:thead
        [:tr
-        [:th "Key"] [:th "Name"] [:th "State"] [:th "Created"]]]
+        [:th "Key"] [:th "Name"] [:th "State"] [:th.text-end "Priority"] [:th "Created"]]]
       [:tbody
        (for [j jobs] [job-row j])]]]))
 
@@ -677,6 +678,48 @@
 (defn- abort-job! [] (post-job-action! :project-job-abort))
 
 
+(defn- set-job-priority! [priority]
+  (-> (js/fetch (path :project-job-priority {:project-id (project-id)
+                                             :commit-id  (commit-id)
+                                             :job-id     (job-id)})
+                (clj->js {:method      "POST"
+                           :credentials "same-origin"
+                           :headers     {"content-type" "application/json"
+                                         "accept"       "application/json"
+                                         "x-csrf-token" (anti-csrf/token)}
+                           :body        (.stringify js/JSON (clj->js {:priority priority}))}))
+      (.then (fn [_] (fetch-data)))))
+
+(defn- job-priority-form
+  "Run-time override of the job priority (configured via `priority:` in the
+  job's cider-ci configuration, default 0). Higher is dispatched first;
+  only trials still pending are affected."
+  [job]
+  (reagent/with-let [value* (reagent/atom nil)]
+    (let [current (or (:priority job) 0)
+          value   (or @value* (str current))]
+      [:form.d-inline-flex.align-items-center.ms-3
+       {:on-submit (fn [e]
+                     (.preventDefault e)
+                     (let [n (js/parseInt value 10)]
+                       (when-not (js/isNaN n)
+                         (set-job-priority! n)
+                         (reset! value* nil))))}
+       [:label.form-label.mb-0.me-2 {:for "job-priority"} "Priority"]
+       [:input.form-control.form-control-sm.me-2
+        {:id        "job-priority"
+         :name      "priority"
+         :type      "number"
+         :step      1
+         :style     {:width "6em"}
+         :value     value
+         :on-change #(reset! value* (-> % .-target .-value))}]
+       [:button.btn.btn-sm.btn-outline-secondary
+        {:type     "submit"
+         :disabled (= (str current) (str/trim value))}
+        "Set priority"]])))
+
+
 (defn- job-detail-page []
   [:div.page.job
    [state/hidden-routing-state-component :did-change start-job-polling!]
@@ -705,7 +748,8 @@
             [icons/stop] " Abort"])
          [:button.btn.btn-sm.btn-outline-secondary
           {:on-click retry-job!}
-          [icons/retry] " Retry"]]
+          [icons/retry] " Retry"]
+         [job-priority-form job]]
         [tasks-panel (:tasks job)]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])]))])

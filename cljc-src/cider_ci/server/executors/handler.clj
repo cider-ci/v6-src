@@ -14,6 +14,10 @@
   ; Dispatch one trial at a time, subtracting each trial's load from the
   ; remaining budget. This prevents dispatching more concurrent trials than
   ; the executor can actually handle (e.g. LIMIT int(32) → 32 concurrent JVMs).
+  ;
+  ; Order (legacy parity): highest job priority first, then the oldest job,
+  ; then task priority and name, then the oldest trial. SKIP LOCKED makes
+  ; concurrent syncs take the next trial in that order.
   (let [raw-trials
         (loop [remaining (double (or available-load 0.0))
                trials    []]
@@ -44,6 +48,9 @@
                                     AND t2.dispatched_at > now() - (tsk.spec->>'dispatch_storm_delay_seconds')::float * interval '1 second'
                                 )
                               )
+                            ORDER BY j.priority DESC, j.created_at ASC,
+                                     tsk.priority DESC, tsk.name ASC,
+                                     t.created_at ASC
                             LIMIT 1
                             FOR UPDATE OF t SKIP LOCKED"
                            (:id executor) remaining]))]

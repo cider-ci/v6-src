@@ -46,6 +46,8 @@
                   :auth-http-unsafe #{:user}}]
        ["/retry" {:name             :project-job-retry
                   :auth-http-unsafe #{:user}}]
+       ["/priority" {:name             :project-job-priority
+                     :auth-http-unsafe #{:user}}]
        ["/tasks/:task-id"
         ["" {:name :project-job-task
              :auth-http-safe #{:user}}]

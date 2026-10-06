@@ -46,6 +46,18 @@
     (str "{" (->> names (map (comp str/lower-case str/trim name)) (str/join ",")) "}")))
 
 
+(defn spec-priority
+  "The `priority:` of a job or task spec as an integer, 0 when absent or
+  unparsable (legacy: `jobs.priority integer DEFAULT 0`)."
+  [spec]
+  (let [p (:priority spec)]
+    (cond
+      (integer? p) (int p)
+      (number? p)  (int (Math/round (double p)))
+      (string? p)  (or (parse-long (str/trim p)) 0)
+      :else        0)))
+
+
 (defn insert-task!
   "Inserts one task row for job-id from a decomposed task spec, deriving the
    traits (text[]) and load columns from the spec. Shared by the auto-trigger
@@ -54,21 +66,23 @@
    executor regardless of the required traits)."
   [tx job-id task-id task-spec]
   (jdbc/execute-one! tx
-    ["INSERT INTO tasks (id, job_id, name, state, spec, traits, load)
-      VALUES (?, ?, ?, 'pending', ?, CAST(? AS text[]), ?)"
+    ["INSERT INTO tasks (id, job_id, name, state, spec, traits, load, priority)
+      VALUES (?, ?, ?, 'pending', ?, CAST(? AS text[]), ?, ?)"
      task-id job-id (:name task-spec) task-spec
      (task-traits-literal task-spec)
-     (double (or (:load task-spec) 1.0))]))
+     (double (or (:load task-spec) 1.0))
+     (spec-priority task-spec)]))
 
 
 (defn create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
   (let [expanded   (generate/expand project-id (str commit-id) spec)
         new-job-id (java.util.UUID/randomUUID)
         result     (jdbc/execute-one! tx
-                     ["INSERT INTO jobs (id, project_id, commit_id, key, name, state, spec)
-                       VALUES (?, ?, ?, ?, ?, 'pending', ?)
+                     ["INSERT INTO jobs (id, project_id, commit_id, key, name, state, spec, priority)
+                       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
                        ON CONFLICT (project_id, commit_id, key) DO NOTHING"
-                      new-job-id project-id (str commit-id) key name expanded])]
+                      new-job-id project-id (str commit-id) key name expanded
+                      (spec-priority expanded)])]
     (when (= 1 (:next.jdbc/update-count result))
       (info "Auto-triggered job" key "for" project-id commit-id)
       (doseq [task-spec (decompose/decompose expanded)]

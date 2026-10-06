@@ -30,3 +30,16 @@
   (testing "jobs with depends_on are left to the dep-trigger"
     (is (false? (should-trigger? (job {:depends_on {:d {:type "job" :job_key "a" :states ["passed"]}}
                                        :run_when {:any {:type "branch"}}}) "master")))))
+
+
+(deftest spec-priority-test
+  (let [spec-priority cider-ci.server.jobs.auto-trigger/spec-priority]
+    (testing "default 0 when absent or unparsable"
+      (is (= 0 (spec-priority {})))
+      (is (= 0 (spec-priority {:priority nil})))
+      (is (= 0 (spec-priority {:priority "high"}))))
+    (testing "integers, numeric strings and floats"
+      (is (= 7 (spec-priority {:priority 7})))
+      (is (= -100 (spec-priority {:priority -100})))
+      (is (= 3 (spec-priority {:priority " 3 "})))
+      (is (= 2 (spec-priority {:priority 2.4}))))))

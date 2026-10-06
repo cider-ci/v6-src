@@ -7,6 +7,7 @@
     [cider-ci.server.jobs.generate :as generate]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as shared]
+    [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
@@ -72,7 +73,7 @@
          (map #(annotate-job % created-by-key repo commit-id)))))
 
 (defn- created-jobs [project-id commit-id]
-  (->> (-> (sql/select :id :key :name :state :created_at)
+  (->> (-> (sql/select :id :key :name :state :created_at :priority)
            (sql/from :jobs)
            (sql/where [:= :project_id project-id])
            (sql/where [:= :commit_id commit-id])
@@ -112,6 +113,7 @@
                                   :jobs/name   (:name job-entry)
                                   :state       "pending"
                                   :spec        [:lift full-spec]
+                                  :priority    (auto-trigger/spec-priority full-spec)
                                   :created_by  created-by}])
                     sql-format))
               (doseq [task-spec task-specs]
@@ -270,6 +272,26 @@
     {:status 200 :body {:status "retrying"}}))
 
 
+(defn- set-job-priority!
+  "Run-time override of the job's priority (from the configuration or the
+  default 0). Only pending trials are affected: the dispatcher orders by it."
+  [project-id job-id body]
+  (let [p (:priority body)
+        p (cond (integer? p) p
+                (number? p)  (Math/round (double p))
+                (string? p)  (parse-long (str/trim p))
+                :else        nil)]
+    (if (nil? p)
+      {:status 422 :body "priority must be an integer"}
+      (let [result (jdbc/execute-one! (get-ds)
+                     ["UPDATE jobs SET priority = ?, updated_at = now()
+                       WHERE id = ? AND project_id = ?"
+                      (int p) (java.util.UUID/fromString job-id) project-id])]
+        (if (= 1 (:next.jdbc/update-count result))
+          {:status 200 :body {:priority (int p)}}
+          {:status 404 :body "Job not found"})))))
+
+
 (defn handler [{{{:keys [project-id commit-id job-id task-id]} :path-params} :route
                 route-name    :route-name
                 request-method :request-method
@@ -298,6 +320,11 @@
     :project-job-retry
     (case request-method
       :post (retry-job! project-id job-id)
+      {:status 405 :body "Method not allowed"})
+
+    :project-job-priority
+    (case request-method
+      :post (set-job-priority! project-id job-id body)
       {:status 405 :body "Method not allowed"})
 
     :project-job-task-retry

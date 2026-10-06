@@ -3,6 +3,7 @@
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.jobs.auto-trigger :as auto-trigger]
     [cider-ci.server.jobs.decompose :as decompose]
+    [cider-ci.server.jobs.dependencies :as dependencies]
     [cider-ci.server.jobs.generate :as generate]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as shared]
@@ -28,27 +29,12 @@
         []
         (throw e)))))
 
-(defn- dep-satisfied? [dep created-by-key]
-  (let [dep-type (some-> dep :type name)
-        job-key  (:job_key dep)
-        states   (set (map name (:states dep)))]
-    (cond
-      (or (and dep-type (not= dep-type "job"))
-          (seq (:submodule dep)))
-      false
-      :else
-      (let [existing (get created-by-key (name job-key))]
-        (and existing (contains? states (:state existing)))))))
-
-(defn- annotate-job [job-entry created-by-key]
+(defn- annotate-job [job-entry created-by-key repo commit-id]
   (let [key-str       (:key job-entry)
         depends-on    (:depends_on (:full-spec job-entry))
         has-instance? (contains? created-by-key key-str)
         unmet-deps    (when (and (not has-instance?) depends-on)
-                        (->> depends-on
-                             (remove (fn [[_ dep]] (dep-satisfied? dep created-by-key)))
-                             (map (fn [[dep-name _]] (name dep-name)))
-                             vec))
+                        (dependencies/unmet (get-ds) repo commit-id (:full-spec job-entry) created-by-key))
         runnable?     (and (not has-instance?) (empty? unmet-deps))
         dep-job-keys  (->> depends-on
                            vals
@@ -83,7 +69,7 @@
 (defn- available-jobs [repo commit-id created]
   (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))]
     (->> (full-job-configs repo commit-id)
-         (map #(annotate-job % created-by-key)))))
+         (map #(annotate-job % created-by-key repo commit-id)))))
 
 (defn- created-jobs [project-id commit-id]
   (->> (-> (sql/select :id :key :name :state :created_at)

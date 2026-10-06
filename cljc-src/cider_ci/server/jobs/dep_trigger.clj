@@ -2,6 +2,7 @@
   (:require
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.jobs.auto-trigger :as auto-trigger]
+    [cider-ci.server.jobs.dependencies :as dependencies]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as repo-shared]
     [cider-ci.utils.daemon :refer [defdaemon]]
@@ -20,21 +21,8 @@
         (throw e)))))
 
 
-(defn- dep-satisfied? [dep existing-by-key]
-  (let [dep-type (some-> dep :type name)
-        job-key  (some-> dep :job_key name)
-        states   (set (map name (or (:states dep) [])))]
-    (cond
-      (and dep-type (not= dep-type "job")) false
-      (seq (:submodule dep))               false
-      :else
-      (let [existing (get existing-by-key job-key)]
-        (and existing (contains? states (:state existing)))))))
-
-
-(defn- all-deps-satisfied? [spec existing-by-key]
-  (every? (fn [[_ dep]] (dep-satisfied? dep existing-by-key))
-          (:depends_on spec)))
+(defn- all-deps-satisfied? [ds repo commit-id spec existing-by-key]
+  (empty? (dependencies/unmet ds repo commit-id spec existing-by-key)))
 
 
 (defn- trigger-dependents! [ds project-id commit-id]
@@ -48,7 +36,7 @@
             to-trigger    (filter (fn [{:keys [key spec]}]
                                     (and (seq (:depends_on spec))
                                          (not (contains? by-key key))
-                                         (all-deps-satisfied? spec by-key)))
+                                         (all-deps-satisfied? ds repo commit-id spec by-key)))
                                   job-configs)]
         (when (seq to-trigger)
           (info "dep-trigger: triggering" (map :key to-trigger)

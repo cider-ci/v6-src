@@ -134,21 +134,93 @@
                (branch-run-when-entries spec)))))
 
 
-(defn trigger-for-commit! [ds project-id commit-id branch-name
-                            & {:keys [repo-include repo-exclude repo-max-age]
-                               :or   {repo-include "^.*$" repo-exclude "" repo-max-age nil}}]
-  (when (and (repo-allows-branch? repo-include repo-exclude branch-name)
-             (commit-within-age? ds commit-id repo-max-age))
-    (try
-      (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
-        (let [job-configs (read-job-configs repo commit-id)]
-          (doseq [job-config job-configs]
-            (when (job-should-trigger? job-config branch-name)
-              (try
-                (jdbc/with-transaction [tx ds]
-                  (create-job-with-tasks! tx project-id commit-id job-config))
-                (catch Exception e
-                  (warn "Failed to auto-trigger job" (:key job-config)
-                        "for" project-id commit-id "on" branch-name ":" (.getMessage e))))))))
-      (catch Exception e
-        (warn "Auto-trigger failed for" project-id commit-id "on" branch-name ":" (.getMessage e))))))
+(defn- record-pending!
+  "Remember a branch update whose configuration could not be evaluated so
+   the branch-trigger-retry daemon tries again (e.g. after the submodule
+   commit it needs has been pushed and fetched)."
+  [ds project-id commit-id branch-name error]
+  (jdbc/execute-one! ds
+    ["INSERT INTO pending_branch_triggers (repository_id, commit_id, branch_name, error)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT (repository_id, commit_id, branch_name) DO UPDATE
+        SET error = EXCLUDED.error,
+            attempts = pending_branch_triggers.attempts + 1,
+            updated_at = now()"
+     project-id (str commit-id) branch-name error]))
+
+(defn- clear-pending! [ds project-id commit-id branch-name]
+  (jdbc/execute-one! ds
+    ["DELETE FROM pending_branch_triggers
+      WHERE repository_id = ? AND commit_id = ? AND branch_name = ?"
+     project-id (str commit-id) branch-name]))
+
+(defn trigger-for-commit!
+  "Evaluates the job configuration of `commit-id` and creates the jobs a
+   branch update of `branch-name` triggers (run_when type branch). Returns
+   :skipped (branch or age filter), :ok, or :pending when the configuration
+   could not be evaluated or a job could not be created; the latter is
+   recorded in pending_branch_triggers for the retry daemon."
+  [ds project-id commit-id branch-name
+   & {:keys [repo-include repo-exclude repo-max-age]
+      :or   {repo-include "^.*$" repo-exclude "" repo-max-age nil}}]
+  (if-not (and (repo-allows-branch? repo-include repo-exclude branch-name)
+               (commit-within-age? ds commit-id repo-max-age))
+    :skipped
+    (let [errors (atom [])]
+      (try
+        (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
+          (let [job-configs (read-job-configs repo commit-id)]
+            (doseq [job-config job-configs]
+              (when (job-should-trigger? job-config branch-name)
+                (try
+                  (jdbc/with-transaction [tx ds]
+                    (create-job-with-tasks! tx project-id commit-id job-config))
+                  (catch Exception e
+                    (warn "Failed to auto-trigger job" (:key job-config)
+                          "for" project-id commit-id "on" branch-name ":" (.getMessage e))
+                    (swap! errors conj (str "job `" (:key job-config) "`: " (.getMessage e)))))))))
+        (catch Exception e
+          (warn "Auto-trigger failed for" project-id commit-id "on" branch-name ":" (.getMessage e))
+          (swap! errors conj (.getMessage e))))
+      (if (seq @errors)
+        (do (record-pending! ds project-id commit-id branch-name (str/join "\n" @errors))
+            :pending)
+        (do (clear-pending! ds project-id commit-id branch-name)
+            :ok)))))
+
+
+(defn retry-pending!
+  "Re-evaluates every recorded pending branch trigger. Entries whose commit
+   is older than the repository's branch_trigger_max_commit_age (or the
+   settings default) are dropped. `settings-default-age` is the fallback
+   interval; `min-age-seconds` avoids retrying an entry that was just
+   recorded."
+  [ds & {:keys [min-age-seconds] :or {min-age-seconds 5}}]
+  (let [default-age (jdbc/execute-one! ds
+                      ["SELECT branch_trigger_max_commit_age_default::text AS age FROM settings WHERE id = 0"])
+        pending     (jdbc/execute! ds
+                      ["SELECT p.repository_id, p.commit_id, p.branch_name,
+                              r.branch_trigger_include_match, r.branch_trigger_exclude_match,
+                              r.branch_trigger_max_commit_age
+                         FROM pending_branch_triggers p
+                         JOIN repositories r ON r.id = p.repository_id
+                        WHERE p.updated_at < now() - CAST(? AS interval)
+                        ORDER BY p.created_at"
+                       (str min-age-seconds " seconds")])]
+    (doseq [{:keys [repository_id commit_id branch_name
+                    branch_trigger_include_match branch_trigger_exclude_match
+                    branch_trigger_max_commit_age]} pending]
+      (let [max-age (or branch_trigger_max_commit_age (:age default-age))]
+        (if-not (commit-within-age? ds commit_id max-age)
+          (do (info "branch-trigger-retry: dropping" repository_id commit_id branch_name
+                    "- commit older than" max-age)
+              (clear-pending! ds repository_id commit_id branch_name))
+          (let [result (trigger-for-commit! ds repository_id commit_id branch_name
+                                            :repo-include (or branch_trigger_include_match "^.*$")
+                                            :repo-exclude (or branch_trigger_exclude_match "")
+                                            :repo-max-age max-age)]
+            (when (= :skipped result)
+              ;; branch filter changed meanwhile: nothing to retry
+              (clear-pending! ds repository_id commit_id branch_name))
+            (when (= :ok result)
+              (info "branch-trigger-retry: resolved" repository_id commit_id branch_name))))))))

@@ -169,6 +169,32 @@
                (:label hooks-link)]])
            [:div.form-text "POST to this URL to trigger an immediate fetch on push."]]]))]))
 
+(defn- pending-branch-triggers-table
+  "Branch updates whose job configuration could not be evaluated yet (e.g. a
+   submodule commit that is not pushed); the server retries them while the
+   commit is within the branch trigger max age."
+  []
+  (when-let [pending (seq (:pending_branch_triggers @_data*))]
+    [:<>
+     [:h3.mt-4 "Unresolved Branch Updates"]
+     [:p.text-muted.small
+      "The job configuration of these commits could not be evaluated (typically a submodule "
+      "commit that is not pushed yet). They are retried automatically while the commit is "
+      "within the branch trigger max age."]
+     [:table.table.table-sm.pending-branch-triggers
+      [:thead [:tr [:th "Branch"] [:th "Commit"] [:th "Attempts"] [:th "Last attempt"] [:th "Error"]]]
+      [:tbody
+       (for [{:keys [branch_name commit_id attempts updated_at error]} pending]
+         ^{:key (str branch_name commit_id)}
+         [:tr
+          [:td branch_name]
+          [:td [:a {:href (path :project-jobs {:project-id (project-id) :commit-id commit_id})}
+                [:code (subs commit_id 0 8)]]]
+          [:td attempts]
+          [:td (relative-time updated_at)]
+          [:td [:pre.small.mb-0.text-break {:style {:white-space "pre-wrap"}} error]]])]]]))
+
+
 (defn- detail-page []
   (fn []
     [:div.page.project
@@ -201,6 +227,7 @@
             [icons/delete] " Delete project"]])
         [:h3.mt-4 "Branches"]
         [branches-table]
+        [pending-branch-triggers-table]
         (when @state/debug?*
           [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])]))
 

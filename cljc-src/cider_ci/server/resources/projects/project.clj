@@ -34,13 +34,21 @@
       (sql/order-by [:c.committer_date :is-null] [:c.committer_date :desc])))
 
 
+(defn- pending-branch-triggers-sql [project-id]
+  (-> (sql/select :branch_name :commit_id :error :attempts :created_at :updated_at)
+      (sql/from :pending_branch_triggers)
+      (sql/where [:= :repository_id project-id])
+      (sql/order-by [:created_at :desc])))
+
 (defn- get-handler [tx project-id]
   (if-let [repo (jdbc/execute-one! tx (sql-format (repository-sql project-id)))]
     (let [branches (jdbc/execute! tx (sql-format (branches-sql project-id)))
+          pending  (jdbc/execute! tx (sql-format (pending-branch-triggers-sql project-id)))
           repo-state (some-> @repo-state-db*
                              (get-in [:repositories (keyword project-id)])
                              (select-keys [:fetch-and-update :branch-updates]))]
-      {:body (merge repo repo-state {:branches branches})})
+      {:body (merge repo repo-state {:branches branches
+                                     :pending_branch_triggers pending})})
     {:status 404 :body "Project not found"}))
 
 (defn- delete-handler [tx project-id]

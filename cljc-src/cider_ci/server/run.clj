@@ -2,7 +2,8 @@
   (:require
     [cider-ci.server.db.core :as db]
     [cider-ci.server.html.server :as http-server]
-    [cider-ci.server.jobs.dep-trigger :as dep-trigger]
+   [cider-ci.server.jobs.branch-trigger-retry :as branch-trigger-retry]
+   [cider-ci.server.jobs.dep-trigger :as dep-trigger]
     [cider-ci.server.jobs.stale-trials :as stale-trials]
     [cider-ci.server.projects.repositories.main :as repositories]
     [cider-ci.server.routing :as routing]
@@ -47,7 +48,8 @@
     (http-server/init routes options))
   (repositories/init options)
   (stale-trials/init)
-  (dep-trigger/init))
+  (dep-trigger/init)
+  (branch-trigger-retry/init))
 
 
 (defn main [gopts args]

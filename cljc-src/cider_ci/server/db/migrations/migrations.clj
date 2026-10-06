@@ -52,6 +52,8 @@
         :down (partial exec-resource-sql! "migrations/00024_remote_fetch_interval_default_down.sql")}
     25 {:up (partial exec-resource-sql! "migrations/00025_jobs_priority_up.sql")
         :down (partial exec-resource-sql! "migrations/00025_jobs_priority_down.sql")}
+    26 {:up (partial exec-resource-sql! "migrations/00026_pending_branch_triggers_up.sql")
+        :down (partial exec-resource-sql! "migrations/00026_pending_branch_triggers_down.sql")}
     ))
 
 (defn available []

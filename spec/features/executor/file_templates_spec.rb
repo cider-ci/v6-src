@@ -11,8 +11,11 @@ feature 'Executor file templates' do
   scenario 'renders templates with env vars and ports; a missing template fails the task' do
     trigger_job 'Templates'
     url = job_detail_url('file_templates')
-    # the job fails as a whole because of the deliberately missing template
-    wait_for_job_badge(url, 'failed', timeout_sec: 180)
+    # the job fails as a whole because of the deliberately missing template:
+    # the task is defective (all its trials are) and so is the job; with the
+    # ordered dispatch this is deterministic (earlier runs sometimes saw a
+    # "failed" trial and hence a failed job).
+    wait_for_job_badge(url, /failed|defective/, timeout_sec: 180)
 
     states = database[:tasks].join(:jobs, id: :job_id)
                              .where(Sequel[:jobs][:key] => 'file_templates', Sequel[:jobs][:project_id] => project_id)

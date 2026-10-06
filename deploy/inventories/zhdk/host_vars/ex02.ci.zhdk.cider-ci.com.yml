@@ -1,0 +1,20 @@
+---
+# Second ZHdK executor (Hetzner, Debian 13 trixie, 32 cores, 125 GB, 2 TB
+# md-RAID root). Same trait set as ex01; its own executor record on the
+# server (registered 2026-10-06), token in secrets.yml.
+ci_executor_token: "{{ ci_executor_token_ex02 }}"
+
+ci_executor_trait_mise: true
+ci_executor_trait_ruby: true
+ci_executor_trait_postgresql: true
+ci_executor_trait_stress_ng: true
+ci_executor_trait_git: true
+ci_executor_trait_incus: true
+ci_executor_trait_misc: true
+ci_executor_trait_apache2: true
+
+# Dispatch-marker traits, see ex01 host_vars for the rationale.
+ci_executor_extra_traits:
+  - "postgresql 15"
+  - asdf
+  - firefox-esr

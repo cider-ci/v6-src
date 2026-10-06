@@ -18,7 +18,10 @@ ci_server_http_port: 3838
 ci_server_http_bind: "127.0.0.1"
 
 # --- Executor ----------------------------------------------------------------
-# ci_executor_token — defined in secrets.yml (transcrypt-encrypted)
+# ci_executor_token — defined in secrets.yml (transcrypt-encrypted); ex02
+# overrides it per host (ci_executor_token_ex02). ci_executor_name is only
+# used by provision.yml to seed the first executor record; further
+# executors are registered via the admin UI (/executors/new).
 ci_executor_name: ex01.ci.zhdk.cider-ci.com
 ci_executor_max_load: 16
 ci_executor_server_url: "https://ci.zhdk.cider-ci.com"

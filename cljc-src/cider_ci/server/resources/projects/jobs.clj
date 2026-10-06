@@ -81,7 +81,7 @@
            sql-format)
        (jdbc-sql/query (get-ds))))
 
-(defn- create-job [repo project-id commit-id body session]
+(defn- create-job [repo project-id commit-id body user]
   (let [job-key (:key body)]
     (when-not (seq job-key)
       {:status 400 :body "Missing job key"})
@@ -89,7 +89,7 @@
           job-entry   (some #(when (= (:key %) job-key) %) all-configs)]
       (if-not job-entry
         {:status 404 :body "Job not found in configuration"}
-        (let [created-by (get-in session [:user :id])
+        (let [created-by (:id user)
               full-spec  (generate/expand project-id commit-id (:full-spec job-entry))
               task-specs (decompose/decompose full-spec)
               new-job-id (java.util.UUID/randomUUID)]
@@ -296,7 +296,7 @@
                 route-name    :route-name
                 request-method :request-method
                 body           :body
-                session        :session}]
+                user           :user}]
   (case route-name
     :project-job
     (case request-method
@@ -340,7 +340,7 @@
                   {:status 200
                    :body   {:available (available-jobs repo commit-id created)
                             :created   created}})
-          :post (create-job repo project-id commit-id body session)
+          :post (create-job repo project-id commit-id body user)
           {:status 405 :body "Method not allowed"})
         ;; A full SHA always "resolves" in JGit; reading it throws when the
         ;; commit has not been fetched yet. That is a 404, not a 500.

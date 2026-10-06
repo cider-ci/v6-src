@@ -73,6 +73,9 @@ feature 'Job priority' do
 
     expect(job_row('prio-manual')[:priority]).to eq(-3)
     expect(job_row('prio-default')[:priority]).to eq 0
+    # UI-triggered jobs record the user; auto-triggered ones do not
+    expect(job_row('prio-manual')[:created_by]).to eq @admin.id
+    expect(job_row('prio-auto')[:created_by]).to be_nil
 
     # the recorded jobs table shows the priority
     recorded = find('h4', text: 'Recorded Jobs').find(:xpath, 'following-sibling::table[1]')

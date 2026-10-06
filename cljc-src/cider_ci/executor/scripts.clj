@@ -86,13 +86,13 @@
         (normalize-start-when (:start_when spec))))
 
 
-(defn- env-str-map
+(defn env-str-map
   "Normalises an env map to {string -> string} for ProcessBuilder and templates."
   [env-map]
   (into {} (map (fn [[k v]] [(name k) (str v)]) env-map)))
 
 
-(defn- apply-templates
+(defn apply-templates
   "Fixpoint-iterates {{KEY}} substitution in the values of a string-keyed env map.
    Unresolvable references are left as literal {{KEY}}. Stops after 10 passes."
   [str-env]

@@ -3,6 +3,7 @@
     [cider-ci.executor.git :as git]
     [cider-ci.executor.ports :as ports]
     [cider-ci.executor.scripts :as scripts]
+    [cider-ci.executor.templates :as templates]
     [cheshire.core :as json]
     [org.httpkit.client :as http-client]
     [taoensso.timbre :refer [info warn]])
@@ -208,6 +209,10 @@
       (.mkdirs (working-dirs-root))
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
                                 repository_git_url)
+      ;; file templates (`templates:` in the task spec) are rendered with the
+      ;; trial's env (incl. assigned ports) before any script runs; a missing
+      ;; template source throws and makes the trial defective (legacy parity)
+      (templates/render! work-dir (:templates task_spec) env-vars)
 
       (let [scripts-fut (future (scripts/run-all! (.getAbsolutePath work-dir) task_spec env-vars id))]
         ;; Stream partial script logs and live script states to the server

@@ -1,5 +1,6 @@
 {:paths [:cljc-paths :resource-paths]
  :deps {cheshire/cheshire {:mvn/version "6.1.0"}
+        selmer/selmer {:mvn/version "1.12.62"}
         clj-commons/clj-yaml {:mvn/version "1.0.29"}
         cljs-http/cljs-http {:mvn/version "0.1.49"}
         com.github.seancorfield/honeysql {:mvn/version "2.7.1368"}

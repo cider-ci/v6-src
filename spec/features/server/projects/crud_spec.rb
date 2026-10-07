@@ -20,5 +20,16 @@ feature 'Projects' do
       visit '/projects/'
       wait_until(10) { tr_project('cider-ci-demo-project') }
     end
+
+    scenario 'lists projects ordered by id' do
+      # inserted out of order; without ORDER BY the list followed the heap order
+      %w[zeta-project alpha-project mid-project].each do |id|
+        database[:repositories].insert(id: id, name: id, git_url: "file:///nowhere/#{id}.git",
+                                       branch_trigger_include_match: '^__none__$')
+      end
+      visit '/projects/'
+      wait_until(10) { tr_project('zeta-project') }
+      expect(all('tr.project td.id').map(&:text)).to eq %w[alpha-project mid-project zeta-project]
+    end
   end
 end

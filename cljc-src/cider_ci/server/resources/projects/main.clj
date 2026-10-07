@@ -27,6 +27,7 @@
 (defn get-projects [tx]
   {:body (-> (sql/select :id :name)
              (sql/from :repositories)
+             (sql/order-by :id) ; stable listing (no ORDER BY = heap order, changes with updates)
              (sql-format)
              (->> (jdbc/execute! tx)
                   (map (fn [{id :id :as repo}]

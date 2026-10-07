@@ -1,6 +1,7 @@
 require 'digest'
 require 'fileutils'
 require 'securerandom'
+require 'tmpdir'
 require 'timeout'
 
 shared_context 'with live executor' do
@@ -29,10 +30,13 @@ shared_context 'with live executor' do
     log_dir = PROJECT_DIR.join('tmp/executor-logs')
     FileUtils.mkdir_p(log_dir)
     @executor_log_path = log_dir.join("executor-#{SecureRandom.hex(6)}.log").to_s
+    # a fresh git cache per run: specs can assert where repositories are fetched from
+    @executor_git_cache_dir = Dir.mktmpdir('cider-ci-git-cache')
     @executor_pid = Process.spawn(
-      { 'CIDER_CI_EXECUTOR_TOKEN'  => @executor_token,
-        'CIDER_CI_SERVER_URL'      => http_base_url,
-        'CIDER_CI_EXECUTOR_TRAITS' => 'Bash' },
+      { 'CIDER_CI_EXECUTOR_TOKEN'         => @executor_token,
+        'CIDER_CI_SERVER_URL'             => http_base_url,
+        'CIDER_CI_EXECUTOR_TRAITS'        => 'Bash',
+        'CIDER_CI_EXECUTOR_GIT_CACHE_DIR' => @executor_git_cache_dir },
       PROJECT_DIR.join('bin/executor-run').to_s,
       out: @executor_log_path,
       err: @executor_log_path
@@ -45,6 +49,7 @@ shared_context 'with live executor' do
   after :each do
     Process.kill('TERM', @executor_pid) rescue nil
     Process.wait(@executor_pid)         rescue nil
+    FileUtils.rm_rf(@executor_git_cache_dir) if @executor_git_cache_dir
   end
 
   # Navigate to the commit's job list and click Run for the named job.

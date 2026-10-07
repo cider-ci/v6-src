@@ -2,6 +2,8 @@
   (:require
     [cider-ci.server.executors.auth :as auth]
     [cider-ci.server.jobs.propagation :as propagation]
+    [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
+    [cider-ci.server.projects.repositories.shared :as repo-shared]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -9,6 +11,31 @@
     [taoensso.timbre :refer [warn]])
   (:import [java.io InputStream]))
 
+
+(defonce ^:private git-proxies-cache* (atom {}))
+
+(defn- git-proxies-for
+  "{submodule-commit server-git-url} for the trial's commit (see
+   submodules/git-proxies), so executors fetch submodules from this server
+   whenever a configured repository holds them. Computed per (project,
+   commit) and cached for 5 minutes: a new project can make more submodules
+   resolvable."
+  [project-id commit-id server-base-url]
+  (let [k   [project-id commit-id]
+        now (System/currentTimeMillis)
+        hit (get @git-proxies-cache* k)]
+    (if (and hit (< (- now (:at hit)) (* 5 60 1000)))
+      (:value hit)
+      (let [m (try
+                (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
+                  (submodules/git-proxies repo commit-id))
+                (catch Exception e
+                  (warn "git proxies for" project-id commit-id "failed:" (.getMessage e))
+                  {}))
+            v (into {} (map (fn [[sha id]] [sha (str server-base-url "/projects/" id "/git")]) m))]
+        (when (> (count @git-proxies-cache*) 500) (reset! git-proxies-cache* {}))
+        (swap! git-proxies-cache* assoc k {:at now :value v})
+        v))))
 
 (defn- dispatch-trials [tx executor available-load server-base-url]
   ; Dispatch one trial at a time, subtracting each trial's load from the
@@ -79,6 +106,11 @@
              ;; scripts can `git fetch origin ...` without executor credentials.
              :git_url    (str server-base-url "/projects/" (:project_id t) "/git")
              :repository_git_url (:repository_git_url t)
+             ;; git_proxies: {submodule-commit git-url-on-this-server} for the
+             ;; submodules a configured repository holds (recursively); the
+             ;; executor fetches those from here instead of their .gitmodules
+             ;; host (which may be throttled, private or unpublished).
+             :git_proxies (git-proxies-for (:project_id t) (:commit_id t) server-base-url)
              :patch_path (str "/executor/trials/" (:id t))})
           raw-trials)))
 

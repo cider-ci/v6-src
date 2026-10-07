@@ -186,7 +186,7 @@
   (into {} (for [[k v] script-results] [k (dissoc v :log-file)])))
 
 
-(defn execute! [{:keys [id git_url repository_git_url commit_id task_spec] :as trial} opts]
+(defn execute! [{:keys [id git_url repository_git_url git_proxies commit_id task_spec] :as trial} opts]
   (info "Executing trial" id)
   (let [trial-load (double (or (:load task_spec) 1.0))
         work-dir   (working-dir id)
@@ -208,7 +208,7 @@
 
       (.mkdirs (working-dirs-root))
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
-                                repository_git_url)
+                                repository_git_url git_proxies)
       ;; file templates (`templates:` in the task spec) are rendered with the
       ;; trial's env (incl. assigned ports) before any script runs; a missing
       ;; template source throws and makes the trial defective (legacy parity)

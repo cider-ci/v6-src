@@ -172,3 +172,49 @@
   "Opens the bare repository with the given id. Caller must close it."
   ^Repository [repo-id]
   (shared/file-repository (shared/path {:id repo-id})))
+
+
+;;; git proxies for executors ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- submodule-entries
+  "[{:path :url :commit}] for every .gitmodules entry of commit-id that has a
+   gitlink in the tree."
+  [^Repository repo commit-id]
+  (for [[path url] (parse-gitmodules (read-string-at repo commit-id ".gitmodules"))
+        :let [commit (gitlink-commit repo commit-id path)]
+        :when commit]
+    {:path path :url url :commit commit}))
+
+(defn git-proxies
+  "Where an executor can fetch the submodules of commit-id from this server:
+   {submodule-commit-sha repository-id} for every submodule, recursively
+   through nested submodules, whose commit a configured repository contains
+   (matched by .gitmodules URL, else the parent repository itself). Submodules
+   no configured repository holds are left out; the executor then falls back
+   to the .gitmodules URL. Keyed by commit so that the executor needs no URL
+   matching and the mapping stays valid for private or unpublished
+   submodules. Never throws: resolution problems yield a partial map."
+  [^Repository repo commit-id]
+  (let [acc  (atom {})
+        seen (atom #{})]
+    (letfn [(walk! [^Repository r cid]
+              (when-not (contains? @seen [(repo-id r) cid])
+                (swap! seen conj [(repo-id r) cid])
+                (doseq [{:keys [url commit]} (try (submodule-entries r cid) (catch Exception _ []))]
+                  (when-not (contains? @acc commit)
+                    (let [candidates (distinct (concat (when url (repositories-matching-url url))
+                                                       [(repo-id r)]))
+                          found      (some (fn [id]
+                                             (try
+                                               (with-open [^Repository c (open-repo id)]
+                                                 (when (repo-contains-commit? c commit) id))
+                                               (catch Exception _ nil)))
+                                           candidates)]
+                      (when found
+                        (swap! acc assoc commit found)
+                        (try
+                          (with-open [^Repository c (open-repo found)]
+                            (walk! c commit))
+                          (catch Exception _ nil))))))))]
+      (try (walk! repo commit-id) (catch Exception _ nil))
+      @acc)))

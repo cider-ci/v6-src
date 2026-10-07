@@ -125,17 +125,19 @@
   (-> url str/trim (str/replace #"/+$" "") (str/replace #"\.git$" "")))
 
 (defn- ensure-cache!
-  "A bare clone of git-url (keyed by canonical URL) containing commit-id; only
-   touches the network when the commit is missing. Clone and fetch are retried
-   on transient failures."
-  [git-url commit-id token]
-  (let [cache (File. ^String @cache-root* (sha1-hex (canonical-url git-url)))
+  "A bare clone containing commit-id, fetched from git-url and keyed by the
+   canonical key-url (the repository's real URL, so the same repository
+   fetched via the server proxy or from its host shares one cache); only
+   touches the network when the commit is missing. Clone and fetch are
+   retried on transient failures."
+  [git-url commit-id token & {:keys [key-url] :or {key-url git-url}}]
+  (let [cache (File. ^String @cache-root* (sha1-hex (canonical-url key-url)))
         auth  (auth-args token git-url)
         clone! (fn []
                  (.mkdirs cache)
                  (with-retries (str "clone of " git-url) 3
                    #(run! (vec (concat ["git"] auth ["clone" "--bare" git-url (.getAbsolutePath cache)])) nil)))]
-    (locking (repo-lock (canonical-url git-url))
+    (locking (repo-lock (canonical-url key-url))
       (when-not (valid-bare-clone? cache)
         (when (.exists cache)
           (warn "Cache dir exists but is not a valid git repo; deleting" (.getAbsolutePath cache))
@@ -160,10 +162,11 @@
     cache))
 
 (defn- clone-from-cache!
-  "Checks commit-id of git-url out into dir (a `--shared` clone of the cache)
-   and points `origin` to origin-url."
+  "Checks commit-id out into dir (a `--shared` clone of the cache, fetched
+   from git-url, cache keyed by origin-url) and points `origin` to
+   origin-url (the repository's real URL)."
   [git-url commit-id ^File dir token origin-url]
-  (let [cache (ensure-cache! git-url commit-id token)]
+  (let [cache (ensure-cache! git-url commit-id token :key-url (or (not-empty origin-url) git-url))]
     (run! ["git" "clone" "--shared" "--no-checkout"
            (.getAbsolutePath cache) (.getAbsolutePath dir)] nil)
     (run! ["git" "checkout" commit-id] dir)
@@ -244,21 +247,24 @@
    ~30 submodules per trial, and 32 parallel trials got throttled by GitHub,
    failing a whole job. The executor token is only sent to the CIDER-CI
    server's own origin."
-  [^File dir submodule-opts parent-url token server-git-url]
+  [^File dir submodule-opts parent-url token server-git-url git-proxies]
   (when (.exists (File. dir ".gitmodules"))
     (let [entries (gitmodules-entries dir)
           matched (filter #(include-submodule? (:path %) submodule-opts) entries)]
       (when (seq matched)
         (info "Initialising" (count matched) "of" (count entries) "submodules in" (.getName dir))
         (doseq [{:keys [path url]} matched]
-          (let [url     (resolve-submodule-url parent-url url)
-                commit  (gitlink-commit dir path)
-                sub-dir (File. dir ^String path)]
+          (let [url       (resolve-submodule-url parent-url url)
+                commit    (gitlink-commit dir path)
+                sub-dir   (File. dir ^String path)
+                ;; the server tells us where it can serve the submodule commit
+                ;; from (git_proxies); otherwise it comes from its declared host
+                fetch-url (or (get git-proxies commit) url)]
             (when commit
-              (clone-from-cache! url commit sub-dir
-                                 (when (same-origin? url server-git-url) token)
+              (clone-from-cache! fetch-url commit sub-dir
+                                 (when (same-origin? fetch-url server-git-url) token)
                                  url)
-              (init-submodules! sub-dir submodule-opts url token server-git-url))))))))
+              (init-submodules! sub-dir submodule-opts url token server-git-url git-proxies))))))))
 
 
 (defn prepare-working-dir!
@@ -267,10 +273,15 @@
    as a Bearer token). The working dir's `origin` is then set to origin-url —
    the project's real repository URL (legacy parity) — so trial scripts can run
    `git fetch origin ...` without executor credentials; falls back to git-url.
-   git-options may contain {:submodules {:include_match ... :exclude_match ...}}"
-  [git-url commit-id ^File work-dir git-options token & [origin-url]]
+   git-options may contain {:submodules {:include_match ... :exclude_match ...}}.
+   git-proxies ({submodule-commit git-url} from the dispatch payload) names
+   where this server serves submodule commits; other submodules are fetched
+   from their .gitmodules URL."
+  [git-url commit-id ^File work-dir git-options token & [origin-url git-proxies]]
   (clone-from-cache! git-url commit-id work-dir token origin-url)
-  (let [submodule-opts (:submodules git-options)]
+  (let [submodule-opts (:submodules git-options)
+        git-proxies    (into {} (map (fn [[k v]] [(name k) v]) (or git-proxies {})))]
     ;; legacy parity: submodules are only checked out when git_options.submodules is given
     (when (map? submodule-opts)
-      (init-submodules! work-dir submodule-opts (or (not-empty origin-url) git-url) token git-url))))
+      (init-submodules! work-dir submodule-opts (or (not-empty origin-url) git-url)
+                        token git-url git-proxies))))

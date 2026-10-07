@@ -21,5 +21,11 @@ feature 'Executor git submodules' do
     expect(states.keys).to include('Verify that README.md in the submodule does exist',
                                    'Verify that README.md in the submodule does not exist if clone is False',
                                    'Verify that README.md in the submodule does exist if include_match matches')
+
+    # the submodule (the demo project itself, declared with its GitHub URL) is
+    # served by this server (git_proxies): no fetch from github.com at all
+    log = File.read(@executor_log_path)
+    expect(log).to include("Initialising bare clone cache for #{http_base_url}/projects/#{project_id}/git")
+    expect(log).not_to include('github.com')
   end
 end

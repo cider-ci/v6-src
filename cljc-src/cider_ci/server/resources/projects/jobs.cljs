@@ -639,16 +639,95 @@
      [icons/retry] " Retry"]]])
 
 
+;;; job overview: progress bar and task filters ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- task-category
+  "One of :passed :failed :retrying :executing :pending for the progress bar:
+   failed = finally failed/defective/aborted; retrying = still running or
+   waiting with a failed trial behind it."
+  [t]
+  (let [state (:state t)]
+    (cond
+      (= state "passed") :passed
+      (#{"failed" "defective" "aborted"} state) :failed
+      (some #(#{"failed" "defective" "aborted"} (:state %)) (:trials t)) :retrying
+      (#{"executing" "aborting"} state) :executing
+      :else :pending)))
+
+(def ^:private categories
+  [[:passed    "passed"    "bg-success"]
+   [:failed    "failed"    "bg-danger"]
+   [:retrying  "retrying"  "bg-warning text-dark"]
+   [:executing "executing" "bg-primary progress-bar-striped progress-bar-animated"]
+   [:pending   "pending"   "bg-secondary"]])
+
+(defn- job-progress-bar
+  "Stacked bar over all tasks: passed | failed | retrying | executing | pending,
+   each section proportional to its count (as on the legacy job page)."
+  [tasks]
+  (let [n      (count tasks)
+        counts (frequencies (map task-category tasks))]
+    (when (pos? n)
+      [:div.job-progress.mb-3
+       [:div.small.mb-1
+        [:span.me-3 (str n " tasks")]
+        (for [[k label _] categories
+              :let [c (get counts k 0)]
+              :when (pos? c)]
+          ^{:key k} [:span.me-3 {:class (str "job-progress-" (name k))} (str c " " label)])
+        (let [done (+ (get counts :passed 0) (get counts :failed 0))]
+          [:span.text-muted (str done " of " n " finished")])]
+       [:div.progress {:style {:height "1.4em"}}
+        (for [[k label cls] categories
+              :let [c (get counts k 0)]
+              :when (pos? c)]
+          ^{:key k}
+          [:div.progress-bar {:class cls
+                              :role  "progressbar"
+                              :title (str c " " label)
+                              :data-category (name k)
+                              :style {:width (str (* 100.0 (/ c n)) "%")}}
+           (when (>= (/ c n) 0.04) c)])]])))
+
+(defonce ^:private task-filter* (reagent/atom :unpassed))
+
+(def ^:private task-filters
+  [[:unpassed "Unpassed"
+    (fn [t] (not= "passed" (:state t)))]
+   [:unpassed-trials "With unpassed trials"
+    (fn [t] (or (not= "passed" (:state t))
+                (some #(not= "passed" (:state %)) (:trials t))))]
+   [:all "All" (constantly true)]])
+
+(defn- task-filter-buttons [tasks]
+  [:div.btn-group.btn-group-sm.task-filters {:role "group"}
+   (for [[k label pred] task-filters]
+     ^{:key k}
+     [:button.btn
+      {:type     "button"
+       :class    (if (= k @task-filter*) "btn-secondary" "btn-outline-secondary")
+       :on-click #(reset! task-filter* k)}
+      label " " [:span.badge.bg-light.text-dark (count (filter pred tasks))]])])
+
 (defn- tasks-panel [tasks]
-  [:<>
-   [:h4.mt-3 "Tasks"]
-   (if (seq tasks)
-     [:table.table.table-sm
-      [:thead
-       [:tr [:th "Name"] [:th "State"] [:th "Trials"]]]
-      [:tbody
-       (for [t tasks] [task-row t])]]
-     [:p.text-muted "No tasks for this job."])])
+  (let [[_ label pred] (some #(when (= (first %) @task-filter*) %) task-filters)
+        shown          (filter pred tasks)]
+    [:<>
+     [:div.d-flex.align-items-center.gap-3.mt-3.mb-2
+      [:h4.mb-0 "Tasks"]
+      [task-filter-buttons tasks]]
+     (cond
+       (empty? tasks) [:p.text-muted "No tasks for this job."]
+       (empty? shown) [:p.text-muted.tasks-empty
+                       (str "No tasks in \"" label "\"; ")
+                       [:a {:href "#" :on-click (fn [e] (.preventDefault e) (reset! task-filter* :all))}
+                        "show all"] "."]
+       :else
+       [:table.table.table-sm.tasks
+        [:thead
+         [:tr [:th "Name"] [:th "State"] [:th "Trials"]]]
+        [:tbody
+         (for [t shown] [task-row t])]])]))
 
 
 (defn- trial-fail-rate [tasks]
@@ -740,6 +819,7 @@
          " / "
          [:code (:key job)]]
         [:h3 (:name job) " " [state-badge (:state job)]]
+        [job-progress-bar (:tasks job)]
         [trial-fail-rate (:tasks job)]
         [:div.mb-3
          (when abortable?

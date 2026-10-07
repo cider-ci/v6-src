@@ -3,6 +3,7 @@
     [cider-ci.server.db.core :as db]
     [cider-ci.server.html.server :as http-server]
    [cider-ci.server.jobs.branch-trigger-retry :as branch-trigger-retry]
+   [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
    [cider-ci.server.jobs.dep-trigger :as dep-trigger]
     [cider-ci.server.jobs.stale-trials :as stale-trials]
     [cider-ci.server.projects.repositories.main :as repositories]
@@ -49,7 +50,8 @@
   (repositories/init options)
   (stale-trials/init)
   (dep-trigger/init)
-  (branch-trigger-retry/init))
+  (branch-trigger-retry/init)
+  (submodule-resolutions/init))
 
 
 (defn main [gopts args]

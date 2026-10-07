@@ -10,6 +10,7 @@
     [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
     [cider-ci.server.projects.repositories.shared :as repo-shared]
+    [cider-ci.utils.daemon :refer [defdaemon]]
     [clojure.data.json :as json]
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [info warn]]))
@@ -77,3 +78,37 @@
     (let [r (check! ds repository_id commit_id)]
       (when (= "resolved" (:state r))
         (info "submodule tree of" repository_id commit_id "now resolves")))))
+
+
+(defn backfill-branch-tips!
+  "Resolution rows for current branch tips that have none yet (commits
+   from before this feature, or whose branch update failed), newest first,
+   at most `limit` per call so a large installation fills in gradually."
+  [ds & {:keys [limit] :or {limit 20}}]
+  (doseq [{:keys [repository_id current_commit_id]}
+          (jdbc/execute! ds
+            ["SELECT DISTINCT b.repository_id, b.current_commit_id, c.committer_date
+                FROM branches b
+                JOIN commits c ON c.id = b.current_commit_id
+                LEFT JOIN commit_submodule_resolutions r
+                       ON r.repository_id = b.repository_id AND r.commit_id = b.current_commit_id
+               WHERE r.commit_id IS NULL
+                 AND c.committer_date > now() - interval '90 days'
+               ORDER BY c.committer_date DESC
+               LIMIT ?"
+             limit])]
+    (check! ds repository_id current_commit_id)))
+
+
+;; Besides the hooks (branch update, after every repository fetch) a slow
+;; cycle keeps the marks complete: backfill of branch tips and the re-check of
+;; unresolved commits.
+(defdaemon "submodule-resolutions" 60
+  (try
+    (backfill-branch-tips! (get-ds))
+    (recheck-unresolved! (get-ds))
+    (catch Exception e
+      (warn "submodule-resolutions daemon error:" (.getMessage e)))))
+
+(defn init []
+  (start-submodule-resolutions))

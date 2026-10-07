@@ -51,6 +51,7 @@
    :project-blob #'project-blob/handler
    :project-branch #'project-branch/handler
    :project-commit #'project-commit/handler
+   :project-commit-submodules #'project-commit/handler
    :project-commit-configuration #'project-configuration/handler
    :project-fetch #'project-fetch/handler
    :project-push-notification #'project-push-notification/handler

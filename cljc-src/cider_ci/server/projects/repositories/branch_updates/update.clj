@@ -11,6 +11,7 @@
    [cider-ci.server.projects.repositories.branches :as branches]
    [cider-ci.server.projects.repositories.git.repositories :as git.repositories]
    [cider-ci.server.jobs.auto-trigger :as auto-trigger]
+   [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
    [cider-ci.utils.core :refer [deep-merge keyword str]]
    [cider-ci.utils.system :as system]
@@ -107,6 +108,10 @@
         (future
           (doseq [branch changed]
             (when-let [commit-id (:current_commit_id branch)]
+              ;; submodule tree resolvable through the configured projects?
+              ;; (shown on the project and commit pages)
+              (try (submodule-resolutions/check! (get-ds) repo-id commit-id)
+                   (catch Exception e (warn "submodule resolution failed:" (.getMessage e))))
               (auto-trigger/trigger-for-commit!
                 (get-ds) repo-id commit-id (:name branch)
                 :repo-include   (:branch_trigger_include_match repository)

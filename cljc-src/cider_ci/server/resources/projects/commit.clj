@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.projects.commit
   (:require
+    [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]))
@@ -43,7 +44,16 @@
       (sql/order-by [:path :asc])))
 
 
-(defn handler [{{{commit-id :commit-id} :path-params} :route tx :tx}]
+(defn- submodules-handler
+  "GET: the stored submodule resolution of the commit (computed when absent).
+   POST: 'Check now' - resolve again and store."
+  [tx project-id commit-id request-method]
+  (case request-method
+    :get  {:body (submodule-resolutions/get-or-check! tx project-id commit-id)}
+    :post {:body (submodule-resolutions/check! tx project-id commit-id)}
+    {:status 405 :body "Method not allowed"}))
+
+(defn- commit-handler [tx commit-id]
   (if-let [commit (jdbc/execute-one! tx (sql-format (commit-sql commit-id)))]
     (let [parents          (->> (sql-format (parents-sql commit-id))
                                 (jdbc/execute! tx)
@@ -53,3 +63,12 @@
                  (assoc :parents parents)
                  (assoc :tree_attachments tree-attachments))})
     {:status 404 :body "Commit not found"}))
+
+
+(defn handler [{{{commit-id :commit-id project-id :project-id} :path-params} :route
+                route-name     :route-name
+                request-method :request-method
+                tx             :tx}]
+  (if (= route-name :project-commit-submodules)
+    (submodules-handler tx project-id commit-id request-method)
+    (commit-handler tx commit-id)))

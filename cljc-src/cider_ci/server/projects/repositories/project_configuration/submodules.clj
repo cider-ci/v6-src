@@ -185,36 +185,54 @@
         :when commit]
     {:path path :url url :commit commit}))
 
+(defn submodule-tree
+  "The submodule tree of commit-id in repo as resolved through the configured
+   repositories: [{:path :url :commit :repository_id :resolved :submodules}],
+   nested for the submodules of resolved submodules. A submodule is resolved
+   when a configured repository (matched by .gitmodules URL, else the parent
+   repository itself) contains its gitlink commit; :repository_id names it.
+   Cycles (self-referential submodules) stop at an already visited
+   repository/commit. Never throws: problems yield :error entries."
+  [^Repository repo commit-id]
+  (let [seen (atom #{})]
+    (letfn [(walk [^Repository r cid]
+              (swap! seen conj [(repo-id r) cid])
+              (vec
+                (for [{:keys [path url commit]} (try (submodule-entries r cid) (catch Exception _ []))]
+                  (let [candidates (distinct (concat (when url (try (repositories-matching-url url)
+                                                                     (catch Exception _ [])))
+                                                     [(repo-id r)]))
+                        found      (some (fn [id]
+                                           (try
+                                             (with-open [^Repository c (open-repo id)]
+                                               (when (repo-contains-commit? c commit) id))
+                                             (catch Exception _ nil)))
+                                         candidates)
+                        nested     (when (and found (not (contains? @seen [found commit])))
+                                     (try
+                                       (with-open [^Repository c (open-repo found)]
+                                         (walk c commit))
+                                       (catch Exception _ [])))]
+                    (cond-> {:path          path
+                             :url           url
+                             :commit        commit
+                             :repository_id found
+                             :candidates    (vec (remove #{(repo-id r)} candidates))
+                             :resolved      (boolean found)}
+                      (seq nested) (assoc :submodules nested))))))]
+      (try (walk repo commit-id) (catch Exception _ [])))))
+
+(defn flatten-tree [nodes]
+  (mapcat (fn [n] (cons (dissoc n :submodules) (flatten-tree (:submodules n)))) nodes))
+
 (defn git-proxies
   "Where an executor can fetch the submodules of commit-id from this server:
-   {submodule-commit-sha repository-id} for every submodule, recursively
-   through nested submodules, whose commit a configured repository contains
-   (matched by .gitmodules URL, else the parent repository itself). Submodules
-   no configured repository holds are left out; the executor then falls back
-   to the .gitmodules URL. Keyed by commit so that the executor needs no URL
-   matching and the mapping stays valid for private or unpublished
-   submodules. Never throws: resolution problems yield a partial map."
+   {submodule-commit-sha repository-id} for every resolved submodule of the
+   tree (see submodule-tree). Submodules no configured repository holds are
+   left out; the executor then falls back to the .gitmodules URL. Keyed by
+   commit so that the executor needs no URL matching and the mapping stays
+   valid for private or unpublished submodules."
   [^Repository repo commit-id]
-  (let [acc  (atom {})
-        seen (atom #{})]
-    (letfn [(walk! [^Repository r cid]
-              (when-not (contains? @seen [(repo-id r) cid])
-                (swap! seen conj [(repo-id r) cid])
-                (doseq [{:keys [url commit]} (try (submodule-entries r cid) (catch Exception _ []))]
-                  (when-not (contains? @acc commit)
-                    (let [candidates (distinct (concat (when url (repositories-matching-url url))
-                                                       [(repo-id r)]))
-                          found      (some (fn [id]
-                                             (try
-                                               (with-open [^Repository c (open-repo id)]
-                                                 (when (repo-contains-commit? c commit) id))
-                                               (catch Exception _ nil)))
-                                           candidates)]
-                      (when found
-                        (swap! acc assoc commit found)
-                        (try
-                          (with-open [^Repository c (open-repo found)]
-                            (walk! c commit))
-                          (catch Exception _ nil))))))))]
-      (try (walk! repo commit-id) (catch Exception _ nil))
-      @acc)))
+  (into {} (for [{:keys [commit repository_id resolved]} (flatten-tree (submodule-tree repo commit-id))
+                 :when resolved]
+             [commit repository_id])))

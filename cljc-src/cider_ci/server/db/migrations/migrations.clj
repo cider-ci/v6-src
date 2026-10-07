@@ -54,6 +54,8 @@
         :down (partial exec-resource-sql! "migrations/00025_jobs_priority_down.sql")}
     26 {:up (partial exec-resource-sql! "migrations/00026_pending_branch_triggers_up.sql")
         :down (partial exec-resource-sql! "migrations/00026_pending_branch_triggers_down.sql")}
+    27 {:up (partial exec-resource-sql! "migrations/00027_commit_submodule_resolutions_up.sql")
+        :down (partial exec-resource-sql! "migrations/00027_commit_submodule_resolutions_down.sql")}
     ))
 
 (defn available []

@@ -31,6 +31,9 @@
           :auth-http-safe #{:user}}]
      ["/configuration" {:name :project-commit-configuration
                         :auth-http-safe #{:user}}]
+     ["/submodules" {:name             :project-commit-submodules
+                     :auth-http-safe   #{:user}
+                     :auth-http-unsafe #{:user}}]
      ["/blob/*blob-path" {:name :project-blob
                           :auth-http-safe #{:user}}]
      ["/jobs"

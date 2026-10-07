@@ -71,6 +71,23 @@
         sorted (sort-by #(get % key) branches)]
     (if (= dir :desc) (reverse sorted) sorted)))
 
+(defn- submodules-cell
+  "Can the submodule tree of the branch's commit be resolved through the
+   configured projects? (commit_submodule_resolutions, see the commit page)"
+  [b]
+  (let [cid (:current_commit_id b)
+        href (when cid (path :project-commit {:project-id (project-id) :commit-id cid}))]
+    (case (:submodules_state b)
+      "resolved"   [:a.text-success {:href href :title (str "all " (:submodules_total b) " submodules resolvable through the configured projects")}
+                    [icons/check-circle]]
+      "unresolved" [:a.text-warning {:href href :title (str (:submodules_unresolved b) " of " (:submodules_total b)
+                                                            " submodules not resolvable: not pushed, not fetched yet or no project")}
+                    [icons/warning] " " (:submodules_unresolved b)]
+      "error"      [:a.text-danger {:href href :title "submodule resolution failed, see the commit page"}
+                    [icons/warning]]
+      "none"       [:span.text-muted {:title "no submodules"} "—"]
+      [:a.text-muted {:href href :title "not checked yet"} [icons/unknown-signature]])))
+
 (defn- branches-table []
   (let [branches (:branches @_data*)]
     (if (empty? branches)
@@ -82,6 +99,7 @@
          [:th "Last commit"]
          [sort-th :commit_committer_date "Date"]
          [:th "Signed"]
+         [:th {:title "submodule tree resolvable through the configured projects"} "Submodules"]
          [:th "Subject"]]]
        [:tbody
         (for [b (sorted-branches branches)]
@@ -100,6 +118,7 @@
               "—")]
            [:td [:small (or (relative-time (:commit_committer_date b)) "—")]]
            [:td [signature-cell (:commit_signature_fingerprint b)]]
+           [:td.submodules [submodules-cell b]]
            [:td.text-truncate {:style {:max-width "32em"}}
             (:commit_subject b)]])]])))
 

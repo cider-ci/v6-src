@@ -1,8 +1,10 @@
 (ns cider-ci.server.projects.repositories.fetch-and-update.main
   (:refer-clojure :exclude [str keyword])
   (:require
+    [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.db.settings :refer [get-setting!]]
     [cider-ci.server.projects.repositories.branch-updates.core :as branch-updates]
+    [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
     [cider-ci.server.projects.repositories.fetch-and-update.fetch :as fetch]
     [cider-ci.server.projects.repositories.fetch-and-update.scheduler :as scheduler]
     [cider-ci.server.projects.repositories.fetch-and-update.shared :as shared :refer [db-get-fetch-and-update db-update-fetch-and-update]]
@@ -35,6 +37,10 @@
       (try
         (fetch/fetch repository)
         (branch-updates/update repository)
+        ;; new commits of this repository may resolve submodule trees of
+        ;; other projects' commits (a submodule pushed after its superproject)
+        (future (try (submodule-resolutions/recheck-unresolved! (get-ds))
+                     (catch Exception e (warn "recheck of submodule resolutions failed:" (.getMessage e)))))
         (catch Throwable e (catch-fetch-and-update-exception e repository))))))
 
 (defn- submit-pending-repositories []

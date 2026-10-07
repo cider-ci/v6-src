@@ -27,9 +27,14 @@
         [:c.author_date    :commit_author_date]
         [:c.subject        :commit_subject]
         [:c.author_name    :commit_author_name]
-        [:c.signature_fingerprint :commit_signature_fingerprint])
+        [:c.signature_fingerprint :commit_signature_fingerprint]
+        [:r.state      :submodules_state]
+        [:r.total      :submodules_total]
+        [:r.unresolved :submodules_unresolved])
       (sql/from [:branches :b])
       (sql/left-join [:commits :c] [:= :c.id :b.current_commit_id])
+      (sql/left-join [:commit_submodule_resolutions :r]
+                     [:and [:= :r.commit_id :b.current_commit_id] [:= :r.repository_id :b.repository_id]])
       (sql/where [:= :b.repository_id project-id])
       (sql/order-by [:c.committer_date :is-null] [:c.committer_date :desc])))
 

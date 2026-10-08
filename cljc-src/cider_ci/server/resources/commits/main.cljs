@@ -2,6 +2,7 @@
   (:require
     ["date-fns" :as date-fns]
     [cider-ci.server.html.icons :as icons]
+    [cider-ci.server.html.job-states :as job-states]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
     [cider-ci.server.state :as state]
@@ -32,25 +33,29 @@
     (navigate! (path :commits {} qp))))
 
 
-(defn- state-cls [s]
-  (case s
-    "passed"    "bg-success"
-    "failed"    "bg-danger"
-    "executing" "bg-primary"
-    "pending"   "bg-secondary"
-    "aborted"   "bg-warning"
-    "bg-secondary"))
-
-
-(defn- job-badge [commit-id job]
-  ^{:key (:id job)}
-  [:a.badge.text-decoration-none.me-1
-   {:href  (path :project-job {:project-id (:project_id job)
-                               :commit-id  commit-id
-                               :job-id     (:id job)})
-    :class (state-cls (:state job))
-    :title (:name job)}
-   (:key job)])
+(defn- jobs-summary-cell
+  "One count badge per job state group (failed incl. defective/aborted,
+   passed, executing, pending), each linking to the commit's jobs page
+   filtered by that group; a dash when the commit has no jobs."
+  [c project-id]
+  (let [jobs   (:jobs c)
+        counts (job-states/count-by-group jobs)]
+    [:td.jobs-summary.text-nowrap
+     (if (empty? jobs)
+       [:a.text-muted.text-decoration-none
+        {:href  (path :project-jobs {:project-id project-id :commit-id (:id c)})
+         :title "no jobs yet: view / trigger jobs"}
+        "—"]
+       (for [[k label _ cls] job-states/groups
+             :let [n (get counts k 0)]
+             :when (pos? n)]
+         ^{:key k}
+         [:a.badge.text-decoration-none.me-1
+          {:href  (path :project-jobs {:project-id project-id :commit-id (:id c)} {:state (name k)})
+           :class cls
+           :data-state (name k)
+           :title (str n " " label (if (= n 1) " job" " jobs"))}
+          n]))]))
 
 
 (defn- project-cell [branches]
@@ -121,6 +126,7 @@
                        (catch js/Error _ (str (:committer_date c)))))]
     ^{:key (:id c)}
     [:tr
+     [jobs-summary-cell c project-id]
      [:td
       [:a {:href (path :project-commit {:project-id project-id
                                         :commit-id  (:id c)})}
@@ -134,13 +140,7 @@
      [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
      [:td
       (for [b (:branches c)] [branch-tag b])
-      (for [b (:ancestor_branches c)] [ancestor-branch-tag b])]
-     [:td
-      (for [j (:jobs c)] [job-badge (:id c) j])
-      [:a.ms-1 {:href  (path :project-jobs {:project-id project-id
-                                             :commit-id  (:id c)})
-                :title "View / trigger jobs for this commit"}
-       [icons/create]]]]))
+      (for [b (:ancestor_branches c)] [ancestor-branch-tag b])]]))
 
 
 (defn- filter-bar []
@@ -190,8 +190,9 @@
     [:table.table.table-sm.table-hover
      [:thead
       [:tr
+       [:th {:title "jobs: failed | passed | executing | pending"} "CI"]
        [:th "Commit"] [:th "Subject"] [:th "Project"] [:th "Author"]
-       [:th "Date"] [:th "Branches"] [:th "CI"]]]
+       [:th "Date"] [:th "Branches"]]]
      [:tbody
       (for [c commits] [commit-row c])]]))
 

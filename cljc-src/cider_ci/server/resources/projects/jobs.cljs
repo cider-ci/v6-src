@@ -3,6 +3,7 @@
    ["elkjs/lib/elk.bundled.js" :as ELK]
    ["js-yaml" :as js-yaml]
    [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.html.job-states :as job-states]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
@@ -511,16 +512,29 @@
    [:td [:span.text-muted (str (:created_at j))]]])
 
 
-(defn- created-jobs-panel [jobs]
+(defn- created-jobs-panel
+  "Recorded jobs; `?state=failed|passed|executing|pending` (the count badges
+   on the commits page link here) shows only the jobs of that state group."
+  [jobs]
   (when (seq jobs)
-    [:<>
-     [:h4.mt-4 "Recorded Jobs"]
-     [:table.table.table-sm
-      [:thead
-       [:tr
-        [:th "Key"] [:th "Name"] [:th "State"] [:th.text-end "Priority"] [:th "Created"]]]
-      [:tbody
-       (for [j jobs] [job-row j])]]]))
+    (let [state-param (-> @state/routing* :query-params :state)
+          states      (job-states/group-states state-param)
+          shown       (if states (filter #(contains? states (:state %)) jobs) jobs)]
+      [:<>
+       [:h4.mt-4 "Recorded Jobs"
+        (when states
+          [:small.ms-2.text-muted.recorded-jobs-filter
+           (str (count shown) " " (name state-param) " of " (count jobs) " · ")
+           [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (commit-id)})}
+            "show all"]])]
+       (if (empty? shown)
+         [:p.text-muted (str "No " (name state-param) " jobs.")]
+         [:table.table.table-sm.recorded-jobs
+          [:thead
+           [:tr
+            [:th "Key"] [:th "Name"] [:th "State"] [:th.text-end "Priority"] [:th "Created"]]]
+          [:tbody
+           (for [j shown] [job-row j])]])])))
 
 
 (defn- available-jobs-panel [jobs created]

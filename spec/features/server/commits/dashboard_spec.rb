@@ -44,7 +44,8 @@ feature 'Commits Dashboard' do
     expect(page).to have_text 'Commit A1 on master'
     expect(page).to have_text 'Commit A2 on feature'
     expect(page).to have_text 'Commit B1 on main'
-    expect(page).to have_css '.badge.bg-success', text: 'ci'
+    # one passed job -> a green count badge in the CI column, linking to the jobs page
+    expect(page).to have_css 'td.jobs-summary a.badge.bg-success', text: '1'
   end
 
   scenario 'filter by project shows only commits from that project' do

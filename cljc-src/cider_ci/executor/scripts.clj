@@ -141,6 +141,18 @@
     (future (run-one! trial-id key-str spec env-vars work-dir))))
 
 
+(defn script-command
+  "How to run a script file (legacy parity: the wrapper executed the file, so
+   the kernel honoured its shebang). A body with a shebang is exec'ed as a
+   file from a bash, which sources BASH_ENV first so interpreters provided by
+   traits (`#!/usr/bin/env ruby` via mise) are on PATH; madek's
+   api-database-configure is such a Ruby script. A body without a shebang is
+   run by bash as before."
+  [^File script-file body]
+  (if (str/starts-with? (str body) "#!")
+    ["bash" "-c" "exec \"$0\"" (.getAbsolutePath script-file)]
+    ["bash" (.getAbsolutePath script-file)]))
+
 (defn- run-one! [trial-id key-str spec env-vars work-dir]
   (try
     (let [timeout-sec (parse-timeout (:timeout spec))
@@ -164,7 +176,7 @@
                              (str "cider-ci-script-" key-str "-" trial-id ".sh"))]
       (spit script-file (or (:body spec) ""))
       (.setExecutable script-file true)
-      (let [pb   (doto (ProcessBuilder. ["bash" (.getAbsolutePath script-file)])
+      (let [pb   (doto (ProcessBuilder. ^java.util.List (script-command script-file (:body spec)))
                    (.directory (File. ^String work-dir))
                    ;; stdin must be EOF, not an open pipe: tools that read
                    ;; configuration from a non-tty stdin (e.g. `incus launch`)

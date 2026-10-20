@@ -46,3 +46,38 @@
     (is (= "host-1.2.3.4-port-8080"
            (template-resource-name {"HOST" "1.2.3.4" "PORT" "8080"}
                                    "host-{{HOST}}-port-{{PORT}}")))))
+
+
+;;; shebangs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def ^:private run-one! @#'cider-ci.executor.scripts/run-one!)
+
+(defn- run-body [body]
+  (let [dir (str (java.nio.file.Files/createTempDirectory "scripts-test" (make-array java.nio.file.attribute.FileAttribute 0)))
+        r   (run-one! (str "t-" (System/nanoTime)) "k" {:body body} {} dir)]
+    (assoc r :log (slurp (:log-file r)))))
+
+(deftest script-command-test
+  (let [f (java.io.File. "/tmp/x.sh")]
+    (is (= ["bash" "-c" "exec \"$0\"" "/tmp/x.sh"]
+           (cider-ci.executor.scripts/script-command f "#!/usr/bin/env ruby\nputs 1")))
+    (is (= ["bash" "/tmp/x.sh"] (cider-ci.executor.scripts/script-command f "echo 1")))
+    (is (= ["bash" "/tmp/x.sh"] (cider-ci.executor.scripts/script-command f nil)))))
+
+(deftest shebang-is-honoured-test
+  (testing "a non-bash interpreter named in the shebang runs the script (madek api-database-configure is Ruby)"
+    (let [r (run-body "#!/usr/bin/env python3\nprint('from python', 1 + 1)\n")]
+      (is (= "passed" (:state r)) (:log r))
+      (is (re-find #"from python 2" (:log r)))))
+  (testing "a bash shebang still runs with bash"
+    (let [r (run-body "#!/usr/bin/env bash\nset -euo pipefail\n[[ 1 == 1 ]] && echo bash-ok\n")]
+      (is (= "passed" (:state r)) (:log r))
+      (is (re-find #"bash-ok" (:log r)))))
+  (testing "no shebang: bash as before (bashisms allowed)"
+    (let [r (run-body "[[ 1 == 1 ]] && echo plain-ok\n")]
+      (is (= "passed" (:state r)) (:log r))
+      (is (re-find #"plain-ok" (:log r)))))
+  (testing "a failing interpreter script fails the script"
+    (let [r (run-body "#!/usr/bin/env python3\nimport sys; sys.exit(3)\n")]
+      (is (= "failed" (:state r)))
+      (is (= 3 (:exit_status r))))))

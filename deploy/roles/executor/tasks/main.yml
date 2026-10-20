@@ -136,10 +136,18 @@
       # Managed by Ansible. Sourced via BASH_ENV by the non-login bash that runs
       # trial scripts. /etc/profile.d is only read by login shells, so trait
       # roles (mise, asdf, postgresql, ...) expose their environment here too.
-      for _cider_ci_trait_env in /etc/profile.d/cider-ci-trait-*.sh; do
-        [ -r "$_cider_ci_trait_env" ] && . "$_cider_ci_trait_env"
-      done
-      unset _cider_ci_trait_env
+      #
+      # Only once per process tree: every child bash (a spec running
+      # `bash -c`, a wrapper script) inherits BASH_ENV and would re-prepend
+      # the trait dirs to PATH, overtaking whatever the parent put in front
+      # (e.g. a test's fake `bundle` dir; madek's db_set_env_spec).
+      if [ -z "${CIDER_CI_TRAIT_ENV_LOADED:-}" ]; then
+        for _cider_ci_trait_env in /etc/profile.d/cider-ci-trait-*.sh; do
+          [ -r "$_cider_ci_trait_env" ] && . "$_cider_ci_trait_env"
+        done
+        unset _cider_ci_trait_env
+        export CIDER_CI_TRAIT_ENV_LOADED=1
+      fi
   notify: Restart cider-ci-executor
 
 - name: Install system packages required for integration tests

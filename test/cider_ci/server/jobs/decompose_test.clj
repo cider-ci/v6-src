@@ -30,3 +30,16 @@
                                   :two "echo 2"}})]
     (is (= #{"one" "two"} (set (map :name tasks))))
     (is (= "echo 2" (get-in (first (filter #(= "two" (:name %)) tasks)) [:scripts :main :body])))))
+
+
+(deftest key->str-test
+  (testing "a slash in a YAML key makes a namespaced keyword; the full key is kept"
+    (is (= "spec/models/media_entry/combined_filter_spec.rb"
+           (decompose/key->str (keyword "spec/models/media_entry/combined_filter_spec.rb"))))
+    (is (= "main" (decompose/key->str :main)))
+    (is (= "spec/a.rb" (decompose/key->str "spec/a.rb")))))
+
+(deftest decompose-slash-key-name-test
+  (testing "a task keyed `spec/models/x_spec.rb` is named with the full key (madek datalayer)"
+    (let [tasks (decompose {:tasks {(keyword "spec/models/x_spec.rb") {:scripts {:test {:body "t"}}}}})]
+      (is (= ["spec/models/x_spec.rb"] (map :name tasks))))))

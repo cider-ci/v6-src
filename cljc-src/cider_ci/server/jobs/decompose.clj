@@ -30,6 +30,13 @@
 
 (declare collect-from-context)
 
+(defn key->str
+  "A task key as the string it was written as. YAML keys are keywordized,
+   and a key like `spec/models/x_spec.rb` becomes a NAMESPACED keyword whose
+   `name` is only `models/x_spec.rb` — so never use `name` on task keys."
+  [k]
+  (if (keyword? k) (subs (str k) 1) (str k)))
+
 (defn tasks->map
   "Normalises the `tasks` value to a {key task-spec} map. YAML allows both a
    map (`tasks: {key: spec}`) and a list (`tasks: [{name: ..., scripts: ...}]`,
@@ -56,7 +63,7 @@
               (let [norm (normalize-task-value v)]
                 (-> (deep-merge inherited-task-defaults
                                 norm
-                                {:name (or (:name norm) (name k))})
+                                {:name (or (:name norm) (key->str k))})
                     (apply-script-defaults script-defaults)))))))
 
 (defn- seq-of-contexts

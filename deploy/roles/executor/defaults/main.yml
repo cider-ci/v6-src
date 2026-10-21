@@ -8,3 +8,9 @@ ci_executor_server_url: "http://localhost:3838"
 ci_executor_max_load: 4
 ci_executor_exec_user: ci-exec-user
 ci_executor_java_xmx: 256m
+
+# Traits removed from executors on deploy (the extra-trait lines are additive).
+# JDK: toolchains come from the projects' .tool-versions via mise, not from a
+# marker trait (briefly deployed for madek mail on 2026-10-21).
+ci_executor_retired_traits:
+  - JDK

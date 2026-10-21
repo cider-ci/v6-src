@@ -112,6 +112,16 @@
   loop: "{{ ci_executor_extra_traits | default([]) }}"
   notify: Restart cider-ci-executor
 
+- name: Remove retired executor traits
+  # the trait lines above are only ever added; traits taken out of use are
+  # listed in ci_executor_retired_traits so a deploy removes them again
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "{{ item }}"
+    state: absent
+  loop: "{{ ci_executor_retired_traits | default([]) }}"
+  notify: Restart cider-ci-executor
+
 - name: Exclude CI working data from systemd-tmpfiles age cleanup
   # trixie: `q /tmp 10d` / `q /var/tmp 30d` would delete untouched files
   # (git cache packs, long-running trial dirs) from under the executor.

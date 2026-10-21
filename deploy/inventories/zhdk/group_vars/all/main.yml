@@ -39,3 +39,16 @@ ci_force_redirect_to_https: true
 
 # --- Certbot (Let's Encrypt) -------------------------------------------------
 ci_certbot_email: Thomas.Schank@zhdk.ch
+
+# Executor traits removed on deploy (the role only ever adds trait lines).
+# - JDK: toolchains come from the projects' .tool-versions via mise, not from
+#   a marker trait (briefly deployed for madek mail on 2026-10-21).
+# - asdf: retired 2026-10-21, mise is the tool versions manager; tasks still
+#   requiring the asdf trait stay pending and expose the remaining asdf
+#   dependencies in the project configurations.
+# - firefox-esr: Firefox comes from the projects' .tool-versions via mise
+#   (retired 2026-10-21, same reasoning as asdf).
+ci_executor_retired_traits:
+  - JDK
+  - asdf
+  - firefox-esr

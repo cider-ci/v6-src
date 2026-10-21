@@ -13,15 +13,13 @@ ci_executor_trait_misc: true
 ci_executor_trait_apache2: true
 
 # Dispatch-marker traits required by projects so their tasks match this
-# executor. The projects pinned toolchains (Ruby, Java, Clojure, Node) are
-# installed on demand via mise (see trait-mise); "asdf" here is a capability
-# marker, not an asdf install. "ruby" is provided by trait-ruby above.
+# executor. The projects' pinned toolchains (Ruby, Java, Clojure, Node,
+# Firefox) are installed on demand via mise (see trait-mise). "asdf",
+# "firefox-esr" and "JDK" are retired (ci_executor_retired_traits in the
+# ZHdK group_vars): projects must require mise, so tasks still requiring them
+# show up as undispatchable. "ruby" is provided by trait-ruby above.
 # "postgresql 15" mirrors the versioned trait the leihs config expects
 # (the postgresql trait role provisions PG 15 and its PG15* env vars).
 ci_executor_extra_traits:
   - "postgresql 15"
-  - asdf
-  # leihs specs jobs require Firefox-ESR; Firefox is provided via mise
-  # (executor role installs the firefox plugin) and xvfb is installed.
-  - firefox-esr
 

@@ -16,5 +16,3 @@ ci_executor_trait_apache2: true
 # Dispatch-marker traits, see ex01 host_vars for the rationale.
 ci_executor_extra_traits:
   - "postgresql 15"
-  - asdf
-  - firefox-esr

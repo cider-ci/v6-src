@@ -43,3 +43,12 @@
       (is (= -100 (spec-priority {:priority -100})))
       (is (= 3 (spec-priority {:priority " 3 "})))
       (is (= 2 (spec-priority {:priority 2.4}))))))
+
+
+(deftest initial-job-state-test
+  (let [initial-job-state cider-ci.server.jobs.auto-trigger/initial-job-state]
+    (testing "a job without tasks is passed right away (legacy check-tasks-empty!)"
+      (is (= "passed" (initial-job-state [])))
+      (is (= "passed" (initial-job-state nil))))
+    (testing "a job with tasks starts pending"
+      (is (= "pending" (initial-job-state [{:name "t"}]))))))

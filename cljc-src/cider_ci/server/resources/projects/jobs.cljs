@@ -731,7 +731,11 @@
       [:h4.mb-0 "Tasks"]
       [task-filter-buttons tasks]]
      (cond
-       (empty? tasks) [:p.text-muted "No tasks for this job."]
+       (empty? tasks) [:div.alert.alert-warning.no-tasks
+                       [:strong "No tasks have been created."]
+                       " The job has therefore been set to passed, which is the consistent behaviour. "
+                       "Check " [:code "tasks"] " / " [:code "generate_tasks"]
+                       " in the configuration if this is not intended."]
        (empty? shown) [:p.text-muted.tasks-empty
                        (str "No tasks in \"" label "\"; ")
                        [:a {:href "#" :on-click (fn [e] (.preventDefault e) (reset! task-filter* :all))}

@@ -92,6 +92,7 @@
         (let [created-by (:id user)
               full-spec  (generate/expand project-id commit-id (:full-spec job-entry))
               task-specs (decompose/decompose full-spec)
+              job-state  (auto-trigger/initial-job-state task-specs)
               new-job-id (java.util.UUID/randomUUID)]
           ;; Ensure the commit row exists with tree_id so tree attachments work.
           ;; Done outside the job transaction to avoid deadlock with the fetch daemon.
@@ -111,7 +112,7 @@
                                   :commit_id   commit-id
                                   :jobs/key    job-key
                                   :jobs/name   (:name job-entry)
-                                  :state       "pending"
+                                  :state       job-state
                                   :spec        [:lift full-spec]
                                   :priority    (auto-trigger/spec-priority full-spec)
                                   :created_by  created-by}])
@@ -133,7 +134,7 @@
             {:status 201 :body {:id    new-job-id
                                 :key   job-key
                                 :name  (:name job-entry)
-                                :state "pending"}}
+                                :state job-state}}
             (catch org.postgresql.util.PSQLException e
               (if (= "23505" (.getSQLState e))
                 {:status 409 :body "A job with this key already exists for this commit"}

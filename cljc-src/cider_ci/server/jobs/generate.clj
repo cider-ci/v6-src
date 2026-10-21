@@ -20,6 +20,16 @@
       (with-open [repo (submodules/open-repo project-id)]
         (submodules/resolve-submodule-chain {:repo repo :commit-id commit-id} segments)))))
 
+(defn- generate-failed!
+  "A failing file listing must not look like \"no files matched\": a job
+   with no tasks is set to passed, so swallowing the error would turn a
+   transient git problem into a false green. Throw instead; the job is then
+   not created and the triggers retry it."
+  [e]
+  (warn "generate_tasks ls-tree failed:" (.getMessage e))
+  (throw (ex-info (str "generate_tasks: listing the files failed: " (.getMessage e))
+                  {:status 500} e)))
+
 (defn- file-list [project-id commit-id generate-spec]
   (let [include-match (or (:include_match generate-spec) "")
         exclude-match (:exclude_match generate-spec)]
@@ -30,10 +40,9 @@
         ;; a bad submodule reference is a configuration error — surface it
         (if (= 422 (:status (ex-data e)))
           (throw e)
-          (do (warn "generate_tasks ls-tree failed:" (.getMessage e)) [])))
+          (generate-failed! e)))
       (catch Exception e
-        (warn "generate_tasks ls-tree failed:" (.getMessage e))
-        []))))
+        (generate-failed! e)))))
 
 (defn merge-generated-tasks
   "Legacy semantics (builder.jobs.tasks-generator): an explicit `tasks:` entry

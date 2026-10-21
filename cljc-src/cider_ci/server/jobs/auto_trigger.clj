@@ -74,18 +74,29 @@
      (spec-priority task-spec)]))
 
 
+(defn initial-job-state
+  "Legacy parity (builder.tasks/check-tasks-empty!): a job without tasks is
+   passed right away — nothing can fail — instead of staying pending forever
+   and blocking the jobs that depend on it (e.g. madek api-v2 clojure-tests,
+   whose generate_tasks matches no file). The job page says so."
+  [task-specs]
+  (if (seq task-specs) "pending" "passed"))
+
+
 (defn create-job-with-tasks! [tx project-id commit-id {:keys [key name spec]}]
   (let [expanded   (generate/expand project-id (str commit-id) spec)
+        task-specs (decompose/decompose expanded)
         new-job-id (java.util.UUID/randomUUID)
         result     (jdbc/execute-one! tx
                      ["INSERT INTO jobs (id, project_id, commit_id, key, name, state, spec, priority)
-                       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                        ON CONFLICT (project_id, commit_id, key) DO NOTHING"
-                      new-job-id project-id (str commit-id) key name expanded
+                      new-job-id project-id (str commit-id) key name
+                      (initial-job-state task-specs) expanded
                       (spec-priority expanded)])]
     (when (= 1 (:next.jdbc/update-count result))
       (info "Auto-triggered job" key "for" project-id commit-id)
-      (doseq [task-spec (decompose/decompose expanded)]
+      (doseq [task-spec task-specs]
         (let [new-task-id (java.util.UUID/randomUUID)]
           (insert-task! tx new-job-id new-task-id task-spec)
           (jdbc/execute-one! tx

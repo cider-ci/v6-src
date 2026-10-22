@@ -27,13 +27,42 @@
   (str "{" (str/join "," traits) "}"))
 
 
+(def ^:private active-states "('dispatching', 'executing', 'aborting')")
+
+
 (defn- fetch-list [tx]
   (jdbc/execute! tx
-    ["SELECT id, name, token_part,
-             array_to_string(traits, ',') AS traits,
-             max_load, enabled, last_seen_at, created_at
-      FROM executors
-      ORDER BY name ASC"]))
+    [(str "SELECT e.id, e.name, e.token_part,
+             array_to_string(e.traits, ',') AS traits,
+             e.max_load, e.enabled, e.last_seen_at, e.created_at,
+             COALESCE(a.current_load, 0) AS current_load,
+             COALESCE(a.trials_count, 0) AS trials_count
+      FROM executors e
+      LEFT JOIN (SELECT t.executor_id,
+                        sum(tsk.load) AS current_load,
+                        count(*)      AS trials_count
+                 FROM trials t
+                 JOIN tasks tsk ON tsk.id = t.task_id
+                 WHERE t.state IN " active-states "
+                 GROUP BY t.executor_id) a ON a.executor_id = e.id
+      ORDER BY e.name ASC")]))
+
+
+(defn- fetch-current-trials
+  "The trials the executor is currently working on, oldest dispatch first."
+  [tx executor-id]
+  (jdbc/execute! tx
+    [(str "SELECT t.id, t.state, t.dispatched_at, t.started_at,
+             tsk.id AS task_id, tsk.name AS task_name, tsk.load,
+             j.id AS job_id, j.name AS job_name,
+             j.project_id, j.commit_id
+      FROM trials t
+      JOIN tasks tsk ON tsk.id = t.task_id
+      JOIN jobs j    ON j.id = tsk.job_id
+      WHERE t.executor_id = ?::uuid
+        AND t.state IN " active-states "
+      ORDER BY t.dispatched_at ASC NULLS LAST, t.created_at ASC")
+     executor-id]))
 
 
 (defn- list-resp [tx]
@@ -70,7 +99,10 @@
                                    max_load, enabled, last_seen_at
                             FROM executors WHERE id = ?::uuid"
                           executor-id])]
-             {:body ex}
+             (let [trials (fetch-current-trials tx executor-id)]
+               {:body (assoc ex
+                             :current_trials trials
+                             :current_load (reduce + 0 (map #(double (or (:load %) 0)) trials)))})
              {:status 404 :body "Executor not found"})
       :patch (let [enabled  (:enabled body)
                    new-name (presence (:name body))

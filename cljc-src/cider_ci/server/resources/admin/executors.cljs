@@ -37,11 +37,25 @@
         (when (< (:status resp) 300)
           (swap! _data* assoc url (:body resp))))))
 
-(defn- fetch-single [& _]
-  (go (when-let [res (-> {:method :get
-                           :url    (executor-url (executor-id-param))}
-                         http-client/request :chan <! http-client/filter-success :body)]
-        (reset! _single* res))))
+(defn- fetch-single [& {:keys [quiet?]}]
+  (let [url (executor-url (executor-id-param))]
+    (go (when-let [res (-> {:method :get
+                             :url    url
+                             :modal-on-response-error (not quiet?)}
+                           http-client/request :chan <! http-client/filter-success :body)]
+          ;; ignore responses that arrive after navigating to another executor
+          (when (= url (executor-url (executor-id-param)))
+            (reset! _single* res))))))
+
+
+(def ^:private reload-interval-ms 5000)
+
+(defn- start-reload!
+  "Reloads via f every reload-interval-ms while the route is route-name;
+   returns the interval id."
+  [route-name f]
+  (js/setInterval #(when (= route-name (:name @state/routing*)) (f))
+                  reload-interval-ms))
 
 
 ;;; Shared components
@@ -59,6 +73,24 @@
      [:button.btn.btn-sm.btn-outline-secondary
       {:on-click #(reset! new-token* nil)}
       "Dismiss"]]))
+
+
+(defn- fmt-load [x]
+  (let [n (js/Number (or x 0))]
+    (if (js/Number.isInteger n) (str n) (.toFixed n 1))))
+
+(defn- load-bar
+  "Current load against max load as a progress bar with a text label."
+  [current max-load & {:keys [label]}]
+  (let [cur  (js/Number (or current 0))
+        mx   (js/Number (or max-load 0))
+        pct  (if (pos? mx) (min 100 (* 100 (/ cur mx))) 0)
+        cls  (cond (>= pct 100) "bg-danger" (>= pct 75) "bg-warning" :else "bg-success")]
+    [:div.executor-load.d-flex.align-items-center.gap-2
+     [:div.progress.flex-grow-1 {:style {:min-width "6rem" :height "0.9rem"}
+                                 :title (str (fmt-load cur) " of " (fmt-load mx))}
+      [:div.progress-bar {:class cls :style {:width (str pct "%")}}]]
+     [:small.text-nowrap.load-text (fmt-load cur) " / " (fmt-load mx) label]]))
 
 
 (defn- time-ago [ts-str]
@@ -84,9 +116,24 @@
           have     (->> (string/split (or traits-str "") #",") (map string/trim) (map string/lower-case) (remove string/blank?) set)]
       (every? have required))))
 
+(defn- load-summary
+  "Total current load and capacity of the listed enabled executors."
+  [executors]
+  (let [enabled (filter :enabled executors)]
+    (when (seq enabled)
+      [:div.load-summary.mb-3.col-md-5
+       [:div.small.text-muted.mb-1
+        "Total load of " (count enabled) " enabled executor"
+        (when (not= 1 (count enabled)) "s") ", "
+        (reduce + 0 (map :trials_count enabled)) " running trials"]
+       [load-bar (reduce + 0 (map #(js/Number (or (:current_load %) 0)) enabled))
+                 (reduce + 0 (map #(js/Number (or (:max_load %) 0)) enabled))]])))
+
+
 (defn- list-page []
   (reagent/with-let
-    [filter* (reagent/atom (or (-> @state/routing* :query-params :traits) ""))
+    [timer   (start-reload! :executors fetch-data)
+     filter* (reagent/atom (or (-> @state/routing* :query-params :traits) ""))
      _sync   (reagent/track!
                #(let [v (or (-> @state/routing* :query-params :traits) "")]
                   (when (not= @filter* v)
@@ -104,6 +151,7 @@
           [:a.btn.btn-primary {:href (path :executor-new {})}
            [icons/create] " Add Executor"])]
        [token-alert]
+       [load-summary filtered]
        [:div.mb-3.col-md-5
         [:div.input-group
          [:span.input-group-text [icons/filter-icon]]
@@ -129,7 +177,7 @@
             (when (seq filtered)
               [:table.table.table-sm.table-hover
                [:thead
-                [:tr [:th "Name"] [:th "Traits"] [:th "Max Load"] [:th "Status"] [:th "Last Seen"]]]
+                [:tr [:th "Name"] [:th "Traits"] [:th "Load"] [:th "Trials"] [:th "Status"] [:th "Last Seen"]]]
                [:tbody
                 (for [ex filtered]
                   ^{:key (:id ex)}
@@ -144,12 +192,16 @@
                             [:div.d-flex.flex-wrap.gap-1
                              (for [t ts] ^{:key t} [:span.badge.bg-secondary t])]
                             [:span.text-muted "—"]))]
-                   [:td (:max_load ex)]
+                   [:td [load-bar (:current_load ex) (:max_load ex)]]
+                   [:td.trials-count
+                    [:a {:href (path :executor-detail {:executor-id (:id ex)})}
+                     (:trials_count ex)]]
                    [:td [enabled-badge (:enabled ex)]]
                    [:td [:small (time-ago (:last_seen_at ex))]]])]])]))
        (when @state/debug?*
          [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
     (finally
+      (js/clearInterval timer)
       (reagent/dispose! _sync))))
 
 
@@ -188,8 +240,33 @@
 
 ;;; Detail page (route :executor-detail)
 
+(defn- current-trials-table [trials]
+  (if (empty? trials)
+    [:p.text-muted.current-trials-empty "Not working on any trial right now."]
+    [:table.table.table-sm.table-hover.current-trials
+     [:thead
+      [:tr [:th "Trial"] [:th "State"] [:th "Load"] [:th "Task"] [:th "Job"]
+       [:th "Project"] [:th "Started"]]]
+     [:tbody
+      (for [t trials
+            :let [job-params {:project-id (:project_id t)
+                              :commit-id  (:commit_id t)
+                              :job-id     (:job_id t)}]]
+        ^{:key (:id t)}
+        [:tr
+         [:td [:a {:href (path :trial {:trial-id (:id t)})}
+               [:code (subs (str (:id t)) 0 8)]]]
+         [:td [:span.badge.bg-secondary (:state t)]]
+         [:td (fmt-load (:load t))]
+         [:td [:a {:href (path :project-job-task (assoc job-params :task-id (:task_id t)))}
+               (:task_name t)]]
+         [:td [:a {:href (path :project-job job-params)} (:job_name t)]]
+         [:td [:a {:href (path :project {:project-id (:project_id t)})} (:project_id t)]]
+         [:td [:small (time-ago (or (:started_at t) (:dispatched_at t)))]]])]]))
+
+
 (defn- detail-page []
-  (fn []
+  (reagent/with-let [timer (start-reload! :executor-detail #(fetch-single :quiet? true))]
     [:div.page
      [state/hidden-routing-state-component :did-change
       #(do (reset! _single* nil) (fetch-single))]
@@ -212,18 +289,22 @@
               {:href (path :executor-edit {:executor-id (:id ex)})}
               [icons/edit] " Edit"])]
           [:dl.row
+           [:dt.col-sm-3 "Load"]
+           [:dd.col-sm-9 [:div.col-md-6 [load-bar (:current_load ex) (:max_load ex)]]]
            [:dt.col-sm-3 "Traits"]
            [:dd.col-sm-9
             (if (seq traits)
               [:div.d-flex.flex-wrap.gap-1
                (for [t traits] ^{:key t} [:span.badge.bg-secondary t])]
               [:span.text-muted "—"])]
-           [:dt.col-sm-3 "Max load"]
-           [:dd.col-sm-9 (:max_load ex)]
            [:dt.col-sm-3 "Token prefix"]
            [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
            [:dt.col-sm-3 "Last seen"]
-           [:dd.col-sm-9 (time-ago (:last_seen_at ex))]]]))]))
+           [:dd.col-sm-9 (time-ago (:last_seen_at ex))]]
+          [:h3.mt-4 "Current trials"]
+          [current-trials-table (:current_trials ex)]]))]
+    (finally
+      (js/clearInterval timer))))
 
 
 ;;; Edit page (route :executor-edit)

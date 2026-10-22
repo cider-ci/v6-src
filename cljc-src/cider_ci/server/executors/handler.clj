@@ -57,11 +57,13 @@
                                    tsk.load AS task_load,
                                    j.id     AS job_id,
                                    j.commit_id,
+                                   c.tree_id,
                                    j.project_id,
                                    r.git_url AS repository_git_url
                             FROM trials t
                             JOIN tasks    tsk ON tsk.id = t.task_id
                             JOIN jobs     j   ON j.id   = tsk.job_id
+                            LEFT JOIN commits c ON c.id = j.commit_id
                             JOIN repositories r ON r.id = j.project_id
                             JOIN executors e  ON e.id   = ?::uuid
                             WHERE t.state = 'pending'
@@ -99,6 +101,7 @@
              :task_spec  (:task_spec t)
              :job_id     (str (:job_id t))
              :commit_id  (:commit_id t)
+             :tree_id    (:tree_id t)
              :project_id (:project_id t)
              ;; git_url: where the executor fetches from (server proxy, token
              ;; authenticated). repository_git_url: the project's real remote,

@@ -186,7 +186,8 @@
   (into {} (for [[k v] script-results] [k (dissoc v :log-file)])))
 
 
-(defn execute! [{:keys [id git_url repository_git_url git_proxies commit_id task_spec] :as trial} opts]
+(defn execute! [{:keys [id git_url repository_git_url git_proxies commit_id
+                        job_id task_id tree_id task_spec] :as trial} opts]
   (info "Executing trial" id)
   (let [trial-load (double (or (:load task_spec) 1.0))
         work-dir   (working-dir id)
@@ -196,6 +197,11 @@
                            "CONTINUOUS_INTEGRATION" "true"
                            "CIDER_CI_TRIAL_ID"     id
                            "CIDER_CI_WORKING_DIR"  (.getAbsolutePath work-dir)}
+                          ;; legacy parity: job, task and git tree of the trial
+                          (cond-> {}
+                            job_id  (assoc "CIDER_CI_JOB_ID" job_id)
+                            task_id (assoc "CIDER_CI_TASK_ID" task_id)
+                            tree_id (assoc "CIDER_CI_TREE_ID" tree_id))
                           (:environment_variables task_spec)
                           port-env)]
     (swap! active-trials* assoc id trial-load)

@@ -6,10 +6,13 @@
     [taoensso.timbre :refer [debug]]))
 
 
-(defn- build-query [{:keys [project branch]}]
+(defn- mine? [mine] (= "true" (str mine)))
+
+
+(defn- build-query [{:keys [project branch author mine]} user-id]
   (let [base  "WITH page AS (
      SELECT DISTINCT
-       c.id, c.subject, c.author_name, c.committer_name, c.committer_date, c.depth
+       c.id, c.subject, c.author_name, c.author_email, c.committer_name, c.committer_date, c.depth
      FROM commits c
      JOIN branches b ON b.current_commit_id = c.id
      JOIN repositories r ON r.id = b.repository_id
@@ -21,6 +24,7 @@
      page.id,
      page.subject,
      page.author_name,
+     page.author_email,
      page.committer_name,
      page.committer_date,
      (SELECT json_agg(json_build_object(
@@ -59,13 +63,20 @@
    ORDER BY page.committer_date DESC NULLS LAST"
         clauses  (cond-> []
                    (not (str/blank? project)) (conj "r.id = ?")
-                   (not (str/blank? branch))  (conj "b.name ~ ?"))
+                   (not (str/blank? branch))  (conj "b.name ~ ?")
+                   (not (str/blank? author))  (conj "(c.author_name ~* ? OR c.author_email ~* ?)")
+                   (and (mine? mine) user-id) (conj (str "(lower(c.author_email) IN "
+                                                         "  (SELECT lower(email_address) FROM email_addresses WHERE user_id = ?::uuid) "
+                                                         "OR lower(c.committer_email) IN "
+                                                         "  (SELECT lower(email_address) FROM email_addresses WHERE user_id = ?::uuid))")))
         repo-where (if (seq clauses)
                      (str "WHERE " (str/join " AND " clauses))
                      "")
         params   (cond-> []
                    (not (str/blank? project)) (conj project)
-                   (not (str/blank? branch))  (conj branch))]
+                   (not (str/blank? branch))  (conj branch)
+                   (not (str/blank? author))  (into [author author])
+                   (and (mine? mine) user-id) (into [(str user-id) (str user-id)]))]
     (into [(format base repo-where)] params)))
 
 
@@ -73,15 +84,16 @@
   [{route-name     :route-name
     request-method :request-method
     query-string   :query-string
+    user           :user
     tx             :tx}]
   (debug 'commits-handler route-name request-method)
   (case route-name
     :commits
     (case request-method
       :get (let [params  (query-params/decode query-string)
-                 commits (jdbc/execute! tx (build-query params))]
+                 commits (jdbc/execute! tx (build-query params (:id user)))]
              {:status 200
               :body   {:commits commits
-                       :filters (select-keys params [:project :branch])}})
+                       :filters (select-keys params [:project :branch :author :mine])}})
       {:status 405 :body "Method not allowed"})
     {:status 500 :body "Unresolved route"}))

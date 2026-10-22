@@ -20,17 +20,31 @@
   (http-client/route-cached-fetch _data* :reload true :reload-delay 15000))
 
 
+(def ^:private filter-keys [:project :branch :author :mine])
+
+
 (defn- current-filters []
   (let [qp (-> @state/routing* :query-params)]
-    {:project (or (:project qp) "")
-     :branch  (or (:branch qp) "")}))
+    (into {} (for [k filter-keys] [k (str (get qp k ""))]))))
 
 
-(defn- apply-filters [project branch]
-  (let [qp (cond-> {}
-              (not (str/blank? project)) (assoc :project project)
-              (not (str/blank? branch))  (assoc :branch branch))]
+(defn- apply-filters
+  "Navigates to the commits page with the given filters; blank values (and
+   :mine other than \"true\") are dropped from the query string."
+  [filters]
+  (let [qp (into {} (for [[k v] filters
+                          :let [v (str v)]
+                          :when (if (= k :mine) (= v "true") (not (str/blank? v)))]
+                      [k v]))]
     (navigate! (path :commits {} qp))))
+
+
+(defn- update-filters [& kvs]
+  (apply-filters (apply assoc (current-filters) kvs)))
+
+
+(defn- regex-quote [s]
+  (str/replace (str s) #"[.*+?^${}()|\[\]\\]" "\\$&"))
 
 
 (defn- jobs-summary-cell
@@ -59,11 +73,10 @@
 
 
 (defn- project-cell [branches]
-  (let [projects   (->> branches
-                        (map (fn [b] {:id (:repository_id b) :name (:repository_name b)}))
-                        distinct
-                        (sort-by :name))
-        cur-branch (-> @state/routing* :query-params :branch str)]
+  (let [projects (->> branches
+                      (map (fn [b] {:id (:repository_id b) :name (:repository_name b)}))
+                      distinct
+                      (sort-by :name))]
     [:td
      (for [{:keys [id name]} projects]
        ^{:key id}
@@ -74,45 +87,57 @@
           :title    (str "Filter by " name)
           :on-click (fn [e]
                       (.preventDefault e)
-                      (apply-filters id cur-branch))}
+                      (update-filters :project id))}
          [icons/filter-icon]]
         [:a {:href (path :project {:project-id id}) :title "Project page"}
          [icons/config]]])]))
 
 
 (defn- branch-tag [b]
-  (let [cur-project (-> @state/routing* :query-params :project str)]
-    ^{:key (str (:repository_id b) "/" (:name b))}
-    [:span.badge.bg-light.text-dark.border.me-1
-     {:title (:repository_name b)}
-     [:a.me-1 {:href (path :project-branch {:project-id  (:repository_id b)
-                                             :branch-name (:name b)})}
-      (:name b)]
-     [:a.text-muted
-      {:href     "#"
-       :title    (str "Filter by branch " (:name b))
-       :on-click (fn [e]
-                   (.preventDefault e)
-                   (apply-filters cur-project (str "^" (:name b) "$")))}
-      [icons/filter-icon]]]))
+  ^{:key (str (:repository_id b) "/" (:name b))}
+  [:span.badge.bg-light.text-dark.border.me-1
+   {:title (:repository_name b)}
+   [:a.me-1 {:href (path :project-branch {:project-id  (:repository_id b)
+                                           :branch-name (:name b)})}
+    (:name b)]
+   [:a.text-muted
+    {:href     "#"
+     :title    (str "Filter by branch " (:name b))
+     :on-click (fn [e]
+                 (.preventDefault e)
+                 (update-filters :branch (str "^" (regex-quote (:name b)) "$")))}
+    [icons/filter-icon]]])
 
 
 (defn- ancestor-branch-tag [b]
-  (let [cur-project (-> @state/routing* :query-params :project str)]
-    ^{:key (str "anc-" (:repository_id b) "/" (:name b))}
-    [:span.badge.bg-light.border.me-1.text-muted
-     {:title (str (:repository_name b) " (+" (:distance b) " commits ahead)")}
-     [:sub.me-1 (:distance b)]
-     [:a.me-1.text-muted {:href (path :project-branch {:project-id  (:repository_id b)
-                                                        :branch-name (:name b)})}
-      (:name b)]
-     [:a.text-muted
-      {:href     "#"
-       :title    (str "Filter by branch " (:name b))
-       :on-click (fn [e]
-                   (.preventDefault e)
-                   (apply-filters cur-project (str "^" (:name b) "$")))}
-      [icons/filter-icon]]]))
+  ^{:key (str "anc-" (:repository_id b) "/" (:name b))}
+  [:span.badge.bg-light.border.me-1.text-muted
+   {:title (str (:repository_name b) " (+" (:distance b) " commits ahead)")}
+   [:sub.me-1 (:distance b)]
+   [:a.me-1.text-muted {:href (path :project-branch {:project-id  (:repository_id b)
+                                                      :branch-name (:name b)})}
+    (:name b)]
+   [:a.text-muted
+    {:href     "#"
+     :title    (str "Filter by branch " (:name b))
+     :on-click (fn [e]
+                 (.preventDefault e)
+                 (update-filters :branch (str "^" (regex-quote (:name b)) "$")))}
+    [icons/filter-icon]]])
+
+
+(defn- author-cell [c]
+  (let [author (:author_name c)]
+    [:td.author.text-nowrap
+     [:span.me-1 {:title (:author_email c)} author]
+     (when-not (str/blank? author)
+       [:a.text-muted
+        {:href     "#"
+         :title    (str "Filter by author " author)
+         :on-click (fn [e]
+                     (.preventDefault e)
+                     (update-filters :author (str "^" (regex-quote author) "$")))}
+        [icons/filter-icon]])]))
 
 
 (defn- commit-row [c]
@@ -136,50 +161,62 @@
        (let [s (:subject c)]
          (if (> (count s) 72) (str (subs s 0 72) "…") s))]]
      [project-cell (:branches c)]
-     [:td (:author_name c)]
+     [author-cell c]
      [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
      [:td
       (for [b (:branches c)] [branch-tag b])
       (for [b (:ancestor_branches c)] [ancestor-branch-tag b])]]))
 
 
+(defn- text-filter [label placeholder value*]
+  [:div.col-auto
+   [:label.form-label.small.text-muted label]
+   [:input.form-control.form-control-sm
+    {:type        "text"
+     :placeholder placeholder
+     :value       @value*
+     :on-change   #(reset! value* (.. % -target -value))}]])
+
+
 (defn- filter-bar []
   (reagent/with-let
     [project* (reagent/atom "")
      branch*  (reagent/atom "")
+     author*  (reagent/atom "")
+     mine*    (reagent/atom false)
      _sync    (reagent/track!
-                #(let [qp (:query-params @state/routing*)]
-                   (reset! project* (or (:project qp) ""))
-                   (reset! branch*  (or (:branch qp)  ""))))]
-    (fn []
-      (let [active? (or (not (str/blank? @project*))
-                        (not (str/blank? @branch*)))]
-        [:form.row.g-2.mb-3.align-items-end
-         {:on-submit (fn [e]
-                       (.preventDefault e)
-                       (apply-filters @project* @branch*))}
+                #(let [{:keys [project branch author mine]} (current-filters)]
+                   (reset! project* project)
+                   (reset! branch*  branch)
+                   (reset! author*  author)
+                   (reset! mine*    (= mine "true"))))]
+    (let [active? (or (some (comp not str/blank?) [@project* @branch* @author*])
+                      @mine*)]
+      [:form.row.g-2.mb-3.align-items-end
+       {:on-submit (fn [e]
+                     (.preventDefault e)
+                     (apply-filters {:project @project* :branch @branch*
+                                     :author @author* :mine (str @mine*)}))}
+       [text-filter "Project" "project-id" project*]
+       [text-filter "Branch (regex)" "^master$" branch*]
+       [text-filter "Author (regex)" "name or email" author*]
+       [:div.col-auto
+        [:div.form-check.mb-1
+         {:title "Commits authored or committed with one of your email addresses"}
+         [:input.form-check-input
+          {:type      "checkbox"
+           :id        "commits-filter-mine"
+           :checked   @mine*
+           :on-change #(reset! mine* (.. % -target -checked))}]
+         [:label.form-check-label.small {:for "commits-filter-mine"} "My commits"]]]
+       [:div.col-auto
+        [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
+       (when active?
          [:div.col-auto
-          [:label.form-label.small.text-muted "Project"]
-          [:input.form-control.form-control-sm
-           {:type        "text"
-            :placeholder "project-id"
-            :value       @project*
-            :on-change   #(reset! project* (.. % -target -value))}]]
-         [:div.col-auto
-          [:label.form-label.small.text-muted "Branch (regex)"]
-          [:input.form-control.form-control-sm
-           {:type        "text"
-            :placeholder "^master$"
-            :value       @branch*
-            :on-change   #(reset! branch* (.. % -target -value))}]]
-         [:div.col-auto
-          [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
-         (when active?
-           [:div.col-auto
-            [:button.btn.btn-sm.btn-outline-secondary
-             {:type     "button"
-              :on-click #(apply-filters "" "")}
-             "Clear"]])]))
+          [:button.btn.btn-sm.btn-outline-secondary
+           {:type     "button"
+            :on-click #(apply-filters {})}
+           "Clear"]])])
     (finally
       (reagent/dispose! _sync))))
 

@@ -85,4 +85,28 @@ feature 'Project detail page' do
     expect(page).not_to have_content 'Demo Repository'
   end
 
+  scenario 'the reload button and the periodic reload show new data without a page reload' do
+    visit "/projects/#{@project_id}"
+    expect(page).to have_text 'Initial commit'
+    page.execute_script 'window.__no_page_reload = true'
+
+    new_commit = 'c' * 40
+    database[:commits].insert(
+      id: new_commit, tree_id: 'd' * 40, depth: 1,
+      author_name: 'Alice', author_email: 'alice@example.test',
+      committer_name: 'Alice', committer_email: 'alice@example.test',
+      subject: 'Second commit', body: '')
+    database[:branches].insert(repository_id: @project_id, name: 'feature',
+                               current_commit_id: new_commit)
+
+    find('button.reload').click
+    expect(page).to have_text 'Second commit'
+
+    database[:branches].insert(repository_id: @project_id, name: 'third',
+                               current_commit_id: new_commit)
+    expect(page).to have_text 'third', wait: 20
+
+    expect(page.evaluate_script('window.__no_page_reload')).to be true
+  end
+
 end

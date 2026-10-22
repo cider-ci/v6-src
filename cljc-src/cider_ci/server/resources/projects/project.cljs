@@ -22,10 +22,19 @@
 (defn- project-url []
   (path :project {:project-id (project-id)}))
 
-(defn- fetch! [& _]
-  (go (when-let [res (-> {:method :get :url (project-url)}
-                         http-client/request :chan <! http-client/filter-success :body)]
-        (reset! _data* res))))
+(defn- fetch-data! [& {:keys [quiet?]}]
+  (let [url (project-url)]
+    (go (when-let [res (-> {:method :get :url url
+                            :modal-on-response-error (not quiet?)}
+                           http-client/request :chan <! http-client/filter-success :body)]
+          ;; ignore responses that arrive after navigating to another project
+          (when (= url (project-url))
+            (reset! _data* res))))))
+
+(defn- fetch! [& _] (fetch-data!))
+
+
+(def ^:private reload-interval-ms 15000)
 
 
 (defn- relative-time [iso-string]
@@ -215,7 +224,10 @@
 
 
 (defn- detail-page []
-  (fn []
+  (reagent/with-let [timer (js/setInterval
+                             #(when (= :project (:name @state/routing*))
+                                (fetch-data! :quiet? true))
+                             reload-interval-ms)]
     [:div.page.project
      [state/hidden-routing-state-component :did-change
       #(do (reset! _data* nil) (fetch!))]
@@ -227,7 +239,13 @@
          (when (-> @state/user* :is_admin)
            [:a.btn.btn-sm.btn-outline-secondary
             {:href (path :project-edit {:project-id (project-id)})}
-            [icons/edit] " Edit"])]
+            [icons/edit] " Edit"])
+         [:button.btn.btn-sm.btn-outline-secondary.reload
+          {:type     "button"
+           :on-click fetch!
+           :title    (str "Reload (the page also reloads every "
+                          (quot reload-interval-ms 1000) " seconds)")}
+          [icons/fetch]]]
         [project-metadata]
         (when (-> @state/user* :is_admin)
           [:div.mt-3.d-flex.gap-2
@@ -248,7 +266,9 @@
         [branches-table]
         [pending-branch-triggers-table]
         (when @state/debug?*
-          [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])]))
+          [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])]
+    (finally
+      (js/clearInterval timer))))
 
 
 ;;; Edit page (route :project-edit) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

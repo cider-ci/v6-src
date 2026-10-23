@@ -135,7 +135,9 @@
       x /tmp/cider-ci
       x /var/tmp/cider-ci-git-cache
       x /tmp/cider-ci-script-*
-
+      # uberjar builds leave a depstar dir with ~15k files behind each time;
+      # with the 10d default they exhaust the /tmp tmpfs inode limit
+      e /tmp/depstar* - - - 1d
 - name: Install BASH_ENV snippet so non-login trial scripts get trait environment
   ansible.builtin.copy:
     dest: /etc/cider-ci/trial-bash-env.sh

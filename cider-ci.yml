@@ -25,11 +25,12 @@ jobs:
 
   server-ui-tests:
     name: Server UI Tests
-    depends_on:
+    depends_on: &UNIT_TESTS_PASSED
       unit-tests-passed:
         type: job
         job_key: unit-tests
         states: [passed]
+    run_when: *UNIT_TESTS_PASSED
 
     context:
       include:
@@ -40,11 +41,12 @@ jobs:
 
   executor-integration-tests:
     name: Executor Integration Tests
-    depends_on:
+    depends_on: &SERVER_UI_TESTS_PASSED
       server-ui-tests-passed:
         type: job
         job_key: server-ui-tests
         states: [passed]
+    run_when: *SERVER_UI_TESTS_PASSED
 
     context:
       include:

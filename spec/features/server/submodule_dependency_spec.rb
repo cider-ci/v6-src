@@ -46,13 +46,33 @@ feature 'Submodule job dependencies' do
     expect(submodule_dependent_row).to have_content('Waiting for: job-prerequisite_in_submodule_has_passed')
   end
 
-  scenario 'is met by a passed job on the submodule commit and the dep-trigger creates the job' do
+  def wait_for_dep_trigger
+    sleep 25 # the dep-trigger daemon runs every 10 seconds
+  end
+
+  scenario 'is met by a passed job on the submodule commit; the job stays manual without a branch trigger' do
     insert_job!(SUBDEP_SUB_COMMIT, 'job-prerequisite', 'passed')
     # a job on the parent commit makes it "recently active" for the dep-trigger
     insert_job!(SUBDEP_HEAD_COMMIT, 'info', 'passed')
 
+    # job-submodule-dependent's only trigger is run_when type branch; the
+    # commit is no branch head, so depends_on alone must not create it
+    wait_for_dep_trigger
+    expect(database[:jobs].where(project_id: SUBDEP_PROJECT_ID, commit_id: SUBDEP_HEAD_COMMIT,
+                                 key: 'job-submodule-dependent').count).to eq 0
+
     visit "/projects/#{SUBDEP_PROJECT_ID}/commits/#{SUBDEP_HEAD_COMMIT}/jobs"
-    # either still runnable (Run button) or already auto-created by the dep-trigger
+    expect(submodule_dependent_row).to have_button('Run')
+    expect(page).not_to have_content('Waiting for: job-prerequisite_in_submodule_has_passed')
+  end
+
+  scenario 'the dep-trigger creates the job once the commit heads a branch its run_when matches' do
+    database[:repositories].where(id: SUBDEP_PROJECT_ID).update(branch_trigger_include_match: '^dep-test$')
+    database[:branches].insert(repository_id: SUBDEP_PROJECT_ID, name: 'dep-test',
+                               current_commit_id: SUBDEP_HEAD_COMMIT)
+    insert_job!(SUBDEP_SUB_COMMIT, 'job-prerequisite', 'passed')
+    insert_job!(SUBDEP_HEAD_COMMIT, 'info', 'passed')
+
     Timeout.timeout(40) do
       sleep 1 until database[:jobs].where(project_id: SUBDEP_PROJECT_ID, commit_id: SUBDEP_HEAD_COMMIT,
                                           key: 'job-submodule-dependent').count == 1
@@ -60,6 +80,5 @@ feature 'Submodule job dependencies' do
     visit "/projects/#{SUBDEP_PROJECT_ID}/commits/#{SUBDEP_HEAD_COMMIT}/jobs"
     expect(page).to have_content 'Recorded Jobs'
     expect(page).to have_css('tr', text: 'job-submodule-dependent')
-    expect(page).not_to have_content('Waiting for: job-prerequisite_in_submodule_has_passed')
   end
 end

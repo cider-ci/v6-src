@@ -13,7 +13,7 @@
   (when-not (str/blank? pattern)
     (some? (re-find (re-pattern pattern) branch-name))))
 
-(defn- repo-allows-branch? [repo-include repo-exclude branch-name]
+(defn repo-allows-branch? [repo-include repo-exclude branch-name]
   (and (or (str/blank? repo-include)
            (matches-pattern? repo-include branch-name))
        (or (str/blank? repo-exclude)
@@ -126,23 +126,31 @@
     (->> (concat entries legacy)
          (filter #(= "branch" (some-> (get % :type) name))))))
 
+(defn branch-run-when-matches?
+  "Whether a run_when entry of type `branch` matches branch-name: its
+   include_match matches and its exclude_match does not."
+  [spec branch-name]
+  (boolean
+    (some (fn [{:keys [include_match exclude_match]}]
+            (and (or (str/blank? include_match)
+                     (matches-pattern? include_match branch-name))
+                 (not (and (not (str/blank? exclude_match))
+                           (matches-pattern? exclude_match branch-name)))))
+          (branch-run-when-entries spec))))
+
 (defn- job-should-trigger?
   "Legacy semantics (builder.jobs.triggers.tree-ids.branch-update): a branch
    update triggers a job only if it has a run_when entry of type `branch`
    whose include_match matches the branch and whose exclude_match does not.
    Jobs without such an entry are never auto-triggered by a push — they run
-   via the dep-trigger (depends_on / run_when type job), cron, or manually.
+   via the dep-trigger (run_when type job), cron, or manually.
+   Jobs with depends_on are left to the dep-trigger, which creates them once
+   the dependencies are fulfilled (legacy checked them at push time only).
    (v6 used to fire every job lacking trigger configuration; that is why e.g.
    leihs' `all-broken-scenarios` ran on every push here but not on the old CI.)"
   [{:keys [spec]} branch-name]
-  (boolean
-    (and (empty? (:depends_on spec))
-         (some (fn [{:keys [include_match exclude_match]}]
-                 (and (or (str/blank? include_match)
-                          (matches-pattern? include_match branch-name))
-                      (not (and (not (str/blank? exclude_match))
-                                (matches-pattern? exclude_match branch-name)))))
-               (branch-run-when-entries spec)))))
+  (and (empty? (:depends_on spec))
+       (branch-run-when-matches? spec branch-name)))
 
 
 (defn- record-pending!

@@ -81,7 +81,7 @@ feature 'Dispatcher' do
 
   context 'accepted repositories' do
     def stored_accepted_repositories
-      JSON.parse(database.fetch('SELECT array_to_json(accepted_repositories)::text AS a FROM executors').first[:a])
+      JSON.parse(database.fetch('SELECT accepted_repositories::text AS a FROM executors').first[:a])
     end
 
     def dispatched_count(accepted_repositories)
@@ -93,34 +93,84 @@ feature 'Dispatcher' do
 
     scenario 'an executor that does not report them accepts all repositories' do
       expect(dispatched_count(nil)).to eq 1
-      expect(stored_accepted_repositories).to eq ['^.*$']
+      expect(stored_accepted_repositories).to eq [{ 'url' => '^.*$' }]
     end
 
     scenario 'a trial of a repository that does not match is not dispatched' do
-      expect(dispatched_count(['^https://github\\.com/.+$', 'file:///other'])).to eq 0
+      expect(dispatched_count([{ url: '^https://github\\.com/.+$' }, { url: 'file:///other' }])).to eq 0
       expect(database[:trials].where(state: 'pending').count).to eq 1
     end
 
     scenario 'an exact url matches' do
-      expect(dispatched_count(['file:///dev/null'])).to eq 1
+      expect(dispatched_count([{ url: 'file:///dev/null' }])).to eq 1
     end
 
     scenario 'a ^...$ regex matches' do
-      expect(dispatched_count(['^file:///dev/.+$'])).to eq 1
+      expect(dispatched_count([{ url: '^file:///dev/.+$' }])).to eq 1
+    end
+
+    scenario 'a plain string entry is a url pattern' do
+      expect(dispatched_count(['file:///dev/null'])).to eq 1
+      expect(stored_accepted_repositories).to eq [{ 'url' => 'file:///dev/null' }]
     end
 
     scenario 'an invalid regex does not break dispatching' do
-      expect(dispatched_count(['^file:///(dev$', 'file:///dev/null'])).to eq 1
+      expect(dispatched_count([{ url: '^file:///(dev$' }, { url: 'file:///dev/null' }])).to eq 1
     end
 
     scenario 'an empty list accepts nothing' do
       expect(dispatched_count([])).to eq 0
     end
 
-    scenario 'entries with commas and braces are stored unchanged' do
-      entries = ['^file:///d{1,3}ev/.+$', 'https://x/"quoted"']
+    scenario 'entries with commas, braces and quotes are stored unchanged' do
+      entries = [{ 'url' => '^file:///d{1,3}ev/.+$' },
+                 { 'url' => 'https://x/"quoted"', 'branches' => ['^a,b$'] }]
       dispatched_count(entries)
       expect(stored_accepted_repositories).to eq entries
+    end
+
+    context 'restricted to branches (the commit must be the head of a matching branch)' do
+      let(:older_commit) { 'c' * 40 }
+      let(:master_only) { [{ url: 'file:///dev/null', branches: ['^master$'] }] }
+
+      before :each do
+        [commit_id, older_commit].each do |id|
+          database[:commits].insert(id: id, tree_id: 'b' * 40, subject: id[0], author_name: 'A', committer_name: 'A')
+        end
+      end
+
+      def branch!(name, head)
+        database[:branches].insert(repository_id: project_id, name: name, current_commit_id: head)
+      end
+
+      scenario 'the head of a matching branch is dispatched' do
+        branch!('master', commit_id)
+        expect(dispatched_count(master_only)).to eq 1
+      end
+
+      scenario 'the head of another branch only is not dispatched' do
+        branch!('beta', commit_id)
+        branch!('master', older_commit)
+        expect(dispatched_count(master_only)).to eq 0
+      end
+
+      scenario 'a commit that a matching branch has moved past is not dispatched' do
+        branch!('master', older_commit)
+        database[:branches_commits].insert(branch_id: database[:branches].first[:id], commit_id: commit_id)
+        expect(dispatched_count(master_only)).to eq 0
+      end
+
+      scenario 'a branch list and an exact branch name work, as does a second entry without branches' do
+        branch!('release/1.0', commit_id)
+        expect(dispatched_count([{ url: 'file:///dev/null', branches: ['^master$', '^release/.+$'] }])).to eq 1
+        database[:trials].update(state: 'pending', executor_id: nil)
+        _, body = executor_sync(token, accepted_repositories: [{ url: 'file:///dev/null', branches: 'release/1.0' }])
+        expect(body['trials_to_execute'].length).to eq 1
+        database[:trials].update(state: 'pending', executor_id: nil)
+        _, body = executor_sync(token, accepted_repositories: [{ url: 'file:///dev/null', branches: ['^master$'] },
+                                                              { url: '^file:.+$' }])
+        expect(body['trials_to_execute'].length).to eq 1
+      end
     end
   end
 

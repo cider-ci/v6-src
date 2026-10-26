@@ -1,9 +1,11 @@
 (ns cider-ci.server.executors.handler
   (:require
+    [cheshire.core :as json]
     [cider-ci.server.executors.auth :as auth]
     [cider-ci.server.jobs.propagation :as propagation]
     [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
     [cider-ci.server.projects.repositories.shared :as repo-shared]
+    [cider-ci.utils.accepted-repositories :as accepted-repositories]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -68,7 +70,7 @@
                             JOIN executors e  ON e.id   = ?::uuid
                             WHERE t.state = 'pending'
                               AND tsk.traits <@ e.traits
-                              AND cider_ci_repository_accepted(r.git_url, e.accepted_repositories)
+                              AND cider_ci_trial_accepted(r.id, r.git_url, j.commit_id, e.accepted_repositories)
                               AND tsk.load <= ?
                               AND (
                                 tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
@@ -180,12 +182,12 @@
     (jdbc/execute-one! tx
       ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
        (:id executor)]))
-  ;; entries may contain commas and braces (regexes): pass a real array, not a literal
   (when (sequential? (:accepted_repositories body))
-    (let [entries (into-array String (map str (:accepted_repositories body)))]
+    (let [entries (json/generate-string
+                    (accepted-repositories/normalize-entries (:accepted_repositories body)))]
       (jdbc/execute-one! tx
-        ["UPDATE executors SET accepted_repositories = ?::text[]
-          WHERE id = ? AND accepted_repositories IS DISTINCT FROM ?::text[]"
+        ["UPDATE executors SET accepted_repositories = ?::jsonb
+          WHERE id = ? AND accepted_repositories IS DISTINCT FROM ?::jsonb"
          entries (:id executor) entries])))
   (let [available-load (or (:available_load body) 1.0)
         to-execute     (dispatch-trials tx executor available-load server-base-url)

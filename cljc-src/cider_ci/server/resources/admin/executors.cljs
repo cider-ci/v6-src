@@ -265,6 +265,27 @@
          [:td [:small (time-ago (or (:started_at t) (:dispatched_at t)))]]])]]))
 
 
+(defn- accepted-repositories
+  "Entries {url, branches}: without branches any commit reachable on the
+   repository's origin, with branches only the head of a matching branch."
+  [entries]
+  (cond
+    (empty? entries) [:span.text-muted "accepts no repositories"]
+    (= [{:url "^.*$"}] entries) [:span.text-muted "accepts all repositories"]
+    :else [:table.table.table-sm.mb-0
+           [:thead [:tr [:th "Repository"] [:th "Branches"]]]
+           [:tbody
+            (for [[i {:keys [url branches]}] (map-indexed vector entries)]
+              ^{:key i}
+              [:tr
+               [:td [:code url]]
+               [:td.branches
+                (if (seq branches)
+                  [:<> [:span.text-muted.me-1 "head of"]
+                   (for [b branches] ^{:key b} [:code.border.rounded.px-1.me-1 b])]
+                  [:span.text-muted "any branch"])]])]]))
+
+
 (defn- detail-page []
   (reagent/with-let [timer (start-reload! :executor-detail #(fetch-single :quiet? true))]
     [:div.page
@@ -299,12 +320,7 @@
               [:span.text-muted "—"])]
            [:dt.col-sm-3 "Accepted repositories"]
            [:dd.col-sm-9.accepted-repositories
-            (let [entries (:accepted_repositories ex)]
-              (cond
-                (empty? entries) [:span.text-muted "accepts no repositories"]
-                (= ["^.*$"] entries) [:span.text-muted "accepts all repositories"]
-                :else [:div.d-flex.flex-wrap.gap-1
-                       (for [e entries] ^{:key e} [:code.border.rounded.px-1 e])]))]
+            [accepted-repositories (:accepted_repositories ex)]]
            [:dt.col-sm-3 "Token prefix"]
            [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
            [:dt.col-sm-3 "Last seen"]

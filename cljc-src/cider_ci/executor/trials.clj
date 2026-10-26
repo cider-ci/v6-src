@@ -215,10 +215,12 @@
 
       ;; the server only dispatches accepted repositories; checked again here
       ;; against the executor's own config before anything is fetched
-      (accepted-repositories/assert-accepted! repository_git_url)
-      (.mkdirs (working-dirs-root))
-      (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
-                                repository_git_url git_proxies)
+      (let [accepted (accepted-repositories/current)]
+        (accepted-repositories/assert-accepted! accepted repository_git_url)
+        (.mkdirs (working-dirs-root))
+        (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
+                                  repository_git_url git_proxies
+                                  (accepted-repositories/origin-policy accepted repository_git_url)))
       ;; file templates (`templates:` in the task spec) are rendered with the
       ;; trial's env (incl. assigned ports) before any script runs; a missing
       ;; template source throws and makes the trial defective (legacy parity)

@@ -1,5 +1,6 @@
 (ns cider-ci.executor.git
   (:require
+    [cider-ci.utils.accepted-repositories :as ar]
     [clojure.string :as str]
     [taoensso.timbre :refer [info warn]])
   (:import
@@ -180,48 +181,80 @@
              .start
              .waitFor)))
 
-(defn- remote-ref-shas
-  "The commit shas the remote's branches and tags point to; branches first,
-   tags peeled to their commits."
+(defn- remote-refs
+  "[sha ref] of the remote's branches and tags, branches first; annotated
+   tags also appear peeled to their commits (`refs/tags/x^{}`)."
   [origin-url]
-  (let [out  (with-retries (str "ls-remote of " origin-url) 3
-               #(run! ["git" "ls-remote" origin-url "refs/heads/*" "refs/tags/*"] nil))
-        refs (for [line (str/split-lines out)
-                   :let [[_ sha ref] (re-matches #"([0-9a-f]{40})\s+(refs/\S+)" line)]
-                   :when sha]
-               [sha ref])]
-    (->> refs
-         (sort-by (fn [[_ ref]] (if (str/starts-with? ref "refs/heads/") 0 1)))
-         (map first)
-         distinct)))
+  (let [out (with-retries (str "ls-remote of " origin-url) 3
+              #(run! ["git" "ls-remote" origin-url "refs/heads/*" "refs/tags/*"] nil))]
+    (->> (for [line (str/split-lines out)
+               :let [[_ sha ref] (re-matches #"([0-9a-f]{40})\s+(refs/\S+)" line)]
+               :when sha]
+           [sha ref])
+         (sort-by (fn [[_ ref]] (if (str/starts-with? ref "refs/heads/") 0 1))))))
+
+(defn- head-of-matching-branch
+  "The name of a branch matching one of the patterns whose head is commit-id."
+  [refs commit-id patterns]
+  (some (fn [[sha ref]]
+          (when (and (= sha commit-id) (str/starts-with? ref "refs/heads/"))
+            (let [branch (subs ref (count "refs/heads/"))]
+              (when (some #(ar/matches? % branch) patterns) branch))))
+        refs))
+
+(defn- reachable? [^File cache refs commit-id]
+  (let [shas (distinct (map first refs))]
+    (or (some #{commit-id} shas)
+        (some #(and (git-ok? cache "cat-file" "-e" (str % "^{commit}"))
+                    (git-ok? cache "merge-base" "--is-ancestor" commit-id %))
+              shas))))
 
 (defn verify-origin!
-  "Throws unless commit-id is reachable from a branch or tag of origin-url.
-   Ancestry is checked in the bare-clone cache; remote refs the cache does not
-   have yet are skipped."
-  [^File cache origin-url commit-id]
-  (let [k [(canonical-url origin-url) commit-id]]
-    (when-not (contains? @verified-origins* k)
-      (let [shas (remote-ref-shas origin-url)]
-        (if (or (some #{commit-id} shas)
-                (some #(and (git-ok? cache "cat-file" "-e" (str % "^{commit}"))
-                            (git-ok? cache "merge-base" "--is-ancestor" commit-id %))
-                      shas))
-          (do (info "Origin verified:" commit-id "is on" origin-url)
-              (swap! verified-origins* conj k))
-          (throw (ex-info (str "Origin check failed: commit " commit-id
-                               " is not reachable from any branch or tag of " origin-url)
-                          {:origin-url origin-url :commit-id commit-id})))))))
+  "Throws unless origin-url confirms commit-id as policy requires (see
+   cider-ci.utils.accepted-repositories/origin-policy): with :reachable? the
+   commit may be reachable from any branch or tag (ancestry is checked in the
+   bare-clone cache, remote refs the cache lacks are skipped); with
+   :head-branches it may be the head of a branch matching one of them.
+   Branch restrictions are only enforced here, so with the origin check
+   switched off they fail closed."
+  [^File cache origin-url commit-id {:keys [head-branches] :as policy}]
+  (let [policy-reachable? (:reachable? policy)
+        k                 [(canonical-url origin-url) commit-id]]
+    (cond
+      (not @verify-origin?*)
+      (when-not policy-reachable?
+        (throw (ex-info (str "The accepted repositories restrict " origin-url " to branches "
+                             (str/join ", " head-branches)
+                             "; this needs the origin check (CIDER_CI_EXECUTOR_VERIFY_ORIGIN)")
+                        {:origin-url origin-url :commit-id commit-id})))
+
+      (and policy-reachable? (contains? @verified-origins* k))
+      nil
+
+      :else
+      (let [refs (remote-refs origin-url)]
+        (if-let [branch (and (seq head-branches) (head-of-matching-branch refs commit-id head-branches))]
+          (info "Origin verified:" commit-id "is the head of branch" branch "on" origin-url)
+          (if (and policy-reachable? (reachable? cache refs commit-id))
+            (do (info "Origin verified:" commit-id "is on" origin-url)
+                (swap! verified-origins* conj k))
+            (throw (ex-info (str "Origin check failed: commit " commit-id
+                                 (if policy-reachable?
+                                   " is not reachable from any branch or tag of "
+                                   (str " is not the head of a branch matching "
+                                        (str/join ", " head-branches) " on "))
+                                 origin-url)
+                            {:origin-url origin-url :commit-id commit-id}))))))))
 
 (defn- clone-from-cache!
   "Checks commit-id out into dir (a `--shared` clone of the cache, fetched
    from git-url, cache keyed by origin-url) and points `origin` to
-   origin-url (the repository's real URL). With verify-origin? the commit
-   must also be on origin-url (see verify-origin!)."
-  [git-url commit-id ^File dir token origin-url & {:keys [verify-origin?]}]
+   origin-url (the repository's real URL). With an origin-policy the commit
+   must also be confirmed by origin-url (see verify-origin!)."
+  [git-url commit-id ^File dir token origin-url & {:keys [origin-policy]}]
   (let [cache (ensure-cache! git-url commit-id token :key-url (or (not-empty origin-url) git-url))]
-    (when (and verify-origin? @verify-origin?* (not-empty origin-url))
-      (verify-origin! cache origin-url commit-id))
+    (when (and origin-policy (not-empty origin-url))
+      (verify-origin! cache origin-url commit-id origin-policy))
     (run! ["git" "clone" "--shared" "--no-checkout"
            (.getAbsolutePath cache) (.getAbsolutePath dir)] nil)
     (run! ["git" "checkout" commit-id] dir)
@@ -331,10 +364,12 @@
    git-options may contain {:submodules {:include_match ... :exclude_match ...}}.
    git-proxies ({submodule-commit git-url} from the dispatch payload) names
    where this server serves submodule commits; other submodules are fetched
-   from their .gitmodules URL."
-  [git-url commit-id ^File work-dir git-options token & [origin-url git-proxies]]
+   from their .gitmodules URL. origin-policy (from the accepted repositories,
+   default: reachable from any ref) is what origin-url must confirm."
+  [git-url commit-id ^File work-dir git-options token & [origin-url git-proxies origin-policy]]
   ;; only the job's repository is checked against its origin, not submodules
-  (clone-from-cache! git-url commit-id work-dir token origin-url :verify-origin? true)
+  (clone-from-cache! git-url commit-id work-dir token origin-url
+                     :origin-policy (or origin-policy {:reachable? true}))
   (let [submodule-opts (:submodules git-options)
         git-proxies    (into {} (map (fn [[k v]] [(name k) v]) (or git-proxies {})))]
     ;; legacy parity: submodules are only checked out when git_options.submodules is given

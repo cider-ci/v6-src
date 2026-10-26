@@ -104,16 +104,18 @@
 - name: Write accepted repositories
   # read by the executor on every sync, no restart needed
   ansible.builtin.copy:
-    dest: /etc/cider-ci/accepted-repositories
+    dest: /etc/cider-ci/accepted-repositories.yml
     owner: root
     group: "{{ cider_ci_group }}"
     mode: '0640'
     content: |
-      # Managed by Ansible (ci_executor_accepted_repositories): exact git urls
-      # or ^...$ regexes, one per line.
-      {% for r in ci_executor_accepted_repositories %}
-      {{ r }}
-      {% endfor %}
+      # Managed by Ansible (ci_executor_accepted_repositories).
+      {{ ci_executor_accepted_repositories | to_nice_yaml(width=1000) }}
+
+- name: Remove the plain accepted repositories file (replaced by the YAML file)
+  ansible.builtin.file:
+    path: /etc/cider-ci/accepted-repositories
+    state: absent
 
 - name: Register extra executor traits (dispatch markers for projects)
   ansible.builtin.lineinfile:

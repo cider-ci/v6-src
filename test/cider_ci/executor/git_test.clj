@@ -176,3 +176,44 @@
         (is (.exists (java.io.File. (str root "/w4/injected.txt")))))
       (finally
         (git/set-verify-origin! true)))))
+
+
+(deftest verify-origin-head-branches-test
+  (let [root    (str (java.nio.file.Files/createTempDirectory "git-head-test" (make-array java.nio.file.attribute.FileAttribute 0)))
+        _       (git/set-cache-root! (str root "/cache"))
+        old-master (make-bare-repo! root "origin" [])
+        origin  (str root "/origin.git")
+        work    (str root "/origin-work")
+        commit! (fn [file branch]
+                  (spit (str work "/" file) file)
+                  (git! work "add" file)
+                  (git! work "commit" "-q" "-m" file)
+                  (git! work "push" "-q" origin (str "HEAD:refs/heads/" branch))
+                  (clojure.string/trim (git! work "rev-parse" "HEAD")))
+        _       (git! work "remote" "add" "origin" origin)
+        master  (commit! "master2.txt" "master")
+        beta    (commit! "beta.txt" "beta")
+        head-master {:reachable? false :head-branches ["^master$"]}
+        prepare! (fn [dir commit policy]
+                   (git/prepare-working-dir! origin commit (java.io.File. (str root "/" dir)) {} nil
+                                             origin nil policy))
+        failure  (fn [dir commit policy]
+                   (try (prepare! dir commit policy) nil
+                        (catch clojure.lang.ExceptionInfo e (.getMessage e))))]
+    (try
+      (git/set-verify-origin! true)
+      (testing "the head of a matching branch passes"
+        (prepare! "w1" master head-master)
+        (is (.exists (java.io.File. (str root "/w1/master2.txt")))))
+      (testing "an older commit of the matching branch fails"
+        (is (re-find #"not the head of a branch matching \^master\$" (str (failure "w2" old-master head-master)))))
+      (testing "the head of another branch fails"
+        (is (re-find #"not the head of a branch matching" (str (failure "w3" beta head-master)))))
+      (testing "an entry without branches for the same repository still accepts reachable commits"
+        (prepare! "w4" old-master (assoc head-master :reachable? true))
+        (is (.exists (java.io.File. (str root "/w4/origin.txt")))))
+      (testing "with the origin check off, branch restrictions fail closed"
+        (git/set-verify-origin! false)
+        (is (re-find #"needs the origin check" (str (failure "w5" master head-master)))))
+      (finally
+        (git/set-verify-origin! true)))))

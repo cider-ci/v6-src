@@ -1,5 +1,6 @@
 (ns cider-ci.executor.sync
   (:require
+    [cider-ci.executor.accepted-repositories :as accepted-repositories]
     [cider-ci.executor.trials :as trials]
     [cheshire.core :as json]
     [clojure.string :as str]
@@ -33,6 +34,7 @@
                                        "Accept"        "application/json"}
                              :body    (json/generate-string {:available_load         available-load
                                                              :traits                 (read-traits)
+                                                             :accepted_repositories  (accepted-repositories/current)
                                                              :trials_being_processed active-ids})
                              :timeout 10000})]
       (if (= 200 (:status resp))

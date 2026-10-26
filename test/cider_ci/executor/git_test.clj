@@ -138,3 +138,41 @@
         (is (.exists (java.io.File. work2 "sub/sub.txt")))
         (is (= (str root "/does-not-exist.git")
                (clojure.string/trim (git! (str work2 "/sub") "remote" "get-url" "origin"))))))))
+
+
+(deftest verify-origin-test
+  (let [root   (str (java.nio.file.Files/createTempDirectory "git-origin-test" (make-array java.nio.file.attribute.FileAttribute 0)))
+        _      (git/set-cache-root! (str root "/cache"))
+        first-commit (make-bare-repo! root "origin" [])
+        origin (str root "/origin.git")
+        ;; the server's copy: the origin's history plus one commit the origin does not have
+        proxy  (str root "/proxy.git")
+        _      (git! nil "clone" "-q" "--bare" origin proxy)
+        work   (str root "/proxy-work")
+        _      (git! nil "clone" "-q" proxy work)
+        _      (spit (str work "/injected.txt") "x")
+        _      (git! work "add" "injected.txt")
+        _      (git! work "commit" "-q" "-m" "injected")
+        _      (git! work "push" "-q" "origin" "HEAD:refs/heads/injected")
+        injected (clojure.string/trim (git! work "rev-parse" "HEAD"))
+        prepare! (fn [dir commit]
+                   (git/prepare-working-dir! proxy commit (java.io.File. (str root "/" dir)) {} nil origin))]
+    (try
+      (git/set-verify-origin! true)
+      (testing "a commit on a branch of the origin passes"
+        (prepare! "w1" first-commit)
+        (is (.exists (java.io.File. (str root "/w1/origin.txt")))))
+      (testing "a commit only the proxy has fails before checkout"
+        (let [e (try (prepare! "w2" injected) nil (catch clojure.lang.ExceptionInfo e e))]
+          (is (re-find #"Origin check failed" (str (some-> e .getMessage))))
+          (is (not (.exists (java.io.File. (str root "/w2")))))))
+      (testing "verified commits are remembered, the origin is not asked again"
+        (@#'cider-ci.executor.git/delete-recursively! (java.io.File. origin))
+        (prepare! "w3" first-commit)
+        (is (.exists (java.io.File. (str root "/w3/origin.txt")))))
+      (testing "the check can be switched off"
+        (git/set-verify-origin! false)
+        (prepare! "w4" injected)
+        (is (.exists (java.io.File. (str root "/w4/injected.txt")))))
+      (finally
+        (git/set-verify-origin! true)))))

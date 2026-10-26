@@ -19,13 +19,15 @@ feature 'Dispatcher' do
     )
   end
 
-  def executor_sync(tok, available_load: 4.0)
+  def executor_sync(tok, available_load: 4.0, accepted_repositories: nil)
     uri = URI("#{http_base_url}/executor/sync")
     req = Net::HTTP::Post.new(uri)
     req['Authorization'] = "Bearer #{tok}"
     req['Content-Type']  = 'application/json'
     req['Accept']        = 'application/json'
-    req.body             = { available_load: available_load }.to_json
+    payload = { available_load: available_load }
+    payload[:accepted_repositories] = accepted_repositories if accepted_repositories
+    req.body             = payload.to_json
     res = Net::HTTP.start(uri.hostname, uri.port) { |h| h.request(req) }
     body = JSON.parse(res.body) rescue res.body
     [res.code.to_i, body]
@@ -75,6 +77,51 @@ feature 'Dispatcher' do
     expect(body['trials_to_execute'].length).to eq 1
     expect(database[:trials].where(state: 'dispatching').count).to eq 1
     expect(database[:trials].where(state: 'pending').count).to eq 1
+  end
+
+  context 'accepted repositories' do
+    def stored_accepted_repositories
+      JSON.parse(database.fetch('SELECT array_to_json(accepted_repositories)::text AS a FROM executors').first[:a])
+    end
+
+    def dispatched_count(accepted_repositories)
+      seed_executor
+      seed_pending_trial
+      _, body = executor_sync(token, accepted_repositories: accepted_repositories)
+      body['trials_to_execute'].length
+    end
+
+    scenario 'an executor that does not report them accepts all repositories' do
+      expect(dispatched_count(nil)).to eq 1
+      expect(stored_accepted_repositories).to eq ['^.*$']
+    end
+
+    scenario 'a trial of a repository that does not match is not dispatched' do
+      expect(dispatched_count(['^https://github\\.com/.+$', 'file:///other'])).to eq 0
+      expect(database[:trials].where(state: 'pending').count).to eq 1
+    end
+
+    scenario 'an exact url matches' do
+      expect(dispatched_count(['file:///dev/null'])).to eq 1
+    end
+
+    scenario 'a ^...$ regex matches' do
+      expect(dispatched_count(['^file:///dev/.+$'])).to eq 1
+    end
+
+    scenario 'an invalid regex does not break dispatching' do
+      expect(dispatched_count(['^file:///(dev$', 'file:///dev/null'])).to eq 1
+    end
+
+    scenario 'an empty list accepts nothing' do
+      expect(dispatched_count([])).to eq 0
+    end
+
+    scenario 'entries with commas and braces are stored unchanged' do
+      entries = ['^file:///d{1,3}ev/.+$', 'https://x/"quoted"']
+      dispatched_count(entries)
+      expect(stored_accepted_repositories).to eq entries
+    end
   end
 
   scenario 'skips trials whose task load exceeds available_load' do

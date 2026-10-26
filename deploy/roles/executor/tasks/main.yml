@@ -101,6 +101,20 @@
     content: "bash\n"
     force: no
 
+- name: Write accepted repositories
+  # read by the executor on every sync, no restart needed
+  ansible.builtin.copy:
+    dest: /etc/cider-ci/accepted-repositories
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+    content: |
+      # Managed by Ansible (ci_executor_accepted_repositories): exact git urls
+      # or ^...$ regexes, one per line.
+      {% for r in ci_executor_accepted_repositories %}
+      {{ r }}
+      {% endfor %}
+
 - name: Register extra executor traits (dispatch markers for projects)
   ansible.builtin.lineinfile:
     path: /etc/cider-ci/traits

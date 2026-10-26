@@ -41,6 +41,7 @@ feature 'Working dir origin remote' do
     @executor_log_path = log_dir.join("executor-#{SecureRandom.hex(6)}.log").to_s
     @executor_pid = Process.spawn(
       { 'CIDER_CI_EXECUTOR_TOKEN'  => @executor_token,
+        'CIDER_CI_EXECUTOR_VERIFY_ORIGIN' => 'false', # placeholder git_url, no real origin to verify against
         'CIDER_CI_SERVER_URL'      => http_base_url,
         'CIDER_CI_EXECUTOR_TRAITS' => ORIGIN_TRAIT },
       PROJECT_DIR.join('bin/executor-run').to_s,

@@ -34,6 +34,7 @@ shared_context 'with live executor' do
     @executor_git_cache_dir = Dir.mktmpdir('cider-ci-git-cache')
     @executor_pid = Process.spawn(
       { 'CIDER_CI_EXECUTOR_TOKEN'         => @executor_token,
+        'CIDER_CI_EXECUTOR_VERIFY_ORIGIN' => 'false', # placeholder git_url, no real origin to verify against
         'CIDER_CI_SERVER_URL'             => http_base_url,
         'CIDER_CI_EXECUTOR_TRAITS'        => 'Bash',
         'CIDER_CI_EXECUTOR_GIT_CACHE_DIR' => @executor_git_cache_dir },

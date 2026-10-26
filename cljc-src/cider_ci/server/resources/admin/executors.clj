@@ -96,7 +96,8 @@
       :get (if-let [ex (jdbc/execute-one! tx
                          ["SELECT id, name, token_part,
                                    array_to_string(traits, ',') AS traits,
-                                   max_load, enabled, last_seen_at
+                                   max_load, enabled, last_seen_at,
+                                   to_json(accepted_repositories) AS accepted_repositories
                             FROM executors WHERE id = ?::uuid"
                           executor-id])]
              (let [trials (fetch-current-trials tx executor-id)]

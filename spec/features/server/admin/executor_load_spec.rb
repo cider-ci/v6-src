@@ -80,4 +80,14 @@ feature 'Executor load overview' do
     expect(page.evaluate_script('window.__no_page_reload')).to be true
   end
 
+
+  scenario 'the detail page shows the accepted repositories reported by the executor' do
+    visit "/executors/#{@executor_id}"
+    expect(page).to have_css '.accepted-repositories', text: 'accepts all repositories'
+
+    database.run("UPDATE executors SET accepted_repositories = ARRAY['^https://github\\.com/leihs/.+$']
+                  WHERE id = '#{@executor_id}'")
+    visit "/executors/#{@executor_id}"
+    expect(page).to have_css '.accepted-repositories code', text: '^https://github\\.com/leihs/.+$'
+  end
 end

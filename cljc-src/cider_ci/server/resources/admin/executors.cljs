@@ -297,6 +297,14 @@
               [:div.d-flex.flex-wrap.gap-1
                (for [t traits] ^{:key t} [:span.badge.bg-secondary t])]
               [:span.text-muted "—"])]
+           [:dt.col-sm-3 "Accepted repositories"]
+           [:dd.col-sm-9.accepted-repositories
+            (let [entries (:accepted_repositories ex)]
+              (cond
+                (empty? entries) [:span.text-muted "accepts no repositories"]
+                (= ["^.*$"] entries) [:span.text-muted "accepts all repositories"]
+                :else [:div.d-flex.flex-wrap.gap-1
+                       (for [e entries] ^{:key e} [:code.border.rounded.px-1 e])]))]
            [:dt.col-sm-3 "Token prefix"]
            [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
            [:dt.col-sm-3 "Last seen"]

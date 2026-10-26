@@ -12,3 +12,14 @@ ci_executor_java_xmx: 256m
 # Traits removed from executors on deploy (the extra-trait lines are only ever
 # added). Set per inventory, e.g. the ZHdK group_vars.
 ci_executor_retired_traits: []
+
+# Repositories the executor accepts trials for: an exact git url or a regex
+# written as ^...$ (legacy semantics). The executor reports the list on every
+# sync; the server only dispatches matching trials and the executor checks
+# again before fetching.
+ci_executor_accepted_repositories: ['^.*$']
+
+# Before running a trial the executor checks that the commit is reachable
+# from a branch or tag of the repository's real remote (git ls-remote), not
+# only on the CIDER-CI server it fetched it from.
+ci_executor_verify_origin: true

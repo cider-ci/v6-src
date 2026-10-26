@@ -68,6 +68,7 @@
                             JOIN executors e  ON e.id   = ?::uuid
                             WHERE t.state = 'pending'
                               AND tsk.traits <@ e.traits
+                              AND cider_ci_repository_accepted(r.git_url, e.accepted_repositories)
                               AND tsk.load <= ?
                               AND (
                                 tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
@@ -179,6 +180,13 @@
     (jdbc/execute-one! tx
       ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
        (:id executor)]))
+  ;; entries may contain commas and braces (regexes): pass a real array, not a literal
+  (when (sequential? (:accepted_repositories body))
+    (let [entries (into-array String (map str (:accepted_repositories body)))]
+      (jdbc/execute-one! tx
+        ["UPDATE executors SET accepted_repositories = ?::text[]
+          WHERE id = ? AND accepted_repositories IS DISTINCT FROM ?::text[]"
+         entries (:id executor) entries])))
   (let [available-load (or (:available_load body) 1.0)
         to-execute     (dispatch-trials tx executor available-load server-base-url)
         to-abort       (mapv (comp str :id)

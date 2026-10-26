@@ -1,5 +1,6 @@
 (ns cider-ci.executor.trials
   (:require
+    [cider-ci.executor.accepted-repositories :as accepted-repositories]
     [cider-ci.executor.git :as git]
     [cider-ci.executor.ports :as ports]
     [cider-ci.executor.scripts :as scripts]
@@ -212,6 +213,9 @@
                     {:exec_info {:working_dir           (.getAbsolutePath work-dir)
                                  :environment_variables env-vars}})
 
+      ;; the server only dispatches accepted repositories; checked again here
+      ;; against the executor's own config before anything is fetched
+      (accepted-repositories/assert-accepted! repository_git_url)
       (.mkdirs (working-dirs-root))
       (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
                                 repository_git_url git_proxies)

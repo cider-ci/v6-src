@@ -161,12 +161,67 @@
                           {:git-url git-url :commit-id commit-id})))))
     cache))
 
+;; Origin check: the executor fetches through the CIDER-CI server's git proxy,
+;; but only runs a commit that its repository's real remote also has, so a
+;; compromised or misconfigured server cannot hand out arbitrary code.
+
+(def ^:private verify-origin?*
+  (atom (not= "false" (some-> (System/getenv "CIDER_CI_EXECUTOR_VERIFY_ORIGIN") str/trim str/lower-case))))
+
+(defn set-verify-origin! [v] (reset! verify-origin?* (boolean v)))
+
+;; [canonical-url commit-id] pairs already verified; a job runs many trials
+;; of one commit and the remote need not be asked again for each of them.
+(defonce ^:private verified-origins* (atom #{}))
+
+(defn- git-ok? [^File dir & args]
+  (zero? (-> (doto (ProcessBuilder. ^java.util.List (vec (cons "git" args)))
+               (.directory dir))
+             .start
+             .waitFor)))
+
+(defn- remote-ref-shas
+  "The commit shas the remote's branches and tags point to; branches first,
+   tags peeled to their commits."
+  [origin-url]
+  (let [out  (with-retries (str "ls-remote of " origin-url) 3
+               #(run! ["git" "ls-remote" origin-url "refs/heads/*" "refs/tags/*"] nil))
+        refs (for [line (str/split-lines out)
+                   :let [[_ sha ref] (re-matches #"([0-9a-f]{40})\s+(refs/\S+)" line)]
+                   :when sha]
+               [sha ref])]
+    (->> refs
+         (sort-by (fn [[_ ref]] (if (str/starts-with? ref "refs/heads/") 0 1)))
+         (map first)
+         distinct)))
+
+(defn verify-origin!
+  "Throws unless commit-id is reachable from a branch or tag of origin-url.
+   Ancestry is checked in the bare-clone cache; remote refs the cache does not
+   have yet are skipped."
+  [^File cache origin-url commit-id]
+  (let [k [(canonical-url origin-url) commit-id]]
+    (when-not (contains? @verified-origins* k)
+      (let [shas (remote-ref-shas origin-url)]
+        (if (or (some #{commit-id} shas)
+                (some #(and (git-ok? cache "cat-file" "-e" (str % "^{commit}"))
+                            (git-ok? cache "merge-base" "--is-ancestor" commit-id %))
+                      shas))
+          (do (info "Origin verified:" commit-id "is on" origin-url)
+              (swap! verified-origins* conj k))
+          (throw (ex-info (str "Origin check failed: commit " commit-id
+                               " is not reachable from any branch or tag of " origin-url)
+                          {:origin-url origin-url :commit-id commit-id})))))))
+
 (defn- clone-from-cache!
   "Checks commit-id out into dir (a `--shared` clone of the cache, fetched
    from git-url, cache keyed by origin-url) and points `origin` to
-   origin-url (the repository's real URL)."
-  [git-url commit-id ^File dir token origin-url]
+   origin-url (the repository's real URL). With verify-origin? the commit
+   must also be on origin-url (see verify-origin!)."
+  [git-url commit-id ^File dir token origin-url & {:keys [verify-origin?]}]
   (let [cache (ensure-cache! git-url commit-id token :key-url (or (not-empty origin-url) git-url))]
+    (when (and verify-origin? @verify-origin?* (not-empty origin-url))
+      (verify-origin! cache origin-url commit-id))
     (run! ["git" "clone" "--shared" "--no-checkout"
            (.getAbsolutePath cache) (.getAbsolutePath dir)] nil)
     (run! ["git" "checkout" commit-id] dir)
@@ -278,7 +333,8 @@
    where this server serves submodule commits; other submodules are fetched
    from their .gitmodules URL."
   [git-url commit-id ^File work-dir git-options token & [origin-url git-proxies]]
-  (clone-from-cache! git-url commit-id work-dir token origin-url)
+  ;; only the job's repository is checked against its origin, not submodules
+  (clone-from-cache! git-url commit-id work-dir token origin-url :verify-origin? true)
   (let [submodule-opts (:submodules git-options)
         git-proxies    (into {} (map (fn [[k v]] [(name k) v]) (or git-proxies {})))]
     ;; legacy parity: submodules are only checked out when git_options.submodules is given

@@ -14,15 +14,19 @@ ci_executor_java_xmx: 256m
 ci_executor_retired_traits: []
 
 # Repositories the executor accepts trials for. An entry is a url pattern or
-# {url, branches}; a pattern is an exact value or a regex written as ^...$.
-# Without branches any commit reachable on the repository's origin is
+# {url, branches, jobs}; a pattern is an exact value or a regex written as
+# ^...$. Without branches any commit reachable on the repository's origin is
 # accepted; with branches only the head of a matching branch (verified on
-# the origin, so the git host's branch protection applies). The executor
-# reports the list on every sync; the server only dispatches matching trials.
+# the origin, so the git host's branch protection applies). jobs matches the
+# job key from cider-ci.yml; it is a SOFT restriction (renaming a job
+# circumvents it), so combine it with branches on deploy executors. The
+# executor reports the list on every sync; the server only dispatches
+# matching trials. See docs/executors/accepted-repositories.md.
 # A deploy executor for production, e.g.:
 #   ci_executor_accepted_repositories:
 #     - url: 'https://github.com/Madek/Madek.git'
 #       branches: ['^master$']
+#       jobs: ['^deploy_production$']
 ci_executor_accepted_repositories: ['^.*$']
 
 # Before running a trial the executor checks that the commit is reachable

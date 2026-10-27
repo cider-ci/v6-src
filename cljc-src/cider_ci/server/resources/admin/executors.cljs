@@ -265,25 +265,33 @@
          [:td [:small (time-ago (or (:started_at t) (:dispatched_at t)))]]])]]))
 
 
+(defn- patterns [ps]
+  (for [p ps] ^{:key p} [:code.border.rounded.px-1.me-1 p]))
+
 (defn- accepted-repositories
-  "Entries {url, branches}: without branches any commit reachable on the
-   repository's origin, with branches only the head of a matching branch."
+  "Entries {url, branches, jobs}: without branches any commit reachable on the
+   repository's origin, with branches only the head of a matching branch;
+   jobs restricts the job keys (soft, not verified on the origin)."
   [entries]
   (cond
     (empty? entries) [:span.text-muted "accepts no repositories"]
     (= [{:url "^.*$"}] entries) [:span.text-muted "accepts all repositories"]
     :else [:table.table.table-sm.mb-0
-           [:thead [:tr [:th "Repository"] [:th "Branches"]]]
+           [:thead [:tr [:th "Repository"] [:th "Branches"]
+                    [:th {:title "Job keys; a soft restriction, renaming a job circumvents it"} "Jobs"]]]
            [:tbody
-            (for [[i {:keys [url branches]}] (map-indexed vector entries)]
+            (for [[i {:keys [url branches jobs]}] (map-indexed vector entries)]
               ^{:key i}
               [:tr
                [:td [:code url]]
                [:td.branches
                 (if (seq branches)
-                  [:<> [:span.text-muted.me-1 "head of"]
-                   (for [b branches] ^{:key b} [:code.border.rounded.px-1.me-1 b])]
-                  [:span.text-muted "any branch"])]])]]))
+                  [:<> [:span.text-muted.me-1 "head of"] (patterns branches)]
+                  [:span.text-muted "any branch"])]
+               [:td.jobs
+                (if (seq jobs)
+                  (patterns jobs)
+                  [:span.text-muted "any job"])]])]]))
 
 
 (defn- detail-page []

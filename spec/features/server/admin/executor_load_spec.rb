@@ -88,7 +88,8 @@ feature 'Executor load overview' do
     database.run(<<~SQL)
       UPDATE executors SET accepted_repositories =
         '[{"url": "^https://github\\\\.com/leihs/.+$"},
-          {"url": "https://github.com/Madek/Madek.git", "branches": ["^master$"]}]'
+          {"url": "https://github.com/Madek/Madek.git", "branches": ["^master$"],
+           "jobs": ["^deploy_staging$"]}]'
       WHERE id = '#{@executor_id}'
     SQL
     visit "/executors/#{@executor_id}"
@@ -96,10 +97,12 @@ feature 'Executor load overview' do
       within 'tr', text: 'leihs' do
         expect(page).to have_css 'code', text: '^https://github\\.com/leihs/.+$'
         expect(page).to have_css 'td.branches', text: 'any branch'
+        expect(page).to have_css 'td.jobs', text: 'any job'
       end
       within 'tr', text: 'Madek' do
         expect(page).to have_css 'td.branches', text: 'head of'
         expect(page).to have_css 'td.branches code', text: '^master$'
+        expect(page).to have_css 'td.jobs code', text: '^deploy_staging$'
       end
     end
   end

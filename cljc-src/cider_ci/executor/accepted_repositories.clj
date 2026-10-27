@@ -2,7 +2,8 @@
   "The executor's accepted repositories: YAML (or JSON) from env
    CIDER_CI_EXECUTOR_ACCEPTED_REPOSITORIES, else from
    /etc/cider-ci/accepted-repositories.yml, else accept all. A list of url
-   patterns or {url, branches} maps, see cider-ci.utils.accepted-repositories.
+   patterns or {url, branches, jobs} maps, see cider-ci.utils.accepted-repositories
+   (jobs is a soft restriction only).
    Read on every use, like the traits, so config changes apply without a
    restart; unreadable config accepts nothing."
   (:require
@@ -32,8 +33,8 @@
       (parse config-file (slurp config-file))
       ar/accept-all)))
 
-(defn assert-accepted! [entries url]
-  (ar/assert-accepted! entries url))
+(defn assert-accepted! [entries url job-key]
+  (ar/assert-accepted! entries url job-key))
 
-(defn origin-policy [entries url]
-  (ar/origin-policy entries url))
+(defn origin-policy [entries url job-key]
+  (ar/origin-policy entries url job-key))

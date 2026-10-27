@@ -188,7 +188,7 @@
 
 
 (defn execute! [{:keys [id git_url repository_git_url git_proxies commit_id
-                        job_id task_id tree_id task_spec] :as trial} opts]
+                        job_id job_key task_id tree_id task_spec] :as trial} opts]
   (info "Executing trial" id)
   (let [trial-load (double (or (:load task_spec) 1.0))
         work-dir   (working-dir id)
@@ -214,13 +214,15 @@
                                  :environment_variables env-vars}})
 
       ;; the server only dispatches accepted repositories; checked again here
-      ;; against the executor's own config before anything is fetched
+      ;; against the executor's own config before anything is fetched. The
+      ;; job key comes from the server, so the jobs check is soft (routing);
+      ;; url and branches are verified on the origin.
       (let [accepted (accepted-repositories/current)]
-        (accepted-repositories/assert-accepted! accepted repository_git_url)
+        (accepted-repositories/assert-accepted! accepted repository_git_url job_key)
         (.mkdirs (working-dirs-root))
         (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
                                   repository_git_url git_proxies
-                                  (accepted-repositories/origin-policy accepted repository_git_url)))
+                                  (accepted-repositories/origin-policy accepted repository_git_url job_key)))
       ;; file templates (`templates:` in the task spec) are rendered with the
       ;; trial's env (incl. assigned ports) before any script runs; a missing
       ;; template source throws and makes the trial defective (legacy parity)

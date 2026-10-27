@@ -58,6 +58,7 @@
                                    tsk.spec AS task_spec,
                                    tsk.load AS task_load,
                                    j.id     AS job_id,
+                                   j.key    AS job_key,
                                    j.commit_id,
                                    c.tree_id,
                                    j.project_id,
@@ -70,7 +71,7 @@
                             JOIN executors e  ON e.id   = ?::uuid
                             WHERE t.state = 'pending'
                               AND tsk.traits <@ e.traits
-                              AND cider_ci_trial_accepted(r.id, r.git_url, j.commit_id, e.accepted_repositories)
+                              AND cider_ci_trial_accepted(r.id, r.git_url, j.commit_id, j.key, e.accepted_repositories)
                               AND tsk.load <= ?
                               AND (
                                 tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
@@ -103,6 +104,7 @@
              :task_name  (:task_name t)
              :task_spec  (:task_spec t)
              :job_id     (str (:job_id t))
+             :job_key    (:job_key t)
              :commit_id  (:commit_id t)
              :tree_id    (:tree_id t)
              :project_id (:project_id t)

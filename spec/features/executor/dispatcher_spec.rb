@@ -47,11 +47,11 @@ feature 'Dispatcher' do
     ).first
   end
 
-  def seed_pending_trial(task_traits: [], load: 1.0)
+  def seed_pending_trial(task_traits: [], load: 1.0, job_key: SecureRandom.hex(4))
     job_id = database[:jobs].insert(
       project_id: project_id,
       commit_id:  commit_id,
-      key:        SecureRandom.hex(4),
+      key:        job_key,
       state:      'pending',
       name:       'test job'
     )
@@ -84,9 +84,15 @@ feature 'Dispatcher' do
       JSON.parse(database.fetch('SELECT accepted_repositories::text AS a FROM executors').first[:a])
     end
 
-    def dispatched_count(accepted_repositories)
+    def dispatched_count(accepted_repositories, job_key: SecureRandom.hex(4))
       seed_executor
-      seed_pending_trial
+      seed_pending_trial(job_key: job_key)
+      _, body = executor_sync(token, accepted_repositories: accepted_repositories)
+      body['trials_to_execute'].length
+    end
+
+    def redispatched_count(accepted_repositories)
+      database[:trials].update(state: 'pending', executor_id: nil)
       _, body = executor_sync(token, accepted_repositories: accepted_repositories)
       body['trials_to_execute'].length
     end
@@ -170,6 +176,58 @@ feature 'Dispatcher' do
         _, body = executor_sync(token, accepted_repositories: [{ url: 'file:///dev/null', branches: ['^master$'] },
                                                               { url: '^file:.+$' }])
         expect(body['trials_to_execute'].length).to eq 1
+      end
+    end
+
+    # jobs is a soft restriction (routing only, renaming the job circumvents it)
+    context 'restricted to jobs (matching the job key)' do
+      scenario 'a matching job key is dispatched and sent to the executor' do
+        expect(dispatched_count([{ url: 'file:///dev/null', jobs: ['^deploy_dev.*$'] }],
+                                job_key: 'deploy_dev_a')).to eq 1
+        database[:trials].update(state: 'pending', executor_id: nil)
+        _, body = executor_sync(token, accepted_repositories: [{ url: 'file:///dev/null', jobs: 'deploy_dev_a' }])
+        expect(body['trials_to_execute'].first['job_key']).to eq 'deploy_dev_a'
+        expect(stored_accepted_repositories).to eq [{ 'url' => 'file:///dev/null', 'jobs' => ['deploy_dev_a'] }]
+      end
+
+      scenario 'another job key is not dispatched' do
+        expect(dispatched_count([{ url: 'file:///dev/null', jobs: ['^deploy_staging$'] }],
+                                job_key: 'deploy_staging_no_restore')).to eq 0
+        expect(redispatched_count([{ url: 'file:///dev/null', jobs: ['^deploy_staging$'] },
+                                   { url: 'file:///dev/null', jobs: ['^test.*$'] }])).to eq 0
+        expect(redispatched_count([{ url: 'file:///dev/null', jobs: ['^deploy_staging$'] },
+                                   { url: 'file:///dev/null' }])).to eq 1
+      end
+
+      context 'combined with branches' do
+        let(:older_commit) { 'c' * 40 }
+        let(:entries) do
+          [{ url: 'file:///dev/null', jobs: ['^test.*$'] },
+           { url: 'file:///dev/null', branches: ['^master$'], jobs: ['^deploy_staging$'] }]
+        end
+
+        before :each do
+          [commit_id, older_commit].each do |id|
+            database[:commits].insert(id: id, tree_id: 'b' * 40, subject: id[0], author_name: 'A', committer_name: 'A')
+          end
+        end
+
+        scenario 'the deploy job is dispatched for the head of master' do
+          database[:branches].insert(repository_id: project_id, name: 'master', current_commit_id: commit_id)
+          expect(dispatched_count(entries, job_key: 'deploy_staging')).to eq 1
+        end
+
+        scenario 'an entry for other jobs does not relax the branch restriction of the deploy job' do
+          database[:branches].insert(repository_id: project_id, name: 'beta', current_commit_id: commit_id)
+          database[:branches].insert(repository_id: project_id, name: 'master', current_commit_id: older_commit)
+          expect(dispatched_count(entries, job_key: 'deploy_staging')).to eq 0
+          expect(redispatched_count(entries.reverse)).to eq 0
+        end
+
+        scenario 'other jobs matching the job pattern of the unrestricted entry are dispatched' do
+          database[:branches].insert(repository_id: project_id, name: 'beta', current_commit_id: commit_id)
+          expect(dispatched_count(entries, job_key: 'test-deploy')).to eq 1
+        end
       end
     end
   end

@@ -36,6 +36,7 @@ feature 'Executor Run' do
     @executor_pid = Process.spawn(
       { 'CIDER_CI_EXECUTOR_TOKEN' => @executor_token,
         'CIDER_CI_EXECUTOR_VERIFY_ORIGIN' => 'false', # placeholder git_url, no real origin to verify against
+        'CIDER_CI_EXECUTOR_ACCEPTED_REPOSITORIES' => '["^.*$"]', # not the host's /etc/cider-ci/accepted-repositories.yml
         'CIDER_CI_SERVER_URL'     => http_base_url },
       project_dir.join('bin/executor-run').to_s,
       out: @executor_log_path,

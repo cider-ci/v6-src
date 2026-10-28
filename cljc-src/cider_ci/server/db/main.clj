@@ -1,5 +1,6 @@
 (ns cider-ci.server.db.main
   (:require
+    [cider-ci.utils.core :refer [redact-secrets]]
     [cider-ci.server.db.core :as db]
     [cider-ci.server.db.migrations.main :as migrations]
     [clj-yaml.core :as yaml]
@@ -42,7 +43,7 @@
         pass-on-args (->> (rest arguments) flatten (into []))
         options (merge gopts options)
         print-summary #(println (main-usage summary {:args args :options options}))]
-    (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
+    (info {'args args 'options (redact-secrets options) 'cmd cmd 'pass-on-args pass-on-args})
     (cond
       (:help options) (print-summary)
       :else (case cmd

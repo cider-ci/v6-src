@@ -14,12 +14,6 @@
    [:cast password :text]
    [:raw " GEN_SALT('bf', 10) "]])
 
-(defn select-password-hash
-  [password]
-  (-> (sql/select [(gen-crypt-expr password) :pw_hash])
-      (sql-format {:inline true})
-      ))
-
 (defn upsert-statement [password user-id]
   (-> (sql/insert-into :passwords)
       (sql/values [{:user_id [:cast user-id :uuid]
@@ -65,7 +59,7 @@
 (defn password-authenticated-user [tx uid password]
   (jdbc/execute-one!
     tx (-> (password-authenticated-user-statement uid password)
-           (->> (spy :warn))
-           (sql-format {:inline true}) (->> (spy :warn)))))
+           ; never inline or log: the statement contains the plaintext password
+           sql-format)))
 
 (comment (password-authenticated-user @db/ds* "admin@localhost" "secret" ))

@@ -1,5 +1,6 @@
 (ns cider-ci.server.run
   (:require
+    [cider-ci.utils.core :refer [redact-secrets]]
     [cider-ci.server.db.core :as db]
     [cider-ci.server.html.server :as http-server]
    [cider-ci.server.jobs.branch-trigger-retry :as branch-trigger-retry]
@@ -40,7 +41,7 @@
 
 
 (defn run [options]
-  (info "run with " options)
+  (info "run with " (redact-secrets options))
   (when (:dev-mode options)
     (warn 're-require)
     (require '[cider-ci.server.routing-resolver]
@@ -64,7 +65,7 @@
         pass-on-args (->> (rest arguments) flatten (into []))
         options (merge gopts options)
         print-summary #(println (main-usage summary {:args args :options options}))]
-    (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
+    (info {'args args 'options (redact-secrets options) 'cmd cmd 'pass-on-args pass-on-args})
     (cond
       (:help options) (print-summary)
       :else (run options))))

@@ -1,5 +1,6 @@
 (ns cider-ci.server.routing
   (:require
+    [cider-ci.utils.core :refer [redact-secrets]]
     [cider-ci.server.db.core :refer [wrap-tx]]
     [cider-ci.server.db.settings :as settings]
     [cider-ci.server.html.spa :as spa]
@@ -92,7 +93,7 @@
       wrap-content-type))
 
 (defn init [options]
-  (info "initializing routing " options)
+  (info "initializing routing " (redact-secrets options))
   (reset! options* options)
   (let [routes (build-routes options)]
     (info "initialized routing")

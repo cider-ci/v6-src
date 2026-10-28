@@ -93,6 +93,16 @@
        (filter (fn [[_ v]] (presence v)))
        (into {})))
 
+(defn redact-secrets
+  "Masks the values of secret entries (passwords, tokens, secrets) of the map m,
+  for logging options."
+  [m]
+  (reduce-kv (fn [memo k v]
+               (assoc memo k (if (and v (re-find #"(?i)password|token|secret" (str k)))
+                               "***" v)))
+             (empty m)
+             m))
+
 (defn update-vals "Apply function to all values in map."
   [f m]
   (reduce-kv (fn [memo k v]

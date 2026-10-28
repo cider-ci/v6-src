@@ -10,7 +10,6 @@
 
 (defn handler [{{session-id :session_id} :user
                 tx :tx :as request}]
-  (warn 'request request)
   (when session-id (sessions/delete tx session-id))
   {:cookies {sessions/COOKIE-NAME
              {:value nil

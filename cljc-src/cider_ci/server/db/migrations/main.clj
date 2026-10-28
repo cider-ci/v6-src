@@ -1,5 +1,6 @@
 (ns cider-ci.server.db.migrations.main
   (:require
+    [cider-ci.utils.core :refer [redact-secrets]]
     [cider-ci.server.db.core :as db :refer [get-ds]]
     [cider-ci.server.db.migrations.migrations :as migrations]
     [clj-yaml.core :as yaml]
@@ -71,7 +72,7 @@
     (info "migrated up " up)))
 
 (defn migrate [options]
-  (info 'migrate options)
+  (info 'migrate (redact-secrets options))
   (db/init options)
   (let [target (:target options)
         migrated (init options)
@@ -106,7 +107,7 @@
           pass-on-args (->> (rest arguments) flatten (into []))
           options (merge gopts options)
           print-summary #(println (main-usage summary {:args args :options options}))]
-      (info {'args args 'options options 'cmd cmd 'pass-on-args pass-on-args})
+      (info {'args args 'options (redact-secrets options) 'cmd cmd 'pass-on-args pass-on-args})
       (if
         (:help options) (print-summary)
         (migrate options)))

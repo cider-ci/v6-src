@@ -3,7 +3,7 @@
   (:require
     [cider-ci.server.db.type-conversion]
     [cider-ci.utils.cli :refer [long-opt-for-key]]
-    [cider-ci.utils.core :refer [str keyword]]
+    [cider-ci.utils.core :refer [str keyword redact-secrets]]
     [environ.core :refer [env]]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -132,7 +132,7 @@
 (defn init
   ([options]
    (let [db-options (select-keys options options-keys)]
-     (info "Initializing db " db-options)
+     (info "Initializing db " (redact-secrets db-options))
      (init-ds db-options)
      (info "Initialized db " @ds*)
      @ds*)))

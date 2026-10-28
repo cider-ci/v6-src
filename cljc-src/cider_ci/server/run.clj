@@ -8,6 +8,7 @@
     [cider-ci.server.jobs.stale-trials :as stale-trials]
     [cider-ci.server.projects.repositories.main :as repositories]
     [cider-ci.server.routing :as routing]
+    [cider-ci.server.status-pushes.main :as status-pushes]
     [clojure.pprint :refer [pprint]]
     [clojure.tools.cli :as cli :refer [parse-opts]]
     [environ.core :refer [env]]
@@ -51,7 +52,8 @@
   (stale-trials/init)
   (dep-trigger/init)
   (branch-trigger-retry/init)
-  (submodule-resolutions/init))
+  (submodule-resolutions/init)
+  (status-pushes/init))
 
 
 (defn main [gopts args]

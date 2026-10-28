@@ -22,6 +22,8 @@
               :auth-http-safe #{:admin}}]
     ["/fetch" {:name :project-fetch
                :auth-http-unsafe #{:admin}}]
+    ["/push-statuses" {:name :project-push-statuses
+                       :auth-http-unsafe #{:admin}}]
     ["/git/*repository-path" {:name             :project-git
                               :bypass-spa        true
                               :auth-http-safe    #{:public}

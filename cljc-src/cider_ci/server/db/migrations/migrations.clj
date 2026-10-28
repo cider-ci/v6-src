@@ -64,6 +64,8 @@
         :down (partial exec-resource-sql! "migrations/00030_executors_accepted_repositories_branches_down.sql")}
     31 {:up (partial exec-resource-sql! "migrations/00031_executors_accepted_jobs_up.sql")
         :down (partial exec-resource-sql! "migrations/00031_executors_accepted_jobs_down.sql")}
+    32 {:up (partial exec-resource-sql! "migrations/00032_job_status_pushes_up.sql")
+        :down (partial exec-resource-sql! "migrations/00032_job_status_pushes_down.sql")}
     ))
 
 (defn available []

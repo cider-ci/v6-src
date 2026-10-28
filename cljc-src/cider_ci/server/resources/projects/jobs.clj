@@ -163,7 +163,12 @@
                             (sql/where [:= :job_id (:id job)])
                             (sql/order-by [:name :asc])
                             sql-format)))]
-      (assoc job :tasks tasks))))
+      (assoc job
+             :tasks tasks
+             :status_push (first (jdbc-sql/query (get-ds)
+                                   ["SELECT github_state, posted_at, last_error, last_error_at,
+                                            attempts, next_attempt_at
+                                     FROM job_status_pushes WHERE job_id = ?" (:id job)]))))))
 
 (defn- get-task-with-trials [project-id job-id task-id]
   (when-let [task (first (jdbc-sql/query (get-ds)

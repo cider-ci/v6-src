@@ -160,6 +160,34 @@
     [:a {:href git-url :target "_blank" :rel "noopener noreferrer"} git-url]
     [:code git-url]))
 
+(defn- status-pushes-info
+  "Whether and where job states are posted as GitHub commit statuses."
+  []
+  (let [p @_data*
+        {:keys [error repository endpoint posted errors last_posted_at last_error]} (:status_pushes p)]
+    [:<>
+     [:dt.col-sm-3 "GitHub statuses"]
+     [:dd.col-sm-9.status-pushes
+      (cond
+        (not (:send_status_notifications p)) [:span.text-muted "disabled"]
+        (not (:remote_api_token_set p)) [:span.text-muted "not pushed, no token configured"]
+        error [:span.text-danger error]
+        :else [:<>
+               "pushed to " [:code repository]
+               (when (not= endpoint "https://api.github.com")
+                 [:span.text-muted " via " [:code endpoint]])
+               [:span.ms-2.text-muted
+                (str posted " posted, " errors " failing in the last 24 hours")
+                (when-let [t (relative-time last_posted_at)] (str ", last " t))]])
+      (when last_error
+        [:div.small.text-danger.status-pushes-last-error
+         "Last error " (relative-time (:last_error_at last_error)) " for "
+         [:a {:href (path :project-job {:project-id (project-id)
+                                        :commit-id (:commit_id last_error)
+                                        :job-id (:job_id last_error)})}
+          (:job_name last_error)]
+         ": " (:last_error last_error)])]]))
+
 (defn- project-metadata []
   (let [p @_data*]
     [:dl.row
@@ -183,6 +211,7 @@
      (when (:remote_fetch_interval p)
        [:<>
         [:dt.col-sm-3 "Fetch interval"] [:dd.col-sm-9 [:code (:remote_fetch_interval p)]]])
+     [status-pushes-info]
      (when (and (-> @state/user* :is_admin) (:update_notification_token p))
        (let [hooks-link (remote-hooks-url (:git_url p))
              webhook    (push-webhook-url (:update_notification_token p))]
@@ -256,6 +285,15 @@
                                                (fn [_] (set! js/window.location (project-url)))))}
             [:button.btn.btn-sm.btn-secondary {:type :submit}
              [icons/fetch] " Fetch now"]]
+           (when (-> @_data* :status_pushes :enabled)
+             [:button.btn.btn-sm.btn-secondary.push-statuses
+              {:type     "button"
+               :title    "Post the states of the jobs of the last 24 hours to GitHub again"
+               :on-click (fn [_]
+                           (fetch-request "POST"
+                                          (path :project-push-statuses {:project-id (project-id)})
+                                          (fn [_] (fetch-data!))))}
+              [icons/fetch] " Push statuses now"])
            [:button.btn.btn-sm.btn-danger
             {:on-click (fn [_]
                          (fetch-request "DELETE"
@@ -280,6 +318,53 @@
                            http-client/request :chan <! http-client/filter-success)]
         (navigate! (project-url)))))
 
+(defn- status-pushes-fields
+  "Per project GitHub commit status settings; the token is write-only."
+  [form* p]
+  (let [text-input (fn [k placeholder]
+                     [:input.form-control
+                      {:id k :type "text" :placeholder placeholder
+                       :value (get @form* k)
+                       :on-change #(swap! form* assoc k (.. % -target -value))}])]
+    [:fieldset.status-pushes.mb-3.border.rounded.p-3
+     [:legend.fs-6.fw-bold "GitHub commit statuses"]
+     [:div.form-check.mb-3
+      [:input.form-check-input
+       {:id "send_status_notifications" :type "checkbox"
+        :checked (:send_status_notifications @form*)
+        :on-change #(swap! form* update :send_status_notifications not)}]
+      [:label.form-check-label {:html-for "send_status_notifications"}
+       "Push job states as commit statuses"]]
+     [:div.mb-3
+      [:label.form-label {:html-for "remote_api_token"} "Token"]
+      [:input.form-control
+       {:id "remote_api_token" :type "password" :autoComplete "new-password"
+        :placeholder (if (:remote_api_token_set p) "set; leave blank to keep it" "not set")
+        :value (:remote_api_token @form*)
+        :on-change #(swap! form* assoc :remote_api_token (.. % -target -value))}]
+      (when (:remote_api_token_set p)
+        [:div.form-check.mt-1
+         [:input.form-check-input
+          {:id "remote_api_token_clear" :type "checkbox"
+           :checked (:remote_api_token_clear @form*)
+           :on-change #(swap! form* update :remote_api_token_clear not)}]
+         [:label.form-check-label {:html-for "remote_api_token_clear"} "Remove the token"]])
+      [:div.form-text
+       "A GitHub token with write access to commit statuses of this repository. "
+       "Nothing is pushed without a token."]]
+     [:div.mb-3
+      [:label.form-label {:html-for "remote_api_endpoint"} "API endpoint"]
+      [text-input :remote_api_endpoint "https://api.github.com for github.com URLs"]
+      [:div.form-text "Only needed for GitHub Enterprise, e.g. "
+       [:code "https://github.example.org/api/v3"] "."]]
+     [:div.row
+      [:div.col.mb-3
+       [:label.form-label {:html-for "remote_api_namespace"} "Owner"]
+       [text-input :remote_api_namespace "derived from the Git URL"]]
+      [:div.col.mb-3
+       [:label.form-label {:html-for "remote_api_name"} "Repository"]
+       [text-input :remote_api_name "derived from the Git URL"]]]]))
+
 (defn- edit-page []
   (let [form* (reagent/atom nil)]
     (fn []
@@ -300,7 +385,13 @@
                             :branch_trigger_include_match  (or (:branch_trigger_include_match p) "")
                             :branch_trigger_exclude_match  (or (:branch_trigger_exclude_match p) "")
                             :branch_trigger_max_commit_age (or (:branch_trigger_max_commit_age p) "")
-                            :remote_fetch_interval         (or (:remote_fetch_interval p) "")}))
+                            :remote_fetch_interval         (or (:remote_fetch_interval p) "")
+                            :send_status_notifications     (boolean (:send_status_notifications p))
+                            :remote_api_endpoint           (or (:remote_api_endpoint p) "")
+                            :remote_api_namespace          (or (:remote_api_namespace p) "")
+                            :remote_api_name               (or (:remote_api_name p) "")
+                            :remote_api_token              ""
+                            :remote_api_token_clear        false}))
            [:div.col-md-6
             [:h2 "Edit " (:name p)]
             [:form {:on-submit (fn [e] (.preventDefault e) (save-project! form*))}
@@ -354,6 +445,7 @@
                 :value       (:remote_fetch_interval @form*)
                 :on-change   #(swap! form* assoc :remote_fetch_interval (.. % -target -value))}]
               [:div.form-text "PostgreSQL interval. How often to fetch from the remote."]]
+             [status-pushes-fields form* p]
              [:div.d-flex.gap-2
               [:button.btn.btn-primary {:type "submit"} "Save"]
               [:a.btn.btn-secondary {:href (project-url)} "Cancel"]]]]))])))

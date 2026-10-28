@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
+   ["date-fns" :as date-fns]
    ["elkjs/lib/elk.bundled.js" :as ELK]
    ["js-yaml" :as js-yaml]
    [cider-ci.server.html.icons :as icons]
@@ -817,6 +818,20 @@
         "Set priority"]])))
 
 
+(defn- status-push-line
+  "What has been posted to GitHub for this job (only shown for projects that
+   push statuses)."
+  [{:keys [github_state posted_at last_error last_error_at next_attempt_at]}]
+  (let [ago #(date-fns/formatDistance (js/Date. %) (js/Date.) (clj->js {:addSuffix true}))]
+    [:p.small.mb-2.status-push
+     [:span.text-muted "GitHub status: "]
+     (when github_state
+       [:<> [:code github_state] (when posted_at [:span.text-muted " posted " (ago posted_at)])])
+     (when last_error
+       [:span.text-danger.ms-2.status-push-error
+        last_error (when last_error_at (str " (" (ago last_error_at) ")"))
+        (when next_attempt_at (str "; retrying " (ago next_attempt_at)))])]))
+
 (defn- job-detail-page []
   [:div.page.job
    [state/hidden-routing-state-component :did-change start-job-polling!]
@@ -839,6 +854,8 @@
         [:h3 (:name job) " " [state-badge (:state job)]]
         [job-progress-bar (:tasks job)]
         [trial-fail-rate (:tasks job)]
+        (when-let [push (:status_push job)]
+          [status-push-line push])
         [:div.mb-3
          (when abortable?
            [:button.btn.btn-sm.btn-outline-warning.me-2

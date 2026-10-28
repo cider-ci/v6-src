@@ -9,6 +9,7 @@ feature 'Executor: Timeout' do
 
     wait_for_job_badge job_url, 'defective', timeout_sec: 120
 
+    show_all_tasks
     expect(page).to have_css '.badge', text: 'defective'
     expect(page).to have_css '.badge', text: 'passed'
   end

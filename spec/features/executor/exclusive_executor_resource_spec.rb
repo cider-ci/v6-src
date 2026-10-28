@@ -9,6 +9,7 @@ feature 'Executor: Exclusive Executor Resource' do
 
     wait_for_job_badge job_url, 'passed', timeout_sec: 120
 
+    show_all_tasks
     expect(page).to have_css '.badge', text: 'passed', minimum: 2
   end
 end

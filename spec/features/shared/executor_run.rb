@@ -73,6 +73,11 @@ shared_context 'with live executor' do
     url.start_with?('http') ? url : "#{http_base_url}#{url}"
   end
 
+  # The job page lists only unpassed tasks by default; show all of them.
+  def show_all_tasks
+    within('.task-filters') { click_button(text: /\AAll/) }
+  end
+
   # Poll the given URL until the page contains a badge with badge_text.
   def wait_for_job_badge(job_url, badge_text, timeout_sec: 120)
     begin

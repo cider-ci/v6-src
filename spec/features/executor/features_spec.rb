@@ -20,6 +20,7 @@ feature 'Executor feature parity' do
     url = job_detail_url('environment_variables')
     wait_for_job_badge(url, 'passed', timeout_sec: 120)
     expect(page).to have_css '.badge', text: 'passed'
+    show_all_tasks
     # Verify the substitution sub-context tasks actually ran — they only exist
     # if map-style `contexts:` traversal and template_environment_variables work.
     %w[Enabled\ Substitution Recursive\ Substitution Disabled\ Substitution].each do |name|

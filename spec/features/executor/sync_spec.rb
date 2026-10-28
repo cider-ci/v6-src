@@ -92,6 +92,8 @@ feature 'Executor Sync' do
 
     # Verify state propagation on the job detail page
     find('a code', text: 'introduction-demo').click
+    # the job page lists only unpassed tasks by default
+    within('.task-filters') { click_button(text: /\AAll/) }
     expect(page).to have_css '.badge', text: 'passed', minimum: 2
   end
 

@@ -15,6 +15,7 @@
 (defn delete [] [FontAwesomeIcon {:icon (.-faTrash solids) :className ""}])
 (defn email [] [FontAwesomeIcon {:icon (.-faEnvelope solids) :className ""}])
 (defn password [] [FontAwesomeIcon {:icon (.-faKey solids) :className ""}])
+(defn github [] [FontAwesomeIcon {:icon (.-faGithub brands) :className ""}])
 (defn project [] [FontAwesomeIcon {:icon (.-faGitAlt brands) :className ""}])
 (def projects project)
 (defn user [] [FontAwesomeIcon {:icon (.-faUser solids) :className ""}])

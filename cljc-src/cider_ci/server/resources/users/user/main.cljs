@@ -33,6 +33,12 @@
   (let [u @_data*]
     [:dl.row
      [:dt.col-sm-3 "Login"]    [:dd.col-sm-9 (:login u)]
+     (when-let [github-login (:github_login u)]
+       [:<>
+        [:dt.col-sm-3 "GitHub"]
+        [:dd.col-sm-9.github-login
+         [icons/github] " " github-login
+         [:small.text-muted " (updated at each sign-in with GitHub)"]]])
      [:dt.col-sm-3 "Name"]     [:dd.col-sm-9 (or (:name u) [:span.text-muted "—"])]
      [:dt.col-sm-3 "Admin"]
      [:dd.col-sm-9
@@ -57,7 +63,7 @@
        [:div "Loading..."]
        [:<>
         [:div.d-flex.align-items-center.gap-2.mb-3
-         [:h2.mb-0 [icons/user] " " (or (:login @_data*) (user-id-param))]
+         [:h2.mb-0 [icons/user] " " (or (:login @_data*) (:github_login @_data*) (user-id-param))]
          (when (admin?)
            [:a.btn.btn-sm.btn-outline-secondary
             {:href (path :user-edit {:user-id (user-id-param)})}
@@ -143,7 +149,7 @@
         " / "
         (when @_data*
           [:<>
-           [:a {:href (user-url)} (or (:login @_data*) (user-id-param))]
+           [:a {:href (user-url)} (or (:login @_data*) (:github_login @_data*) (user-id-param))]
            " / "])
         "Edit"]
        (if-not @_data*
@@ -221,6 +227,6 @@
    [:> bs/Navbar.Collapse {:class "justify-content-center"}
     (when-let [u @_data*]
       [:> bs/Nav.Item
-       [:> bs/Nav.Link {:href (user-url)} (:login u)]])]])
+       [:> bs/Nav.Link {:href (user-url)} (or (:login u) (:github_login u))]])]])
 
 (def components {:page page :center-nav center-nav})

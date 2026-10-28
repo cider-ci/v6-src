@@ -1,10 +1,11 @@
 (ns cider-ci.server.resources.sign-in.page
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.routes :refer [path navigate!]]
-   [cider-ci.server.state :refer [routing* hidden-routing-state-component] :rename {routing* routing-state*}]
+   [cider-ci.server.state :as state :refer [routing* hidden-routing-state-component] :rename {routing* routing-state*}]
    [cider-ci.utils.core :refer [presence]]
    [cljs.core.async :refer [go <!]]
    [reagent.core :as reagent]
@@ -42,9 +43,30 @@
       :label "Password"]
      [forms/submit-component :inner [:span "Submit"]]]))
 
+(def github-errors
+  {"not-allowed" "Your GitHub account is not a member of an organization or team that may sign in here."
+   "denied" "The sign-in was cancelled on GitHub."
+   "state" "The GitHub sign-in expired or was started in another window; please try again."
+   "failed" "The sign-in with GitHub failed; please try again later or ask an administrator."
+   "not-configured" "The sign-in with GitHub is not configured."})
+
+(defn github-sign-in []
+  (let [{:keys [github-error return-to]} (:query-params @routing-state*)]
+    [:<>
+     (when-let [message (get github-errors github-error)]
+       [:div.alert.alert-danger.github-sign-in-error message])
+     (when (:github_sign_in @state/server*)
+       ;; a plain link: the server redirects to GitHub and back
+       [:p.mb-4
+        [:a.btn.btn-dark.github-sign-in
+         {:href (path :sign-in-github {}
+                      (cond-> {} (presence return-to) (assoc :return-to return-to)))}
+         [icons/github] " Sign in with GitHub"]])]))
+
 (defn page []
   [:div
    [:h2.mt-3 "Sign-in"]
+   [github-sign-in]
    [form]])
 
 (def components

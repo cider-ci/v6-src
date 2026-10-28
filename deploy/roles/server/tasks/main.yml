@@ -55,6 +55,31 @@
     mode: '0640'
   register: env_result
 
+# GitHub sign-in (docs/github-sign-in.md); the server re-reads the file when
+# it changes, no restart needed. Without client id and secret it is removed
+# and the sign-in is not offered.
+- name: Decide whether GitHub sign-in is configured
+  ansible.builtin.set_fact:
+    ci_server_github_sign_in_enabled: >-
+      {{ (ci_server_github_sign_in.client_id | default('') | string | length > 0)
+         and (ci_server_github_sign_in.client_secret | default('') | string | length > 0) }}
+
+- name: Write GitHub sign-in configuration
+  ansible.builtin.copy:
+    content: "{{ ci_server_github_sign_in | to_nice_yaml }}"
+    dest: /etc/cider-ci/github-sign-in.yml
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+  no_log: true
+  when: ci_server_github_sign_in_enabled | bool
+
+- name: Remove GitHub sign-in configuration
+  ansible.builtin.file:
+    path: /etc/cider-ci/github-sign-in.yml
+    state: absent
+  when: not (ci_server_github_sign_in_enabled | bool)
+
 - name: Install server systemd unit
   ansible.builtin.template:
     src: cider-ci-server.service.j2

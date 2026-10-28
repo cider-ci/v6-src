@@ -2,6 +2,7 @@
   (:require
     [cider-ci.utils.core :refer [redact-secrets]]
     [cider-ci.server.db.core :as db]
+    [cider-ci.server.github-sign-in.main :as github-sign-in]
     [cider-ci.server.html.server :as http-server]
    [cider-ci.server.jobs.branch-trigger-retry :as branch-trigger-retry]
    [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
@@ -21,6 +22,7 @@
     [["-h" "--help"]]
     db/cli-options
     http-server/cli-options
+    github-sign-in/cli-options
     ))
 
 
@@ -47,6 +49,7 @@
     (require '[cider-ci.server.routing-resolver]
              '[cider-ci.server.routing]))
   (db/init options)
+  (github-sign-in/init options)
   (let [routes (routing/init options)]
     (http-server/init routes options))
   (repositories/init options)

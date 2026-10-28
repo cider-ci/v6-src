@@ -6,8 +6,7 @@
    [honey.sql :refer [format] :rename {format sql-format}]
    [honey.sql.helpers :as sql]
    [next.jdbc :as jdbc]
-   [taoensso.timbre :refer [debug info warn error]])
-  (:import [java.time Instant Duration]))
+   [taoensso.timbre :refer [debug info warn error]]))
 
 (defn handler [{{login :login password :password} :body
                 {{route-name :name} :data} :route
@@ -18,15 +17,7 @@
   (assert (presence password) "Expected non empty password")
   (if-let [user (password-authenticated-user tx login password)]
     (let [session (sessions/create user request)]
-      (def valid-until (:valid_until session))
-      {:cookies {sessions/COOKIE-NAME
-                 {:value (:token session)
-                  :http-only true
-                  :max-age (.getSeconds
-                            (Duration/between
-                             (Instant/now)
-                             (:valid_until session)))
-                  :path "/"}}
+      {:cookies (sessions/cookie session)
        :body (dissoc session :token :token_digest)})
     {:status 403}))
 

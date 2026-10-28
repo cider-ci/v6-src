@@ -29,7 +29,7 @@
   [:tr.user
    {:style {:cursor "pointer"}
     :on-click #(navigate! (path :user {:user-id (:id user)}))}
-   [:td.login (:login user)]
+   [:td.login (or (:login user) (:github_login user))]
    [:td.name (:name user)]
    [:td.emails [user-emails user]]
    [:td.admin

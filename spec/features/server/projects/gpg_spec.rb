@@ -12,50 +12,11 @@ feature 'GPG signature verification' do
     set_session_cookie @admin
     @project_id = "gpg-test-#{SecureRandom.hex(4)}"
 
-    # Isolated GPG keyring in /tmp (short path — gpg-agent socket has a 104-char limit)
-    @gnupghome = Dir.mktmpdir('cig-', '/tmp')
-    ENV['GNUPGHOME'] = @gnupghome
-
-    # Start agent then generate a passwordless RSA key pair
-    system('gpgconf', '--launch', 'gpg-agent', out: File::NULL, err: File::NULL)
-    File.write(File.join(@gnupghome, 'k'), <<~BATCH)
-      Key-Type: RSA
-      Key-Length: 2048
-      Name-Real: CI Test Signer
-      Name-Email: signer@cider-ci.example
-      Expire-Date: 0
-      %no-protection
-      %commit
-    BATCH
-    system('gpg', '--batch', '--gen-key', File.join(@gnupghome, 'k'),
-           out: File::NULL, err: File::NULL)
-
-    # Fingerprint in uppercase to match BouncyCastle hex-fingerprint output
-    fpr_line = `gpg --with-colons --fingerprint signer@cider-ci.example 2>/dev/null`
-                 .split("\n").find { |l| l.start_with?('fpr') }
-    @fingerprint = fpr_line.split(':')[9].upcase
-    @ascii_key   = `gpg --armor --export signer@cider-ci.example 2>/dev/null`
-
-    # Signed git commit in a temp repo, cloned to a bare repo for git_url
-    @work_dir = Dir.mktmpdir('cig-w-', '/tmp')
-    @bare_dir = Dir.mktmpdir('cig-b-', '/tmp')
-    repo = Git.init(@work_dir)
-    repo.config('user.email', 'signer@cider-ci.example')
-    repo.config('user.name', 'CI Test Signer')
-    File.write(File.join(@work_dir, 'README.md'), '# GPG test')
-    repo.add('README.md')
-    repo.commit('Signed test commit', gpg_sign: true)
-    system("git clone --bare #{@work_dir} #{@bare_dir}/repo.git",
-           out: File::NULL, err: File::NULL)
-    @git_url = "file://#{@bare_dir}/repo.git"
+    create_gpg_signed_repo(email: 'signer@cider-ci.example')
   end
 
   after :each do
-    system('gpgconf', '--kill', 'gpg-agent', out: File::NULL, err: File::NULL)
-    ENV.delete('GNUPGHOME')
-    FileUtils.rm_rf(@gnupghome)
-    FileUtils.rm_rf(@work_dir)
-    FileUtils.rm_rf(@bare_dir)
+    remove_gpg_signed_repo
   end
 
   def wait_for_head_commit

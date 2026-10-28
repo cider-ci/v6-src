@@ -3,6 +3,8 @@
 set -euo
 PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE}")" ; cd .. > /dev/null 2>&1 && pwd -P)"
 cd $PROJECT_DIR
-clj -M -m cider-ci.main --dev-mode true --repl true server run "$@"
+# the GitHub sign-in specs write their configuration to tmp/github-sign-in.yml
+clj -M -m cider-ci.main --dev-mode true --repl true server run \
+  --github-sign-in-config tmp/github-sign-in.yml "$@"
 
 # vi: ft=sh

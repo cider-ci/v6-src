@@ -57,7 +57,11 @@
         [:li.list-group-item.flex-column
          [:div.d-flex.justify-content-between
           [:div [:a {:href (str "mailto:" email-address)}
-                 [:span [icons/email] " " email-address]]]
+                 [:span [icons/email] " " email-address]]
+                (when (= "github" (:source row))
+                  [:span.badge.bg-secondary.ms-2.source-github
+                   {:title "Imported from GitHub; updated at each sign-in with GitHub"}
+                   "GitHub"])]
           [:div
            [:div.btn-group
             [:form

@@ -10,7 +10,7 @@
 
 
 (defn- keys-sql [user-id]
-  (-> (sql/select :id :fingerprint :name :description :created_at :updated_at)
+  (-> (sql/select :id :fingerprint :name :description :source :created_at :updated_at)
       (sql/from :gpg_keys)
       (sql/where [:= :user_id [:cast user-id :uuid]])
       (sql/order-by [:created_at :asc])))

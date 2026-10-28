@@ -15,3 +15,14 @@ ci_server_db_user: "{{ ci_db_user }}"
 # ci_server_db_password: "{{ ci_db_password }}"  — inherits from postgresql role defaults
 
 ci_server_java_xmx: 512m
+
+# GitHub sign-in (docs/github-sign-in.md): written to
+# /etc/cider-ci/github-sign-in.yml when client_id and client_secret are set.
+#
+# ci_server_github_sign_in:
+#   client_id: "{{ ci_github_client_id }}"
+#   client_secret: "{{ ci_github_client_secret }}"   # keep it in secrets.yml
+#   rules:                                           # ordered, first match wins
+#     - {organization: example-org, team: ci-admins, admin: true}
+#     - {organization: example-org}
+ci_server_github_sign_in: {}

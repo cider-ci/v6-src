@@ -49,7 +49,11 @@
          (for [k ks]
            ^{:key (:id k)}
            [:tr
-            [:td (:name k)]
+            [:td (:name k)
+             (when (= "github" (:source k))
+               [:span.badge.bg-secondary.ms-2.source-github
+                {:title "Imported from GitHub; updated at each sign-in with GitHub"}
+                "GitHub"])]
             [:td [:code.small (:fingerprint k)]]
             [:td [:small (:created_at k)]]
             [:td

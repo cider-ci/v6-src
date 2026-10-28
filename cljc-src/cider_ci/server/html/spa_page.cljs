@@ -50,6 +50,7 @@
 (defn user-uid-component [user]
   [:span.user-uid
    (or (some-> user :login)
+       (some-> user :github_login)
        (some-> user :email_addresses first)
        (some-> user :id (string/split "-") first))])
 

@@ -12,7 +12,8 @@ scripts:
       java -jar target/cider-ci.jar server run \
           --http-server-bind 127.0.0.1 \
           --http-server-port "${CI_SERVER_PORT}" \
-          --http-server-threads 4 &
+          --http-server-threads 4 \
+          --github-sign-in-config tmp/github-sign-in.yml &
       SERVER_PID=$!
       cleanup() {
         kill -TERM "$SERVER_PID" 2>/dev/null || true

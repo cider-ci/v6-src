@@ -7,6 +7,7 @@
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [debug info warn error spy]])
   (:import
+    [java.time Duration Instant]
     [java.util UUID]
     ))
 
@@ -35,6 +36,15 @@
   (let [token (java.util.UUID/randomUUID)
         session (insert-session token (:id user) request)]
     (assoc session :token token)))
+
+(defn cookie
+  "The ring :cookies entry for a session created with `create`."
+  [session]
+  {COOKIE-NAME {:value (:token session)
+                :http-only true
+                :max-age (.getSeconds
+                           (Duration/between (Instant/now) (:valid_until session)))
+                :path "/"}})
 
 
 ;;; get ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

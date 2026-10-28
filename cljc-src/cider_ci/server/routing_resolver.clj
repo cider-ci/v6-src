@@ -6,6 +6,7 @@
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.jobs.main :as jobs-dashboard]
     [cider-ci.server.executors.handler :as executors]
+    [cider-ci.server.github-sign-in.main :as github-sign-in]
     [cider-ci.server.resources.init.http :as init]
     [cider-ci.server.resources.projects.blob :as project-blob]
     [cider-ci.server.resources.projects.branch :as project-branch]
@@ -67,6 +68,8 @@
    :project-job-task-retry  #'project-jobs/handler
    :projects #'projects/handler
    :sign-in-authenticate-password #'password-authentication/handler
+   :sign-in-github          #'github-sign-in/handler
+   :sign-in-github-callback #'github-sign-in/handler
    :sign-out #'sign-out/handler
    :users    #'users/handler
    :user-new #'users/handler

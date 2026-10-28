@@ -4,6 +4,7 @@
     [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [keyword presence str]]
     [cider-ci.utils.json :as json]
+    [cider-ci.server.github-sign-in.main :as github-sign-in]
     [cider-ci.server.routes :as routes]
     [cider-ci.server.state :as state]
     [cider-ci.utils.url :as url]
@@ -32,7 +33,7 @@
        (map hiccup.page/include-js)))
 
 (defn server-state [{tx :tx :as request}]
-  (state/db-state tx))
+  (assoc (state/db-state tx) :github_sign_in (github-sign-in/enabled?)))
 
 (defn html-handler [{user :user :as request}]
   {:status 200

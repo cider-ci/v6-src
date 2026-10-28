@@ -186,7 +186,12 @@
    tree-attachments
    ["/sign-in" {:auth-http-unsafe #{:public}}
     ["" {:name :sign-in}]
-    ["/authenticate/password" {:name :sign-in-authenticate-password}]]
+    ["/authenticate/password" {:name :sign-in-authenticate-password}]
+    ;; browser redirects to and back from GitHub, see docs/github-sign-in.md
+    ["/github" {:bypass-spa true
+                :auth-http-safe #{:public}}
+     ["" {:name :sign-in-github}]
+     ["/callback" {:name :sign-in-github-callback}]]]
    ["/sign-out" {:name :sign-out
                  :auth-http-unsafe #{:public}
                  :auth-http-safe #{:public}}]

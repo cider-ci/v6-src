@@ -75,7 +75,13 @@
 ;;; gpg keys ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- parse-gpg-key [{raw-key :raw_key key-id :key_id revoked :revoked}]
-  (when (and (presence raw-key) (not revoked))
+  (cond
+    revoked nil
+    ;; GitHub has no raw key for keys uploaded before it started keeping them;
+    ;; they must be re-uploaded there
+    (not (presence raw-key)) (info (str "GitHub sign-in: the GPG key " key-id
+                                        " has no public key on GitHub (re-upload it there), skipped"))
+    :else
     (try (when-let [fingerprint (some-> raw-key git-gpg/pub-keys first git-gpg/hex-fingerprint)]
            {:fingerprint fingerprint :ascii_key raw-key :key_id key-id})
          (catch Exception e

@@ -93,6 +93,9 @@ account to end them.
     is skipped.
   - If GitHub cannot be reached for the keys, the sign-in still succeeds and
     the imported keys are kept.
+  - GitHub has no public key for GPG keys uploaded before it started storing
+    them (`raw_key` is null, `https://github.com/<login>.gpg` says "need to be
+    reuploaded"). Such keys are skipped and logged; re-upload them on GitHub.
 - **Badges:** imported addresses and keys carry a "GitHub" badge.
 - **SSH keys:** commits signed with SSH keys are not verified; only GPG
   signatures are.

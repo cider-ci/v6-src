@@ -20,16 +20,13 @@ ci_server_http_bind: "127.0.0.1"
 # --- GitHub sign-in (docs/github-sign-in.md) --------------------------------
 # Active once ci_github_client_id and ci_github_client_secret are defined in
 # secrets.yml (OAuth App with the callback
-# https://ci.zhdk.cider-ci.com/sign-in/github/callback). Rules as in the
-# legacy CI.
+# https://ci.zhdk.cider-ci.com/sign-in/github/callback).
 ci_server_github_sign_in:
   client_id: "{{ ci_github_client_id | default('') }}"
   client_secret: "{{ ci_github_client_secret | default('') }}"
   rules:
-    - {organization: zhdk, team: 'ci.zhdk.ch Admins', admin: true}
-    - {organization: Madek}
-    - {organization: leihs}
-    - {organization: cider-ci}
+    - {organization: zhdk, team: 'ci.zhdk Admins', admin: true}
+    - {organization: zhdk, team: 'Ruby Developers'}
 
 # --- Executor ----------------------------------------------------------------
 # ci_executor_token — defined in secrets.yml (transcrypt-encrypted); ex02

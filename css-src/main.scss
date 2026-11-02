@@ -9,3 +9,10 @@
   margin-right: 0.2em;
 }
 
+
+// Split button appended to an input group (header sign-in): square the
+// corners next to the input like a plain appended button
+.input-group > .btn-group:not(:first-child) > .btn:first-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}

@@ -98,6 +98,14 @@ feature 'GitHub sign-in' do
     expect(github_user[:is_admin]).to be false
   end
 
+  scenario 'the sign-in button in the navbar offers the GitHub sign-in' do
+    stub_account(teams: [])
+    visit '/'
+    find('#sign-in-button').click # the toggle of the split button
+    click_on 'Sign in with GitHub'
+    expect(page).to have_css '.user-uid', text: 'octo-cat'
+  end
+
   scenario 'a GitHub account without a matching organization or team is refused' do
     stub_account(orgs: ['other-org'], teams: [])
     sign_in_with_github

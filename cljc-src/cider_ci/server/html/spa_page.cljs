@@ -15,9 +15,18 @@
 
 
 (defn append []
-  [:button.btn.btn-primary
-   {:type :submit}
-   "Sign in"])
+  (if (:github_sign_in @state/server*)
+    ;; the GitHub sign-in is a plain link: the server redirects to GitHub and back
+    [:> bs/SplitButton {:id "sign-in-button" :type :submit :title "Sign in"
+                        :align :end :toggle-label "More sign-in options"}
+     [:> bs/Dropdown.Item
+      {:class "github-sign-in"
+       :href (let [return-to (some-> @routing-state* :query-params :return-to)]
+               (path :sign-in-github {} (cond-> {} return-to (assoc :return-to return-to))))}
+      [icons/github] " Sign in with GitHub"]]
+    [:button.btn.btn-primary
+     {:type :submit}
+     "Sign in"]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

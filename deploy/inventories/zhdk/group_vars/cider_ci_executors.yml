@@ -1,0 +1,8 @@
+---
+# The ZHdK executors only run trials of commits signed with one of these
+# GPG keys (see docs/executors/accepted-gpg-keys.md). The keys are also
+# known to the server (imported from GitHub at sign-in), so the server
+# dispatches those commits and the executor verifies the signature itself.
+ci_executor_accepted_gpg_keys:
+  # Thomas Schank, D180BE89E69F6399711D1590E293459CB10B0442
+  - "{{ lookup('file', inventory_dir ~ '/files/gpg/thomas-schank-B10B0442.asc') }}"

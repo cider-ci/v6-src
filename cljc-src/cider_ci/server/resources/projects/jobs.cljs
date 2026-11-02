@@ -832,6 +832,36 @@
         last_error (when last_error_at (str " (" (ago last_error_at) ")"))
         (when next_attempt_at (str "; retrying " (ago next_attempt_at)))])]))
 
+(defn- signature-filter-param
+  "The executors' `signature` filter for this commit: its verified
+   fingerprint, or `none` (unsigned or untrusted: only executors without
+   accepted GPG keys run it)."
+  [{:keys [signature_fingerprint]}]
+  (or (not-empty signature_fingerprint) "none"))
+
+(defn- commit-signature-line
+  "Like the traits: which executors can run this job's commit at all."
+  [{:keys [is_signed signature_fingerprint signing_key_name signing_key_user_login] :as sig}]
+  (when sig
+    (let [filter-url (str (path :executors {}) "?signature=" (signature-filter-param sig))
+          restricted " – only executors without accepted GPG keys run it"]
+      [:p.small.mb-2.commit-signature
+       [:span.text-muted "Commit signature: "]
+       (cond
+         (not is_signed)
+         [:span [icons/unsigned] " unsigned" restricted]
+
+         (empty? signature_fingerprint)
+         [:span [icons/unknown-signature] " signed, but the signing key is not trusted" restricted]
+
+         :else
+         [:span [icons/signed] " signed by " [:strong (or signing_key_name "a trusted key")]
+          (when signing_key_user_login (str " (" signing_key_user_login ")"))
+          " " [:code.small signature_fingerprint]])
+       [:a.btn.btn-sm.btn-outline-secondary.ms-2
+        {:href filter-url}
+        [icons/server] " Match executors"]])))
+
 (defn- job-detail-page []
   [:div.page.job
    [state/hidden-routing-state-component :did-change start-job-polling!]
@@ -856,6 +886,7 @@
         [trial-fail-rate (:tasks job)]
         (when-let [push (:status_push job)]
           [status-push-line push])
+        [commit-signature-line (:commit_signature job)]
         [:div.mb-3
          (when abortable?
            [:button.btn.btn-sm.btn-outline-warning.me-2
@@ -908,11 +939,13 @@
                  [:code v]
                  [:code.text-muted (str v)])]])]]]))
 
-(defn- traits-panel [traits]
+(defn- traits-panel [traits signature]
   (when (seq traits)
     (let [trait-names (->> (if (map? traits) (map name (keys traits)) (map name traits))
                            sort)
-          filter-url  (str (path :executors {}) "?traits=" (str/join "," trait-names))]
+          ;; executors matching the traits AND able to run the commit
+          filter-url  (str (path :executors {}) "?traits=" (str/join "," trait-names)
+                           (when signature (str "&signature=" (signature-filter-param signature))))]
       [:<>
        [:h5.mt-3 "Traits"]
        [:div.d-flex.align-items-center.flex-wrap.gap-1
@@ -991,7 +1024,8 @@
          [:code (:name task)]]
         [:h3 (:name task) " " [state-badge (:state task)]]
         [task-trials-panel (:trials task) (:id task)]
-        [traits-panel (:traits spec)]
+        [commit-signature-line (:commit_signature task)]
+        [traits-panel (:traits spec) (:commit_signature task)]
         [env-vars-panel (:environment_variables spec)]
         [ports-panel (:ports spec)]
         [scripts-dag-panel spec]

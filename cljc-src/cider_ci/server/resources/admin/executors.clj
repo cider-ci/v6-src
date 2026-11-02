@@ -34,6 +34,7 @@
   (jdbc/execute! tx
     [(str "SELECT e.id, e.name, e.token_part,
              array_to_string(e.traits, ',') AS traits,
+             e.accepted_gpg_keys,
              e.max_load, e.enabled, e.last_seen_at, e.created_at,
              COALESCE(a.current_load, 0) AS current_load,
              COALESCE(a.trials_count, 0) AS trials_count
@@ -64,6 +65,28 @@
       ORDER BY t.dispatched_at ASC NULLS LAST, t.created_at ASC")
      executor-id]))
 
+
+(defn- with-known-gpg-keys
+  "Adds what the server knows about the executor's accepted GPG keys: the
+   key's name and owner when a gpg_keys row has the (primary) fingerprint.
+   A key unknown to the server never verifies a commit, so no trial of a
+   commit signed with it is dispatched; the executor page says so."
+  [tx entries]
+  (let [fps   (keep :fingerprint entries)
+        known (when (seq fps)
+                (->> (jdbc/execute! tx
+                       ["SELECT gk.fingerprint, gk.name, u.login, u.github_login
+                         FROM gpg_keys gk LEFT JOIN users u ON u.id = gk.user_id
+                         WHERE gk.fingerprint = ANY(CAST(? AS text[]))"
+                        (str "{" (str/join "," fps) "}")])
+                     (map (fn [{:keys [fingerprint name login github_login]}]
+                            [fingerprint {:name name :user_login (or login github_login)}]))
+                     (into {})))]
+    (mapv (fn [e]
+            (if-let [k (get known (:fingerprint e))]
+              (assoc e :known true :name (:name k) :user_login (:user_login k))
+              (assoc e :known false)))
+          entries)))
 
 (defn- list-resp [tx]
   {:body (fetch-list tx)})
@@ -97,11 +120,13 @@
                          ["SELECT id, name, token_part,
                                    array_to_string(traits, ',') AS traits,
                                    max_load, enabled, last_seen_at,
-                                   to_json(accepted_repositories) AS accepted_repositories
+                                   to_json(accepted_repositories) AS accepted_repositories,
+                                   accepted_gpg_keys
                             FROM executors WHERE id = ?::uuid"
                           executor-id])]
              (let [trials (fetch-current-trials tx executor-id)]
                {:body (assoc ex
+                             :accepted_gpg_keys (with-known-gpg-keys tx (:accepted_gpg_keys ex))
                              :current_trials trials
                              :current_load (reduce + 0 (map #(double (or (:load %) 0)) trials)))})
              {:status 404 :body "Executor not found"})

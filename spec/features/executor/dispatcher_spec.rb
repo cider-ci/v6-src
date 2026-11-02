@@ -19,7 +19,7 @@ feature 'Dispatcher' do
     )
   end
 
-  def executor_sync(tok, available_load: 4.0, accepted_repositories: nil)
+  def executor_sync(tok, available_load: 4.0, accepted_repositories: nil, accepted_gpg_keys: nil)
     uri = URI("#{http_base_url}/executor/sync")
     req = Net::HTTP::Post.new(uri)
     req['Authorization'] = "Bearer #{tok}"
@@ -27,6 +27,7 @@ feature 'Dispatcher' do
     req['Accept']        = 'application/json'
     payload = { available_load: available_load }
     payload[:accepted_repositories] = accepted_repositories if accepted_repositories
+    payload[:accepted_gpg_keys] = accepted_gpg_keys if accepted_gpg_keys
     req.body             = payload.to_json
     res = Net::HTTP.start(uri.hostname, uri.port) { |h| h.request(req) }
     body = JSON.parse(res.body) rescue res.body
@@ -334,4 +335,70 @@ feature 'Dispatcher' do
     expect(body['trials_to_execute'].length).to eq 1
   end
 
+
+  # the server dispatches by the commit's verified signature_fingerprint;
+  # the executor verifies the signature itself as well (executor specs)
+  context 'accepted GPG keys' do
+    let(:primary) { 'A' * 40 }
+    let(:subkey)  { 'B' * 40 }
+    let(:one_key) { [{ fingerprint: primary, fingerprints: [primary, subkey], key_id: 'K', user_ids: ['T <t@example.org>'] }] }
+
+    def stored_accepted_gpg_keys
+      JSON.parse(database.fetch('SELECT accepted_gpg_keys::text AS a FROM executors').first[:a])
+    end
+
+    def dispatched_count(accepted_gpg_keys, signature_fingerprint: nil)
+      database[:commits].insert(id: commit_id, tree_id: 'b' * 40, subject: 'x', author_name: 'A',
+                                committer_name: 'A', signature: 'sig', signature_fingerprint: signature_fingerprint)
+      seed_executor
+      seed_pending_trial
+      _, body = executor_sync(token, accepted_gpg_keys: accepted_gpg_keys)
+      body['trials_to_execute'].length
+    end
+
+    scenario 'no keys: any commit is dispatched, the keys are stored' do
+      expect(dispatched_count([])).to eq 1
+      expect(stored_accepted_gpg_keys).to eq []
+    end
+
+    scenario 'a commit verified by the primary key or a subkey is dispatched' do
+      expect(dispatched_count(one_key, signature_fingerprint: subkey.downcase)).to eq 1
+      expect(stored_accepted_gpg_keys.first['fingerprints']).to eq [primary, subkey]
+      database[:trials].update(state: 'pending', executor_id: nil)
+      database[:commits].update(signature_fingerprint: primary)
+      _, body = executor_sync(token, accepted_gpg_keys: one_key)
+      expect(body['trials_to_execute'].length).to eq 1
+    end
+
+    scenario 'a commit verified by another key is not dispatched' do
+      expect(dispatched_count(one_key, signature_fingerprint: 'C' * 40)).to eq 0
+      expect(database[:trials].where(state: 'pending').count).to eq 1
+    end
+
+    scenario 'an unsigned or unverified commit is not dispatched' do
+      expect(dispatched_count(one_key, signature_fingerprint: nil)).to eq 0
+    end
+
+    scenario 'a trial without a commit row is only dispatched to executors without keys' do
+      seed_executor
+      seed_pending_trial
+      _, body = executor_sync(token, accepted_gpg_keys: one_key)
+      expect(body['trials_to_execute'].length).to eq 0
+      _, body = executor_sync(token, accepted_gpg_keys: [])
+      expect(body['trials_to_execute'].length).to eq 1
+    end
+
+    scenario 'an entry without fingerprints (a key the executor could not parse) accepts nothing' do
+      expect(dispatched_count([{ error: 'cannot parse the key' }], signature_fingerprint: primary)).to eq 0
+      expect(stored_accepted_gpg_keys).to eq [{ 'fingerprints' => [], 'error' => 'cannot parse the key' }]
+    end
+
+    scenario 'an executor that does not report keys keeps the stored ones' do
+      expect(dispatched_count(one_key, signature_fingerprint: 'C' * 40)).to eq 0
+      database[:trials].update(state: 'pending', executor_id: nil)
+      _, body = executor_sync(token)
+      expect(body['trials_to_execute'].length).to eq 0
+      expect(stored_accepted_gpg_keys.length).to eq 1
+    end
+  end
 end

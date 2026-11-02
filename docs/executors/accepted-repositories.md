@@ -99,3 +99,6 @@ branch restriction of a deploy job's entry.
   executor for that.
 - The executor's traits (`ci_executor_traits`) still have to match the
   task's traits, in addition to the accepted repositories.
+- The accepted GPG keys (`ci_executor_accepted_gpg_keys`) restrict the
+  executor to commits signed with given keys, see
+  [accepted-gpg-keys.md](accepted-gpg-keys.md).

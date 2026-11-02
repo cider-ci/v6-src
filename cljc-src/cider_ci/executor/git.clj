@@ -246,6 +246,12 @@
                                  origin-url)
                             {:origin-url origin-url :commit-id commit-id}))))))))
 
+(defn cat-file-commit
+  "The raw commit object (`git cat-file -p`, with its gpgsig header) of
+   commit-id in dir."
+  [^File dir commit-id]
+  (run! ["git" "cat-file" "-p" commit-id] dir))
+
 (defn- clone-from-cache!
   "Checks commit-id out into dir (a `--shared` clone of the cache, fetched
    from git-url, cache keyed by origin-url) and points `origin` to

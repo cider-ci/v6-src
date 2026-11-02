@@ -1,5 +1,7 @@
 (ns cider-ci.executor.trials
   (:require
+    [cider-ci.executor.accepted-gpg-keys :as accepted-gpg-keys]
+    [cider-ci.utils.accepted-gpg-keys :as agk]
     [cider-ci.executor.accepted-repositories :as accepted-repositories]
     [cider-ci.executor.git :as git]
     [cider-ci.executor.ports :as ports]
@@ -223,6 +225,13 @@
         (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
                                   repository_git_url git_proxies
                                   (accepted-repositories/origin-policy accepted repository_git_url job_key)))
+      ;; the server only dispatches commits it verified against the accepted
+      ;; GPG keys; verified again here with the executor's own keys, so a
+      ;; misconfigured or compromised server cannot make this executor run
+      ;; code that nobody with an accepted key signed. Fails the trial before
+      ;; templates are rendered or any script runs.
+      (accepted-gpg-keys/assert-signed! (accepted-gpg-keys/current)
+                                        (git/cat-file-commit work-dir commit_id) commit_id)
       ;; file templates (`templates:` in the task spec) are rendered with the
       ;; trial's env (incl. assigned ports) before any script runs; a missing
       ;; template source throws and makes the trial defective (legacy parity)
@@ -247,8 +256,11 @@
                         {:scripts_results (strip-log-files scripts)})))
 
       (catch Exception e
-        (warn "Trial" id "failed with exception:" (.getMessage e))
-        (patch-trial! trial opts "defective" {:error (.getMessage e)}))
+        (if (agk/rejected? e)
+          (do (warn "Trial" id "failed:" (.getMessage e))
+              (patch-trial! trial opts "failed" {:error (.getMessage e)}))
+          (do (warn "Trial" id "failed with exception:" (.getMessage e))
+              (patch-trial! trial opts "defective" {:error (.getMessage e)}))))
 
       (finally
         (scripts/clear-abort! id)

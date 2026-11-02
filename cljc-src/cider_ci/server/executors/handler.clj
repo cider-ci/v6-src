@@ -5,6 +5,7 @@
     [cider-ci.server.jobs.propagation :as propagation]
     [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
     [cider-ci.server.projects.repositories.shared :as repo-shared]
+    [cider-ci.utils.accepted-gpg-keys :as accepted-gpg-keys]
     [cider-ci.utils.accepted-repositories :as accepted-repositories]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -72,6 +73,7 @@
                             WHERE t.state = 'pending'
                               AND tsk.traits <@ e.traits
                               AND cider_ci_trial_accepted(r.id, r.git_url, j.commit_id, j.key, e.accepted_repositories)
+                              AND cider_ci_signature_accepted(c.signature_fingerprint, e.accepted_gpg_keys)
                               AND tsk.load <= ?
                               AND (
                                 tsk.spec->>'dispatch_storm_delay_seconds' IS NULL
@@ -190,6 +192,13 @@
       (jdbc/execute-one! tx
         ["UPDATE executors SET accepted_repositories = ?::jsonb
           WHERE id = ? AND accepted_repositories IS DISTINCT FROM ?::jsonb"
+         entries (:id executor) entries])))
+  (when (sequential? (:accepted_gpg_keys body))
+    (let [entries (json/generate-string
+                    (accepted-gpg-keys/normalize-entries (:accepted_gpg_keys body)))]
+      (jdbc/execute-one! tx
+        ["UPDATE executors SET accepted_gpg_keys = ?::jsonb
+          WHERE id = ? AND accepted_gpg_keys IS DISTINCT FROM ?::jsonb"
          entries (:id executor) entries])))
   (let [available-load (or (:available_load body) 1.0)
         to-execute     (dispatch-trials tx executor available-load server-base-url)

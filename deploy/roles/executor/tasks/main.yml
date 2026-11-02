@@ -112,6 +112,17 @@
       # Managed by Ansible (ci_executor_accepted_repositories).
       {{ ci_executor_accepted_repositories | to_nice_yaml(width=1000) }}
 
+- name: Write accepted GPG keys
+  # read by the executor on every sync, no restart needed
+  ansible.builtin.copy:
+    dest: /etc/cider-ci/accepted-gpg-keys.yml
+    owner: root
+    group: "{{ cider_ci_group }}"
+    mode: '0640'
+    content: |
+      # Managed by Ansible (ci_executor_accepted_gpg_keys).
+      {{ ci_executor_accepted_gpg_keys | to_nice_yaml(width=1000) }}
+
 - name: Remove the plain accepted repositories file (replaced by the YAML file)
   ansible.builtin.file:
     path: /etc/cider-ci/accepted-repositories

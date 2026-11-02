@@ -116,6 +116,22 @@
           have     (->> (string/split (or traits-str "") #",") (map string/trim) (map string/lower-case) (remove string/blank?) set)]
       (every? have required))))
 
+(defn- accepts-signature?
+  "The `signature` filter: a verified fingerprint, or `none` for an unsigned
+   or untrusted commit, which only executors without accepted keys run."
+  [accepted-keys signature]
+  (or (string/blank? signature)
+      (empty? accepted-keys)
+      (and (not= "none" signature)
+           (boolean (some #(some #{(string/upper-case signature)} (:fingerprints %)) accepted-keys)))))
+
+(defn- gpg-keys-summary [accepted-keys]
+  (cond
+    (empty? accepted-keys) [:span.text-muted "any"]
+    (some :error accepted-keys) [:span.badge.bg-danger "invalid"]
+    :else [:span {:title (string/join "\n" (map :fingerprint accepted-keys))}
+           (count accepted-keys) " key" (when (not= 1 (count accepted-keys)) "s")]))
+
 (defn- load-summary
   "Total current load and capacity of the listed enabled executors."
   [executors]
@@ -134,12 +150,19 @@
   (reagent/with-let
     [timer   (start-reload! :executors fetch-data)
      filter* (reagent/atom (or (-> @state/routing* :query-params :traits) ""))
+     signature* (reagent/reaction (-> @state/routing* :query-params :signature))
      _sync   (reagent/track!
                #(let [v (or (-> @state/routing* :query-params :traits) "")]
                   (when (not= @filter* v)
                     (reset! filter* v))))]
     (let [filter-val @filter*
-          filtered   (filter #(matches-filter? (:traits %) filter-val) (or @data* []))]
+          signature  @signature*
+          filtered   (filter #(and (matches-filter? (:traits %) filter-val)
+                                   (accepts-signature? (:accepted_gpg_keys %) signature))
+                             (or @data* []))
+          executors-path #(path :executors {} (cond-> {}
+                                                (not (string/blank? filter-val)) (assoc :traits filter-val)
+                                                % (assoc :signature %)))]
       [:div.page
        [state/hidden-routing-state-component :did-change
         (fn [old-state new-state]
@@ -162,22 +185,34 @@
            :on-change   #(let [v (.. % -target -value)]
                            (reset! filter* v)
                            (navigate! (path :executors {}
-                                            (when-not (string/blank? v) {:traits v}))))}]
+                                            (cond-> {}
+                                              (not (string/blank? v)) (assoc :traits v)
+                                              signature (assoc :signature signature)))))}]
          (when-not (string/blank? filter-val)
            [:button.btn.btn-outline-secondary
-            {:on-click #(navigate! (path :executors {}))}
-            "×"])]]
+            {:on-click #(navigate! (path :executors {} (when signature {:signature signature})))}
+            "×"])]
+        (when signature
+          ;; set from a job or task page: executors able to run its commit
+          [:div.signature-filter.mt-2.small
+           [:span.text-muted "Accepting the commit signature: "]
+           (if (= "none" signature)
+             [:span "none (unsigned or untrusted commit: only executors without accepted GPG keys)"]
+             [:code signature])
+           [:a.ms-2 {:href (executors-path nil)} "×"]])]
        (if (nil? @data*)
          [:p.text-muted "Loading..."]
          (if (empty? @data*)
            [:p.text-muted "No executors configured."]
            [:<>
             (when (and (not (string/blank? filter-val)) (empty? filtered))
-              [:p.text-muted "No executors match the trait filter."])
+              [:p.text-muted "No executors match the filter."])
             (when (seq filtered)
               [:table.table.table-sm.table-hover
                [:thead
-                [:tr [:th "Name"] [:th "Traits"] [:th "Load"] [:th "Trials"] [:th "Status"] [:th "Last Seen"]]]
+                [:tr [:th "Name"] [:th "Traits"]
+                 [:th {:title "Accepted GPG keys: with keys only commits signed with one of them are run"} "GPG keys"]
+                 [:th "Load"] [:th "Trials"] [:th "Status"] [:th "Last Seen"]]]
                [:tbody
                 (for [ex filtered]
                   ^{:key (:id ex)}
@@ -192,6 +227,7 @@
                             [:div.d-flex.flex-wrap.gap-1
                              (for [t ts] ^{:key t} [:span.badge.bg-secondary t])]
                             [:span.text-muted "—"]))]
+                   [:td.gpg-keys [gpg-keys-summary (:accepted_gpg_keys ex)]]
                    [:td [load-bar (:current_load ex) (:max_load ex)]]
                    [:td.trials-count
                     [:a {:href (path :executor-detail {:executor-id (:id ex)})}
@@ -294,6 +330,33 @@
                   [:span.text-muted "any job"])]])]]))
 
 
+(defn- accepted-gpg-keys
+  "With keys the executor only runs commits whose signature the server
+   verified against one of them, and verifies the signature itself before
+   anything runs. A key the server does not know never verifies a commit."
+  [entries]
+  (if (empty? entries)
+    [:span.text-muted "any commit, signed or not"]
+    [:table.table.table-sm.mb-0
+     [:thead [:tr [:th "Key"] [:th "Fingerprint"] [:th "Owner"]]]
+     [:tbody
+      (for [[i {:keys [fingerprint key_id user_ids error known name user_login]}] (map-indexed vector entries)]
+        ^{:key i}
+        (if error
+          [:tr.table-danger
+           [:td {:col-span 3} [icons/warning] " " error " – this executor accepts no commit"]]
+          [:tr
+           [:td (or name (first user_ids) key_id)]
+           [:td [:code fingerprint]]
+           [:td.owner
+            (cond
+              (not known)
+              [:span.text-warning
+               [icons/warning] " unknown to the server: no commit is verified against it, "
+               "add it to a user or as a global key"]
+              user_login [:span user_login]
+              :else [:span.text-muted "global key"])]]))]]))
+
 (defn- detail-page []
   (reagent/with-let [timer (start-reload! :executor-detail #(fetch-single :quiet? true))]
     [:div.page
@@ -329,6 +392,9 @@
            [:dt.col-sm-3 "Accepted repositories"]
            [:dd.col-sm-9.accepted-repositories
             [accepted-repositories (:accepted_repositories ex)]]
+           [:dt.col-sm-3 "Accepted GPG keys"]
+           [:dd.col-sm-9.accepted-gpg-keys
+            [accepted-gpg-keys (:accepted_gpg_keys ex)]]
            [:dt.col-sm-3 "Token prefix"]
            [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
            [:dt.col-sm-3 "Last seen"]
@@ -411,7 +477,10 @@
                  {:on-click #(delete-executor! (:name ex))}
                  [icons/delete] " Delete"]]]
               [:dl.row.mt-4
-               [:dt.col-sm-3 "Token prefix"]
+               [:dt.col-sm-3 "Accepted GPG keys"]
+           [:dd.col-sm-9.accepted-gpg-keys
+            [accepted-gpg-keys (:accepted_gpg_keys ex)]]
+           [:dt.col-sm-3 "Token prefix"]
                [:dd.col-sm-9 [:code (str (:token_part ex) "…")]]
                [:dt.col-sm-3 "Last seen"]
                [:dd.col-sm-9 (time-ago (:last_seen_at ex))]]])))])))

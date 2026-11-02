@@ -29,6 +29,17 @@ ci_executor_retired_traits: []
 #       jobs: ['^deploy_production$']
 ci_executor_accepted_repositories: ['^.*$']
 
+# Public GPG keys (ASCII armored) the executor accepts commit signatures of.
+# With keys the executor only runs trials of commits signed with one of them
+# (the server dispatches only those, the executor verifies the signature
+# itself before anything runs); an empty list accepts any commit, signed or
+# not. The keys must also be known to the server (a user's key, imported
+# from GitHub, or a global key), otherwise no commit is verified against
+# them. See docs/executors/accepted-gpg-keys.md. E.g.:
+#   ci_executor_accepted_gpg_keys:
+#     - "{{ lookup('file', 'files/gpg/release-manager.asc') }}"
+ci_executor_accepted_gpg_keys: []
+
 # Before running a trial the executor checks that the commit is reachable
 # from a branch or tag of the repository's real remote (git ls-remote), not
 # only on the CIDER-CI server it fetched it from.

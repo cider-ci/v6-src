@@ -148,6 +148,19 @@
         (sql/order-by [:created_at :asc])
         sql-format)))
 
+(defn- commit-signature
+  "Whether the job's commit is signed and by which trusted key: executors
+   with accepted GPG keys only run commits verified by one of them."
+  [commit-id]
+  (first (jdbc-sql/query (get-ds)
+           ["SELECT (c.signature IS NOT NULL) AS is_signed, c.signature_fingerprint,
+                    gk.name AS signing_key_name,
+                    COALESCE(u.login, u.github_login) AS signing_key_user_login
+             FROM commits c
+             LEFT JOIN gpg_keys gk ON gk.fingerprint = c.signature_fingerprint
+             LEFT JOIN users u ON u.id = gk.user_id
+             WHERE c.id = ?" commit-id])))
+
 (defn- get-job-with-tasks [project-id job-id]
   (when-let [job (first (jdbc-sql/query (get-ds)
                           (-> (sql/select :*)
@@ -165,6 +178,7 @@
                             sql-format)))]
       (assoc job
              :tasks tasks
+             :commit_signature (commit-signature (:commit_id job))
              :status_push (first (jdbc-sql/query (get-ds)
                                    ["SELECT github_state, posted_at, last_error, last_error_at,
                                             attempts, next_attempt_at
@@ -172,14 +186,16 @@
 
 (defn- get-task-with-trials [project-id job-id task-id]
   (when-let [task (first (jdbc-sql/query (get-ds)
-                           (-> (sql/select :t.id :t.name :t.state :t.spec :t.created_at)
+                           (-> (sql/select :t.id :t.name :t.state :t.spec :t.created_at :j.commit_id)
                                (sql/from [:tasks :t])
                                (sql/join [:jobs :j] [:= :j.id :t.job_id])
                                (sql/where [:= :t.id (java.util.UUID/fromString task-id)])
                                (sql/where [:= :t.job_id (java.util.UUID/fromString job-id)])
                                (sql/where [:= :j.project_id project-id])
                                sql-format)))]
-    (assoc task :trials (get-trials-for-task (:id task)))))
+    (assoc task
+           :trials (get-trials-for-task (:id task))
+           :commit_signature (commit-signature (:commit_id task)))))
 
 
 (defn- abort-job! [project-id job-id]

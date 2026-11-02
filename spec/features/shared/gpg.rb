@@ -7,8 +7,8 @@ STATIC_GPG_KEY = File.read(PROJECT_DIR.join('spec/fixtures/gpg/test_public_key.a
 # A passwordless GPG key in an isolated keyring and a bare git repository
 # with one commit signed by it (git_url file://...). Sets @fingerprint
 # (uppercase, as BouncyCastle), @ascii_key and @git_url; remove it with
-# remove_gpg_signed_repo.
-def create_gpg_signed_repo(email:, name: 'CI Test Signer')
+# remove_gpg_signed_repo. `files` are committed along with the README.
+def create_gpg_signed_repo(email:, name: 'CI Test Signer', files: {})
   # short path: the gpg-agent socket has a 104-char limit
   @gnupghome = Dir.mktmpdir('cig-', '/tmp')
   ENV['GNUPGHOME'] = @gnupghome
@@ -35,7 +35,8 @@ def create_gpg_signed_repo(email:, name: 'CI Test Signer')
   repo.config('user.email', email)
   repo.config('user.name', name)
   File.write(File.join(@work_dir, 'README.md'), '# GPG test')
-  repo.add('README.md')
+  files.each { |path, content| File.write(File.join(@work_dir, path), content) }
+  repo.add(['README.md'] + files.keys)
   repo.commit('Signed test commit', gpg_sign: true)
   system("git clone --bare #{@work_dir} #{@bare_dir}/repo.git",
          out: File::NULL, err: File::NULL)

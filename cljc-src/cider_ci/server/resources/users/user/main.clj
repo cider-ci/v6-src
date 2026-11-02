@@ -8,9 +8,16 @@
     [next.jdbc :as jdbc]
     [taoensso.timbre :refer [debug info warn error spy]]))
 
+(def ^:private gpg-keys-sub
+  (-> (sql/select
+        [[:raw " json_agg(json_build_object('name', name, 'fingerprint', fingerprint, 'source', source) ORDER BY created_at) "]])
+      (sql/from :gpg_keys)
+      (sql/where [:= :gpg_keys.user_id :users.id])))
+
 (defn- get-user [tx user-id]
   (if-let [user (jdbc/execute-one!
                   tx (-> users/base-query
+                         (sql/select [gpg-keys-sub :gpg_keys])
                          (sql/where [:= :users.id [:cast user-id :uuid]])
                          (sql-format {:inline false})))]
     {:body user}

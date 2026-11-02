@@ -82,6 +82,7 @@ feature 'GitHub sign-in' do
 
     visit "/users/#{user[:id]}"
     expect(page).to have_css '.github-login', text: 'octo-cat'
+    expect(page).to have_css '.gpg-keys', text: key[:fingerprint]
     visit "/users/#{user[:id]}/email-addresses/"
     expect(page).to have_css '.source-github'
     visit "/users/#{user[:id]}/gpg-keys/"

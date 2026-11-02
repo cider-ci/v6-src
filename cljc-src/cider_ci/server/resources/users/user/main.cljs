@@ -49,6 +49,15 @@
       (if-let [emails (seq (:email_addresses u))]
         (for [e emails] ^{:key e} [:div e])
         [:span.text-muted "—"])]
+     [:dt.col-sm-3 "GPG Keys"]
+     [:dd.col-sm-9.gpg-keys
+      (if-let [gpg-keys (seq (:gpg_keys u))]
+        (for [{:keys [name fingerprint source]} gpg-keys]
+          ^{:key fingerprint}
+          [:div name " " [:code.small fingerprint]
+           (when (= "github" source)
+             [:span.badge.bg-secondary.ms-2 "GitHub"])])
+        [:span.text-muted "—"])]
      [:dt.col-sm-3 "Has Password"]
      [:dd.col-sm-9
       [:span.badge {:class (if (:has_password u) "bg-success" "bg-secondary")}

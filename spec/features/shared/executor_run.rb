@@ -36,6 +36,7 @@ shared_context 'with live executor' do
       { 'CIDER_CI_EXECUTOR_TOKEN'         => @executor_token,
         'CIDER_CI_EXECUTOR_VERIFY_ORIGIN' => 'false', # placeholder git_url, no real origin to verify against
         'CIDER_CI_EXECUTOR_ACCEPTED_REPOSITORIES' => '["^.*$"]', # not the host's /etc/cider-ci/accepted-repositories.yml
+        'CIDER_CI_EXECUTOR_ACCEPTED_GPG_KEYS' => '[]', # not the host's /etc/cider-ci/accepted-gpg-keys.yml
         'CIDER_CI_SERVER_URL'             => http_base_url,
         'CIDER_CI_EXECUTOR_TRAITS'        => 'Bash',
         'CIDER_CI_EXECUTOR_GIT_CACHE_DIR' => @executor_git_cache_dir },

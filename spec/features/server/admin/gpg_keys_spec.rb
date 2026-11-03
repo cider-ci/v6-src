@@ -33,6 +33,26 @@ feature 'Admin global GPG keys' do
       expect(row[:fingerprint]).not_to be_empty
     end
 
+    scenario 'the key page shows what the key contains' do
+      fill_in 'Name', with: 'Release signing key'
+      fill_in 'ascii_key', with: @admin_ascii_key
+      click_on 'Add key'
+      expect(page).to have_content 'Request SUCCESS'
+      click_on 'Release signing key'
+
+      key = database[:gpg_keys].where(user_id: nil).first
+      expect(page).to have_current_path("/admin/gpg-keys/#{key[:id]}", ignore_query: true)
+      within('.gpg-key-detail') do
+        expect(page).to have_content '247047366DDD1587BF63A6043F8629952915F2B7'
+        expect(page).to have_css '.user-ids', text: 'test@cider-ci.example'
+        expect(page).to have_css '.validity', text: 'never expires'
+        expect(find('textarea').value.strip).to eq @admin_ascii_key.strip
+      end
+      click_on 'Remove this key'
+      expect(page).to have_current_path('/admin/gpg-keys/', ignore_query: true)
+      expect(page).to have_content 'No global GPG keys configured'
+    end
+
     scenario 'can add then remove a global GPG key' do
       fill_in 'Name', with: 'Temporary global key'
       fill_in 'ascii_key', with: @admin_ascii_key

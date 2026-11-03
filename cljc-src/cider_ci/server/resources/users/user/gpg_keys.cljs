@@ -1,10 +1,11 @@
 (ns cider-ci.server.resources.users.user.gpg-keys
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.gpg-key :as gpg-key]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
    [cider-ci.server.http.client.main :as http-client]
-   [cider-ci.server.routes :refer [path]]
+   [cider-ci.server.routes :refer [path navigate!]]
    [cider-ci.server.state :as state]
    [cider-ci.utils.core :refer [str presence]]
    [cljs.core.async :refer [go <!]]
@@ -49,7 +50,7 @@
          (for [k ks]
            ^{:key (:id k)}
            [:tr
-            [:td (:name k)
+            [:td [:a.key-name {:href (key-url (:id k))} (:name k)]
              (when (= "github" (:source k))
                [:span.badge.bg-secondary.ms-2.source-github
                 {:title "Imported from GitHub; updated at each sign-in with GitHub"}
@@ -95,9 +96,38 @@
          :inner [:span "Add key"]]]])))
 
 
+;;; detail ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- keys-url []
+  (path :user-gpg-keys {:user-id (user-id)}))
+
+(defn- remove-and-leave [gpg-key-id]
+  (go (when (-> {:method :delete :url (key-url gpg-key-id)}
+                http-client/request :chan <! http-client/filter-success)
+        (navigate! (keys-url)))))
+
+(defn- detail-page []
+  [:div.page
+   [state/hidden-routing-state-component :did-change #(fetch-data)]
+   [:nav.mb-3
+    [:a {:href (path :users)} "Users"]
+    " / "
+    [:a {:href (user-url)} (user-id)]
+    " / "
+    [:a {:href (keys-url)} "GPG Keys"]
+    " / " (or (:name @data*) "…")]
+   (if-let [k @data*]
+     [:<>
+      [gpg-key/details-panel k]
+      [gpg-key/remove-button #(remove-and-leave (:id k))]]
+     [:div "Loading..."])
+   (when @state/debug?*
+     [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
+
+
 ;;; page ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn page []
+(defn- list-page []
   [:div.page
    [state/hidden-routing-state-component :did-change #(fetch-data)]
    [:nav.mb-3
@@ -110,5 +140,10 @@
    [add-form]
    (when @state/debug?*
      [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
+
+(defn page []
+  (case (:name @state/routing*)
+    :user-gpg-key [detail-page]
+    [list-page]))
 
 (def components {:page page})

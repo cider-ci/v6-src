@@ -3,6 +3,7 @@
     [cider-ci.server.projects.repositories.commits :as repo-commits]
     [cider-ci.utils.core :refer [presence]]
     [cider-ci.utils.git-gpg :as git-gpg]
+    [cider-ci.utils.gpg-key-info :as gpg-key-info]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]))
@@ -50,10 +51,13 @@
 
     :admin-gpg-key
     (case method
-      :get    (or (jdbc/execute-one! tx (-> (keys-sql)
-                                             (sql/where [:= :id [:cast gpg-key-id :uuid]])
-                                             (sql-format {:inline false})))
-                  {:status 404 :body "GPG key not found"})
+      ;; the detail: the row with the armored key and what it contains
+      :get    (if-let [k (jdbc/execute-one! tx (-> (keys-sql)
+                                                   (sql/select :ascii_key)
+                                                   (sql/where [:= :id [:cast gpg-key-id :uuid]])
+                                                   (sql-format {:inline false})))]
+                {:body (assoc k :details (gpg-key-info/details (:ascii_key k)))}
+                {:status 404 :body "GPG key not found"})
       :delete (let [existing (jdbc/execute-one! tx (-> (keys-sql)
                                                         (sql/where [:= :id [:cast gpg-key-id :uuid]])
                                                         (sql-format {:inline false})))]

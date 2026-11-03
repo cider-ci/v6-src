@@ -10,7 +10,7 @@
 
 (def ^:private gpg-keys-sub
   (-> (sql/select
-        [[:raw " json_agg(json_build_object('name', name, 'fingerprint', fingerprint, 'source', source) ORDER BY created_at) "]])
+        [[:raw " json_agg(json_build_object('id', id, 'name', name, 'fingerprint', fingerprint, 'source', source) ORDER BY created_at) "]])
       (sql/from :gpg_keys)
       (sql/where [:= :gpg_keys.user_id :users.id])))
 

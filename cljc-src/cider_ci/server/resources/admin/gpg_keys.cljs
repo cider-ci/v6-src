@@ -1,10 +1,11 @@
 (ns cider-ci.server.resources.admin.gpg-keys
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.gpg-key :as gpg-key]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
    [cider-ci.server.http.client.main :as http-client]
-   [cider-ci.server.routes :refer [path]]
+   [cider-ci.server.routes :refer [path navigate!]]
    [cider-ci.server.state :as state]
    [cider-ci.utils.core :refer [str presence]]
    [cljs.core.async :refer [go <!]]
@@ -44,7 +45,7 @@
          (for [k ks]
            ^{:key (:id k)}
            [:tr
-            [:td (:name k)]
+            [:td [:a.key-name {:href (key-url (:id k))} (:name k)]]
             [:td [:code.small (:fingerprint k)]]
             [:td [:small (:created_at k)]]
             [:td
@@ -86,9 +87,32 @@
          :inner [:span "Add key"]]]])))
 
 
+;;; detail ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- remove-and-leave [gpg-key-id]
+  (go (when (-> {:method :delete :url (key-url gpg-key-id)}
+                http-client/request :chan <! http-client/filter-success)
+        (navigate! (path :admin-gpg-keys {})))))
+
+(defn- detail-page []
+  [:div.page
+   [state/hidden-routing-state-component :did-change #(fetch-data)]
+   [:nav.mb-3
+    [:a {:href (path :admin-gpg-keys {})} "Global GPG keys"]
+    " / " (or (:name @data*) "…")]
+   (if-let [k @data*]
+     [:<>
+      [gpg-key/details-panel k]
+      [:p.text-muted "A global key is trusted for all commits, regardless of author."]
+      [gpg-key/remove-button #(remove-and-leave (:id k))]]
+     [:div "Loading..."])
+   (when @state/debug?*
+     [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
+
+
 ;;; page ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn page []
+(defn- list-page []
   [:div.page
    [state/hidden-routing-state-component :did-change #(fetch-data)]
    [:h2 "Admin: Global GPG keys"]
@@ -96,5 +120,10 @@
    [add-form]
    (when @state/debug?*
      [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @_data*))]]])])
+
+(defn page []
+  (case (:name @state/routing*)
+    :admin-gpg-key [detail-page]
+    [list-page]))
 
 (def components {:page page})

@@ -42,4 +42,6 @@
 (defn code-branch [] [FontAwesomeIcon {:icon (.-faCodeBranch solids) :className ""}])
 (defn play-circle [] [FontAwesomeIcon {:icon (.-faCirclePlay solids) :className ""}])
 (defn clipboard [] [FontAwesomeIcon {:icon (.-faClipboard solids) :className ""}])
+(defn gpg-key [] [FontAwesomeIcon {:icon (.-faKey solids) :className ""}])
+(defn download [] [FontAwesomeIcon {:icon (.-faDownload solids) :className ""}])
 (defn spinner [] [:span.fa-4x [FontAwesomeIcon {:icon (.-faSpinner solids) :className "fa-spin"}]])

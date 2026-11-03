@@ -53,9 +53,10 @@
      [:dt.col-sm-3 "GPG Keys"]
      [:dd.col-sm-9.gpg-keys
       (if-let [gpg-keys (seq (:gpg_keys u))]
-        (for [{:keys [name fingerprint source]} gpg-keys]
+        (for [{:keys [id name fingerprint source]} gpg-keys]
           ^{:key fingerprint}
-          [:div name " " [:code.small fingerprint]
+          [:div [:a {:href (path :user-gpg-key {:user-id (user-id-param) :gpg-key-id id})} name]
+           " " [:code.small fingerprint]
            (when (= "github" source)
              [:span.badge.bg-secondary.ms-2 "GitHub"])])
         [:span.text-muted "—"])]

@@ -20,6 +20,11 @@ img.avatar {
 .navbar .dropdown-toggle img.avatar {
   margin-right: 0.3em;
 }
+// A tooltip is informational only; it must never catch a click meant for
+// what it happens to cover (a dropdown item, a link in the next table row).
+.tooltip {
+  pointer-events: none;
+}
 table td img.avatar {
   margin: -0.15em 0;
 }

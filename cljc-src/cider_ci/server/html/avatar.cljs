@@ -22,8 +22,9 @@
   "One of :user-id or :email-hash (md5 of the lower-cased address) picks the
    image. :name, :login, :email, :admin? and :note fill the tooltip; the alt
    text (:alt, else name, login or email) is what screen readers, specs and
-   a broken image show. :size in px (default 24); :href wraps a link."
-  [{:keys [user-id email-hash alt size href class] :as opts}]
+   a broken image show. :size in px (default 24); :href wraps a link;
+   :placement of the tooltip (default bottom), :tooltip false for none."
+  [{:keys [user-id email-hash alt size href class placement tooltip] :as opts}]
   (let [size  (or size 24)
         src   (cond
                 user-id    (path :user-avatar {:user-id user-id})
@@ -34,28 +35,32 @@
                {:src src :alt label :width size :height size
                 :class class :data-user-id user-id}]]
     (when src
-      [:> bs/OverlayTrigger
-       {:placement "bottom"
-        :overlay (reagent/as-element
-                   [:> bs/Tooltip {:id (str "avatar-tip-" (or user-id email-hash))}
-                    (into [:<>] (interpose [:br] (seq lines)))])}
-       (if href
-         [:a.avatar-link {:href href} img]
-         img)])))
+      (let [inner (if href [:a.avatar-link {:href href} img] img)]
+        (if (false? tooltip)
+          inner
+          [:> bs/OverlayTrigger
+           {:placement (or placement "bottom")
+            :overlay (reagent/as-element
+                       [:> bs/Tooltip {:id (str "avatar-tip-" (or user-id email-hash))}
+                        (into [:<>] (interpose [:br] (seq lines)))])}
+           inner])))))
 
 (defn user-avatar
   "The avatar of a user row ({:id :name :login :github_login
    :email_addresses :is_admin}), linked to the user's page unless :href is
    given (false for no link)."
-  [{:keys [id name login github_login email_addresses is_admin]} & {:keys [size href alt]}]
-  [avatar {:user-id id
-           :name    name
-           :login   (or login github_login)
-           :email   (when (string? (first email_addresses)) (first email_addresses))
-           :admin?  is_admin
-           :alt     (or alt login github_login)
-           :size    size
-           :href    (if (nil? href) (path :user {:user-id id}) href)}])
+  [{:keys [id name login github_login email_addresses is_admin]}
+   & {:keys [size href alt placement tooltip]}]
+  [avatar {:user-id   id
+           :name      name
+           :login     (or login github_login)
+           :email     (when (string? (first email_addresses)) (first email_addresses))
+           :admin?    is_admin
+           :alt       (or alt login github_login)
+           :size      size
+           :href      (if (nil? href) (path :user {:user-id id}) href)
+           :placement placement
+           :tooltip   tooltip}])
 
 (defn email-avatar
   "The avatar for an email address with its md5 hash (commit author or

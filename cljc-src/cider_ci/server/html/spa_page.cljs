@@ -65,10 +65,12 @@
       (some-> user :id (string/split "-") first)))
 
 (defn user-uid-component
-  "The signed-in user as avatar; the uid is the alt text and in the tooltip."
+  "The signed-in user as avatar; the uid is the alt text and in the tooltip.
+   The tooltip opens to the left: the dropdown menu opens below the avatar
+   and a tooltip there would cover its items."
   [user]
   [:span.user-uid
-   [avatar/user-avatar user :size 24 :href false :alt (user-uid user)]])
+   [avatar/user-avatar user :size 24 :href false :alt (user-uid user) :placement "left"]])
 
 (defn sign-out [& args]
   (go (when (-> {:url (path :sign-out {} {:foo :bar})

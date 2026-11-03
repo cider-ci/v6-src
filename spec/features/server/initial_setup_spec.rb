@@ -14,10 +14,10 @@ feature 'Initial Setup'  do
       expect(page).to have_content 'Sign-in'
       fill_in 'password', with: 'secret'
       click_on 'Submit'
-      expect(page).to have_content 'admin@localhost'
+      expect(page).to have_css ".user-uid img[alt='admin@localhost']"
       click_on 'admin@localhost'
       click_on 'Sign out'
-      expect(page).not_to have_content 'admin@localhost'
+      expect(page).not_to have_css '.user-uid'
     end
 
 
@@ -30,7 +30,7 @@ feature 'Initial Setup'  do
       expect(page).to have_content 'Sign-in'
       fill_in 'password', with: 'secret'
       click_on 'Submit'
-      expect(page).to have_content 'admin'
+      expect(page).to have_css ".user-uid img[alt='admin']"
       # the only admin has the login 'admin'
       expect(database[:users].first[:login]).to eq 'admin'
       # there is a session
@@ -39,7 +39,7 @@ feature 'Initial Setup'  do
       expect(database[:passwords].first).to be
       click_on 'admin'
       click_on 'Sign out'
-      expect(page).not_to have_content 'admin'
+      expect(page).not_to have_css '.user-uid'
       # there is no (more) session
       expect(database[:sessions].first).to be_nil
     end

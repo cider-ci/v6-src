@@ -13,6 +13,7 @@ scripts:
       mkdir -p /tmp/cider-ci-v6
       if [ ! -f "$CACHE_JAR" ]; then
         npm ci
+        npm run css
         npx shadow-cljs release cider-ci
         clojure -T:build-leihs uber
         cp target/cider-ci.jar "$CACHE_JAR"

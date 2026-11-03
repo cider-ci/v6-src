@@ -197,7 +197,9 @@ feature 'Jobs' do
     expect(page).to have_content 'Traits'
     expect(page).to have_content 'bash'
     expect(page).to have_content 'ruby'
-    link = find(:link, 'Match executors')
+    # the commit signature line has its own "Match executors" link (by
+    # signature only); the traits panel's one carries the traits
+    link = find(:link, 'Match executors', href: /traits=/)
     expect(link[:href]).to match(%r{/executors/\?traits=})
     expect(link[:href]).to include('bash')
     expect(link[:href]).to include('ruby')

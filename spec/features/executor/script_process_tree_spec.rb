@@ -53,11 +53,14 @@ feature 'Killed scripts take their process tree with them' do
     Process.kill('TERM', @executor_pid) rescue nil
     Process.wait(@executor_pid)         rescue nil
     # never leave the marker process behind, whatever the outcome
-    system("pkill -f #{@marker} > /dev/null 2>&1")
+    system('pkill', '-f', @marker, out: File::NULL, err: File::NULL) if @marker
   end
 
+  # Without a shell: `sh -c "pgrep -f marker"` matches that very shell on
+  # Debian (dash does not exec the last command), so the marker always
+  # looked alive there.
   def marker_running?
-    system("pgrep -f #{@marker} > /dev/null")
+    system('pgrep', '-f', @marker, out: File::NULL)
   end
 
   def insert_job!

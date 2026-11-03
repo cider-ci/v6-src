@@ -149,6 +149,16 @@
   loop: "{{ ci_executor_retired_traits | default([]) }}"
   notify: Restart cider-ci-executor
 
+- name: Keep /tmp on disk (mask the tmpfs tmp.mount of Debian 13)
+  # trixie mounts /tmp as a tmpfs capped at 50% of RAM: trial working dirs
+  # (checkouts, node_modules, jars) fill it and compete with the trials for
+  # memory. Masking tmp.mount is Debian's way to opt out; it takes effect
+  # at the next reboot (an active tmpfs is not unmounted).
+  ansible.builtin.systemd:
+    name: tmp.mount
+    masked: true
+  when: ci_executor_tmp_on_disk
+
 - name: Exclude CI working data from systemd-tmpfiles age cleanup
   # trixie: `q /tmp 10d` / `q /var/tmp 30d` would delete untouched files
   # (git cache packs, long-running trial dirs) from under the executor.

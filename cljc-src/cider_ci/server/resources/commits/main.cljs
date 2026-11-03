@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.commits.main
   (:require
     ["date-fns" :as date-fns]
+    [cider-ci.server.html.avatar :as avatar]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.html.job-states :as job-states]
     [cider-ci.server.http.client.main :as http-client]
@@ -129,7 +130,9 @@
 (defn- author-cell [c]
   (let [author (:author_name c)]
     [:td.author.text-nowrap
-     [:span.me-1 {:title (:author_email c)} author]
+     [:span.me-1
+      [avatar/email-avatar {:email-hash (:author_email_hash c)
+                            :name author :email (:author_email c)}]]
      (when-not (str/blank? author)
        [:a.text-muted
         {:href     "#"

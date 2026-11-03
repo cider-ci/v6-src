@@ -3,6 +3,7 @@
   (:require
     ["react-bootstrap" :as bs]
     [cider-ci.utils.core :refer [str keyword]]
+    [cider-ci.server.html.avatar :as avatar]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :as routes :refer [path navigate!]]
@@ -29,8 +30,8 @@
   [:tr.user
    {:style {:cursor "pointer"}
     :on-click #(navigate! (path :user {:user-id (:id user)}))}
+   [:td.avatar-cell [avatar/user-avatar user :size 32 :href false]]
    [:td.login (or (:login user) (:github_login user))]
-   [:td.name (:name user)]
    [:td.emails [user-emails user]]
    [:td.admin
     [:span.badge {:class (if (:is_admin user) "bg-danger" "bg-secondary")}
@@ -43,8 +44,8 @@
   [:table.table.table-sm.table-striped.table-hover.users
    [:thead
     [:tr
+     [:th "User"]
      [:th "Login"]
-     [:th "Name"]
      [:th "Email Addresses"]
      [:th "Admin"]
      [:th "Has Password"]]]

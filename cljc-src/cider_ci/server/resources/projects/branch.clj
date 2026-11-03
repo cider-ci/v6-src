@@ -16,7 +16,8 @@
 
 
 (defn- tip-commit-sql [project-id commit-id]
-  ["SELECT c.id, c.subject, c.author_name, c.committer_date,
+  ["SELECT c.id, c.subject, c.author_name, c.author_email,
+           md5(lower(c.author_email)) AS author_email_hash, c.committer_date,
            (SELECT json_agg(json_build_object(
                               'id',    j.id::text,
                               'key',   j.key,
@@ -33,6 +34,7 @@
 
 (defn- recent-commits-sql [branch-id project-id]
   ["SELECT c.id, c.subject, c.author_name, c.author_email,
+           md5(lower(c.author_email)) AS author_email_hash,
            c.committer_date, c.signature_fingerprint,
            (SELECT json_agg(json_build_object(
                               'id',    j.id::text,

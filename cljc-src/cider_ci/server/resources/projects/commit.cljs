@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.commit
   (:require
    ["date-fns" :as date-fns]
+   [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
@@ -32,7 +33,7 @@
         signed?  (:is_signed c)
         fp       (presence (:signature_fingerprint c))
         key-name (presence (:signing_key_name c))
-        login    (presence (:signing_key_user_login c))]
+        user-id  (presence (:signing_key_user_id c))]
     (cond
       (not signed?)
       [:div.alert.alert-secondary
@@ -45,27 +46,39 @@
       :else
       [:div.alert.alert-success
        [icons/signed] " Signed by "
-       [:strong (or key-name "trusted key")]
-       (when login [:span " (" login ")"])
+       (if user-id
+         ;; the key's owner as avatar; the key is named in the tooltip
+         [avatar/avatar {:user-id user-id
+                         :name    (:signing_key_user_name c)
+                         :login   (:signing_key_user_login c)
+                         :note    key-name
+                         :alt     (or (:signing_key_user_login c) key-name)
+                         :href    (path :user {:user-id user-id})}]
+         [:strong (or key-name "trusted key")])
        [:div.small.mt-1.text-monospace fp]])))
 
 
 ;;; metadata ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- author-row [label name email date]
+(defn- author-row
+  "The person as avatar (name in the tooltip), the address and the date."
+  [label name email email-hash date]
   [:<>
    [:dt.col-sm-3 label]
-   [:dd.col-sm-9
-    (when name [:span [:strong name]])
-    (when email [:span " <" email ">"])
-    (when date  [:span.text-muted.ms-2 date])]])
+   [:dd.col-sm-9.d-flex.align-items-center.gap-2
+    (when email-hash
+      [avatar/email-avatar {:email-hash email-hash :name name :email email}])
+    (when email [:span "<" email ">"])
+    (when date  [:span.text-muted date])]])
 
 
 (defn- metadata-panel []
   (let [c @data*]
     [:dl.row
-     [author-row "Author"    (:author_name c)    (:author_email c)    (:author_date c)]
-     [author-row "Committer" (:committer_name c) (:committer_email c) (:committer_date c)]
+     [author-row "Author"    (:author_name c)    (:author_email c)
+      (:author_email_hash c) (:author_date c)]
+     [author-row "Committer" (:committer_name c) (:committer_email c)
+      (:committer_email_hash c) (:committer_date c)]
      [:dt.col-sm-3 "Tree"]   [:dd.col-sm-9 [:code (:tree_id c)]]
      (when (seq (:parents c))
        [:<>

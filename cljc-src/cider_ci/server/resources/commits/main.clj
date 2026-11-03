@@ -25,6 +25,7 @@
      page.subject,
      page.author_name,
      page.author_email,
+     md5(lower(page.author_email)) AS author_email_hash,
      page.committer_name,
      page.committer_date,
      (SELECT json_agg(json_build_object(

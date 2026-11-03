@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.admin.executors
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
    [cider-ci.server.http.client.main :as http-client]
@@ -340,7 +341,8 @@
     [:table.table.table-sm.mb-0
      [:thead [:tr [:th "Key"] [:th "Fingerprint"] [:th "Owner"]]]
      [:tbody
-      (for [[i {:keys [fingerprint key_id user_ids error known name user_login]}] (map-indexed vector entries)]
+      (for [[i {:keys [fingerprint key_id user_ids error known name user_id user_name user_login]}]
+            (map-indexed vector entries)]
         ^{:key i}
         (if error
           [:tr.table-danger
@@ -354,7 +356,8 @@
               [:span.text-warning
                [icons/warning] " unknown to the server: no commit is verified against it, "
                "add it to a user or as a global key"]
-              user_login [:span user_login]
+              user_id [avatar/avatar {:user-id user_id :name user_name :login user_login
+                                      :alt user_login :href (path :user {:user-id user_id})}]
               :else [:span.text-muted "global key"])]]))]]))
 
 (defn- detail-page []

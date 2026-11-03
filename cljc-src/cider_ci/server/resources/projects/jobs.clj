@@ -155,6 +155,8 @@
   (first (jdbc-sql/query (get-ds)
            ["SELECT (c.signature IS NOT NULL) AS is_signed, c.signature_fingerprint,
                     gk.name AS signing_key_name,
+                    u.id AS signing_key_user_id,
+                    u.name AS signing_key_user_name,
                     COALESCE(u.login, u.github_login) AS signing_key_user_login
              FROM commits c
              LEFT JOIN gpg_keys gk ON gk.fingerprint = c.signature_fingerprint

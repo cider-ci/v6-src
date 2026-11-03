@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [keyword str])
   (:require
     ["react-bootstrap" :as bs]
+    [cider-ci.server.html.avatar :as avatar]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
@@ -72,7 +73,9 @@
        [:div "Loading..."]
        [:<>
         [:div.d-flex.align-items-center.gap-2.mb-3
-         [:h2.mb-0 [icons/user] " " (or (:login @_data*) (:github_login @_data*) (user-id-param))]
+         [:h2.mb-0.d-flex.align-items-center.gap-2
+          [avatar/user-avatar @_data* :size 48 :href false]
+          [:span (or (:login @_data*) (:github_login @_data*) (user-id-param))]]
          (when (admin?)
            [:a.btn.btn-sm.btn-outline-secondary
             {:href (path :user-edit {:user-id (user-id-param)})}
@@ -236,6 +239,8 @@
    [:> bs/Navbar.Collapse {:class "justify-content-center"}
     (when-let [u @_data*]
       [:> bs/Nav.Item
-       [:> bs/Nav.Link {:href (user-url)} (or (:login u) (:github_login u))]])]])
+       [:> bs/Nav.Link {:href (user-url)}
+        [avatar/user-avatar u :size 24 :href false]
+        " " (or (:login u) (:github_login u))]])]])
 
 (def components {:page page :center-nav center-nav})

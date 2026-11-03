@@ -54,6 +54,11 @@ class FakeGithub
     @mutex.synchronize { @posts[path] = [status, body] }
   end
 
+  # a GET answered with raw bytes (e.g. an avatar image) instead of JSON
+  def stub_get_raw(path, bytes, content_type:, status: 200)
+    @mutex.synchronize { @gets[path] = [status, bytes, content_type] }
+  end
+
   def stop
     @thread.kill
     @server.close
@@ -85,16 +90,17 @@ class FakeGithub
                    "Content-Length: 0\r\nConnection: close\r\n\r\n")
       return
     end
-    status, response = @mutex.synchronize do
+    status, response, content_type = @mutex.synchronize do
       if method == 'GET'
         @gets[uri.path] || [404, { message: 'Not Found' }]
       else
         @posts[uri.path] || @responses.shift || [201, { id: @requests.size }]
       end
     end
-    payload = response.to_json
-    client.write("HTTP/1.1 #{status} X\r\nContent-Type: application/json\r\n" \
-                 "Content-Length: #{payload.bytesize}\r\nConnection: close\r\n\r\n#{payload}")
+    payload = content_type ? response.b : response.to_json
+    client.write("HTTP/1.1 #{status} X\r\nContent-Type: #{content_type || 'application/json'}\r\n" \
+                 "Content-Length: #{payload.bytesize}\r\nConnection: close\r\n\r\n")
+    client.write(payload)
   rescue StandardError => e
     warn "FakeGithub: #{e.message}"
   ensure

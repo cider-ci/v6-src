@@ -37,8 +37,10 @@ feature 'GitHub sign-in' do
 
   def stub_account(login: 'octo-cat', name: 'Octo Cat', orgs: ['Example-Org'], teams: ['ci-admins'],
                    emails: [['octo@example.org', true, true], ['unverified@example.org', false, false]],
-                   gpg_keys: [])
-    @fake_github.stub_get('/user', { id: github_id, login: login, name: name })
+                   gpg_keys: [], avatar: FAKE_AVATAR_PNG)
+    @fake_github.stub_get('/user', { id: github_id, login: login, name: name,
+                                     avatar_url: "#{@fake_github.url}/u/#{github_id}?v=4" })
+    @fake_github.stub_get_raw("/u/#{github_id}", avatar, content_type: 'image/png') if avatar
     @fake_github.stub_get('/user/memberships/orgs',
                           orgs.map { |o| { state: 'active', organization: { login: o } } })
     @fake_github.stub_get('/user/teams',
@@ -61,7 +63,7 @@ feature 'GitHub sign-in' do
   scenario 'a member of the admin team signs in as admin; emails and GPG keys are imported' do
     stub_account(gpg_keys: [STATIC_GPG_KEY])
     sign_in_with_github
-    expect(page).to have_css '.user-uid', text: 'octo-cat'
+    expect(page).to have_css '.user-uid img[alt="octo-cat"]'
 
     user = github_user
     expect(user[:github_login]).to eq 'octo-cat'
@@ -74,6 +76,20 @@ feature 'GitHub sign-in' do
     key = database[:gpg_keys].where(user_id: user[:id]).first
     expect(key[:source]).to eq 'github'
     expect(key[:fingerprint]).to be_present
+
+    # the avatar is imported (96 px version) and served by the server
+    image = database[:user_images].where(user_id: user[:id]).first
+    expect(image[:content_type]).to eq 'image/png'
+    expect(image[:source]).to eq 'github'
+    expect(image[:data].to_s.b).to eq FAKE_AVATAR_PNG.b
+    avatar_request = github_requests.find { |r| r.path.start_with?("/u/#{github_id}") }
+    expect(avatar_request.path).to include 's=96'
+    expect(avatar_request.headers['authorization']).to be_nil
+    res = Net::HTTP.get_response(URI("#{http_base_url}/users/#{user[:id]}/avatar"),
+                                 { 'Cookie' => session_cookie_header })
+    expect(res.code).to eq '200'
+    expect(res['content-type']).to eq 'image/png'
+    expect(res.body.b).to eq FAKE_AVATAR_PNG.b
 
     token_request = github_requests.find { |r| r.path == '/login/oauth/access_token' }
     expect(token_request.body).to include 'code=fake-code', 'client_secret=fake-client-secret'
@@ -95,7 +111,7 @@ feature 'GitHub sign-in' do
     expect(page).to have_current_path(%r{/sign-in\?return-to=})
     click_on 'Sign in with GitHub'
     expect(page).to have_current_path('/projects/')
-    expect(page).to have_css '.user-uid', text: 'octo-cat'
+    expect(page).to have_css '.user-uid img[alt="octo-cat"]'
     expect(github_user[:is_admin]).to be false
   end
 
@@ -104,7 +120,7 @@ feature 'GitHub sign-in' do
     visit '/'
     find('#sign-in-button').click # the toggle of the split button
     click_on 'Sign in with GitHub'
-    expect(page).to have_css '.user-uid', text: 'octo-cat'
+    expect(page).to have_css '.user-uid img[alt="octo-cat"]'
   end
 
   scenario 'a GitHub account without a matching organization or team is refused' do
@@ -127,7 +143,7 @@ feature 'GitHub sign-in' do
     stub_account(gpg_keys: [STATIC_GPG_KEY],
                  emails: [['octo@example.org', true, true], ['old@example.org', true, false]])
     sign_in_with_github
-    expect(page).to have_css '.user-uid', text: 'octo-cat'
+    expect(page).to have_css '.user-uid img[alt="octo-cat"]'
     user = github_user
     expect(user[:is_admin]).to be true
     database[:email_addresses].insert(user_id: user[:id], email_address: 'manual@example.org')
@@ -138,7 +154,7 @@ feature 'GitHub sign-in' do
                  emails: [['octo@example.org', true, true], ['taken@example.org', true, false]])
     page.driver.browser.manage.delete_all_cookies
     sign_in_with_github
-    expect(page).to have_css '.user-uid', text: 'octo-cat'
+    expect(page).to have_css '.user-uid img[alt="octo-cat"]'
 
     user = github_user
     expect(user[:is_admin]).to be false
@@ -190,7 +206,7 @@ feature 'GitHub sign-in' do
 
       stub_account(gpg_keys: [@ascii_key])
       sign_in_with_github
-      expect(page).to have_css '.user-uid', text: 'octo-cat'
+      expect(page).to have_css '.user-uid img[alt="octo-cat"]'
 
       expect(database[:commits].where(id: commit[:id]).get(:signature_fingerprint)).to eq @fingerprint
       visit "/projects/#{@project_id}/commits/#{commit[:id]}"

@@ -22,11 +22,11 @@ feature 'Sign-in and sign-out'  do
       fill_in 'password', with: @user.password
       click_on 'Submit'
       expect(page).to have_current_path('/', ignore_query: true)
-      expect(page).to have_content @user.login
+      expect(page).to have_css ".user-uid img[alt='#{@user.login}']"
       expect(database[:sessions].where(user_id: @user.id).first).to be
       click_on @user.login
       click_on 'Sign out'
-      expect(page).not_to have_content @user.login
+      expect(page).not_to have_css ".user-uid"
       expect(database[:sessions].where(user_id: @user.id).first).not_to be
     end
 
@@ -38,11 +38,11 @@ feature 'Sign-in and sign-out'  do
       fill_in 'password', with: @user.password
       click_on 'Submit'
       expect(page).to have_current_path('/', ignore_query: true)
-      expect(page).to have_content @user.login
+      expect(page).to have_css ".user-uid img[alt='#{@user.login}']"
       expect(database[:sessions].where(user_id: @user.id).first).to be
       click_on @user.login
       click_on 'Sign out'
-      expect(page).not_to have_content @user.login
+      expect(page).not_to have_css ".user-uid"
       expect(database[:sessions].where(user_id: @user.id).first).not_to be
     end
 
@@ -53,12 +53,12 @@ feature 'Sign-in and sign-out'  do
     scenario "using the factory session to be signed in" do
       set_session_cookie @user
       visit '/'
-      expect(page).to have_content @user.login
+      expect(page).to have_css ".user-uid img[alt='#{@user.login}']"
 
       # switching quickly to an other user
       set_session_cookie @admin
       visit current_url
-      expect(page).to have_content @admin.login
+      expect(page).to have_css ".user-uid img[alt='#{@admin.login}']"
 
     end
   end
@@ -83,7 +83,7 @@ feature 'Sign-in and sign-out'  do
 
       # returned to the originally requested page, now signed in
       expect(page).to have_current_path('/commits/', ignore_query: true)
-      expect(page).to have_content @user.login
+      expect(page).to have_css ".user-uid img[alt='#{@user.login}']"
     end
 
     scenario 'in-app navigation to a protected page redirects an unauthenticated user to sign-in' do

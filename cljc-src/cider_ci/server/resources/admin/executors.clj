@@ -75,16 +75,18 @@
   (let [fps   (keep :fingerprint entries)
         known (when (seq fps)
                 (->> (jdbc/execute! tx
-                       ["SELECT gk.fingerprint, gk.name, u.login, u.github_login
+                       ["SELECT gk.fingerprint, gk.name, u.id AS user_id, u.name AS user_name,
+                               u.login, u.github_login
                          FROM gpg_keys gk LEFT JOIN users u ON u.id = gk.user_id
                          WHERE gk.fingerprint = ANY(CAST(? AS text[]))"
                         (str "{" (str/join "," fps) "}")])
-                     (map (fn [{:keys [fingerprint name login github_login]}]
-                            [fingerprint {:name name :user_login (or login github_login)}]))
+                     (map (fn [{:keys [fingerprint name user_id user_name login github_login]}]
+                            [fingerprint {:name name :user_id user_id :user_name user_name
+                                          :user_login (or login github_login)}]))
                      (into {})))]
     (mapv (fn [e]
             (if-let [k (get known (:fingerprint e))]
-              (assoc e :known true :name (:name k) :user_login (:user_login k))
+              (merge e {:known true} k)
               (assoc e :known false)))
           entries)))
 

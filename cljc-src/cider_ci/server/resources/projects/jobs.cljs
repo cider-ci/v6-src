@@ -3,6 +3,7 @@
    ["date-fns" :as date-fns]
    ["elkjs/lib/elk.bundled.js" :as ELK]
    ["js-yaml" :as js-yaml]
+   [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.job-states :as job-states]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
@@ -841,7 +842,8 @@
 
 (defn- commit-signature-line
   "Like the traits: which executors can run this job's commit at all."
-  [{:keys [is_signed signature_fingerprint signing_key_name signing_key_user_login] :as sig}]
+  [{:keys [is_signed signature_fingerprint signing_key_name
+           signing_key_user_id signing_key_user_name signing_key_user_login] :as sig}]
   (when sig
     (let [filter-url (str (path :executors {}) "?signature=" (signature-filter-param sig))
           restricted " – only executors without accepted GPG keys run it"]
@@ -855,8 +857,17 @@
          [:span [icons/unknown-signature] " signed, but the signing key is not trusted" restricted]
 
          :else
-         [:span [icons/signed] " signed by " [:strong (or signing_key_name "a trusted key")]
-          (when signing_key_user_login (str " (" signing_key_user_login ")"))
+         [:span [icons/signed] " signed by "
+          (if signing_key_user_id
+            ;; the key's owner as avatar; the key is named in the tooltip
+            [avatar/avatar {:user-id signing_key_user_id
+                            :name    signing_key_user_name
+                            :login   signing_key_user_login
+                            :note    signing_key_name
+                            :alt     (or signing_key_user_login signing_key_name)
+                            :size    20
+                            :href    (path :user {:user-id signing_key_user_id})}]
+            [:strong (or signing_key_name "a trusted key")])
           " " [:code.small signature_fingerprint]])
        [:a.btn.btn-sm.btn-outline-secondary.ms-2
         {:href filter-url}

@@ -29,13 +29,13 @@ feature 'User Account'  do
       expect(page).to have_content 'Request SUCCESS'
       click_on @user.login
       click_on 'Sign out'
-      expect(page).not_to have_content @user.login
+      expect(page).not_to have_css ".user-uid"
       fill_in 'login', with: @user.login
       click_on 'Sign in'
       expect(page).to have_content 'Sign-in'
       fill_in 'password', with: 'New Secret'
       click_on 'Submit'
-      expect(page).to have_content @user.login
+      expect(page).to have_css ".user-uid img[alt='#{@user.login}']"
     end
 
     scenario 'a user can not set the passwort of some other user' do

@@ -65,7 +65,9 @@ feature 'Branch detail page' do
       expect(page).to have_content 'Second commit'
       expect(page).to have_content cid1[0, 8]
       expect(page).to have_content cid2[0, 8]
-      expect(page).to have_content 'Alice'
+      # the author is shown as avatar, the name is its alt text and tooltip
+      expect(page).to have_css "td.author img.avatar[alt='Alice']", count: 2
+      expect(page).not_to have_content 'Alice'
     end
   end
 

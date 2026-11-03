@@ -117,16 +117,34 @@
       (repo-commits/retroactive-verify! tx ascii_key fingerprint user-id))))
 
 
+;;; avatar ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- store-avatar!
+  "Replaces the user's image with the one fetched from GitHub."
+  [tx user-id {:keys [content-type data url]}]
+  (jdbc/execute-one!
+    tx ["INSERT INTO user_images (user_id, content_type, data, source, github_avatar_url)
+         VALUES (?, ?, ?, 'github', ?)
+         ON CONFLICT (user_id) DO UPDATE
+           SET content_type = EXCLUDED.content_type, data = EXCLUDED.data,
+               source = 'github', github_avatar_url = EXCLUDED.github_avatar_url,
+               updated_at = now()"
+        user-id content-type data url]))
+
+
 ;;; sync ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn sync!
   "Creates or updates the account and returns the user (as for sessions).
-  gpg-keys nil means they could not be fetched: the imported keys are kept."
-  [tx {:keys [user emails gpg-keys]} {admin? :admin}]
+  gpg-keys (or avatar) nil means they could not be fetched: the imported
+  keys (image) are kept."
+  [tx {:keys [user emails gpg-keys avatar]} {admin? :admin}]
   (let [user-id (upsert-user! tx user admin?)]
     (sync-email-addresses! tx user-id emails)
     (when gpg-keys
       (sync-gpg-keys! tx user-id (:login user) gpg-keys))
+    (when avatar
+      (store-avatar! tx user-id avatar))
     (jdbc/execute-one! tx (-> users/base-query
                               (sql/where [:= :users.id user-id])
                               sql-format))))

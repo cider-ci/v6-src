@@ -118,6 +118,29 @@
           (and next-url (< pages 10)) (recur next-url (concat acc data) (inc pages))
           :else (vec (concat acc data)))))))
 
+(def ^:private avatar-size 96)
+(def ^:private avatar-max-bytes (* 2 1024 1024))
+
+(defn- fetch-avatar
+  "The avatar image of the GitHub user, {:content-type :data :url}, or nil
+  when it cannot be fetched (best effort, the sign-in goes on). The image
+  host is not the API: the token is not sent."
+  [avatar-url]
+  (when-let [avatar-url (presence avatar-url)]
+    (let [url (str avatar-url (if (string/includes? avatar-url "?") "&" "?") "s=" avatar-size)
+          {:keys [status body headers error]}
+          @(http-client/get url {:as :byte-array :timeout 15000})
+          content-type (some-> (:content-type headers) (string/split #";") first string/trim)]
+      (cond
+        error (warn "GitHub sign-in: cannot fetch the avatar:" (.getMessage error))
+        (not= 200 status) (warn "GitHub sign-in: cannot fetch the avatar: GitHub responded" status)
+        (not (some-> content-type (string/starts-with? "image/")))
+        (warn "GitHub sign-in: the avatar is not an image:" content-type)
+        (not (bytes? body)) (warn "GitHub sign-in: the avatar has no body")
+        (> (alength ^bytes body) avatar-max-bytes)
+        (warn "GitHub sign-in: the avatar is too large:" (alength ^bytes body) "bytes")
+        :else {:content-type content-type :data body :url avatar-url}))))
+
 (defn- fetch-gpg-keys
   "The public GPG keys of the GitHub user, or nil when they cannot be fetched
   (best effort: the sign-in goes on and the imported keys are kept)."
@@ -175,7 +198,8 @@
     (if-let [rule (core/matching-rule (:rules config) memberships)]
       (let [emails (core/verified-emails (api-get config token "/user/emails?per_page=100"))
             gpg-keys (fetch-gpg-keys config token (:login user))
-            account (account/sync! tx {:user user :emails emails :gpg-keys gpg-keys} rule)
+            avatar (fetch-avatar (:avatar_url user))
+            account (account/sync! tx {:user user :emails emails :gpg-keys gpg-keys :avatar avatar} rule)
             session (sessions/create account request)]
         (info (str "GitHub sign-in of user " (:id account) " by the rule "
                    (:organization rule) (some->> (:team rule) (str "/"))

@@ -96,6 +96,11 @@ account to end them.
   - GitHub has no public key for GPG keys uploaded before it started storing
     them (`raw_key` is null, `https://github.com/<login>.gpg` says "need to be
     reuploaded"). Such keys are skipped and logged; re-upload them on GitHub.
+- **Avatar:** the account's image (`avatar_url`, 96 px) is downloaded and
+  stored (table `user_images`); it is shown in place of the user's name, see
+  [avatars.md](avatars.md). GitHub's generated identicon counts as image.
+  If it cannot be fetched, the sign-in still succeeds and the stored image
+  is kept.
 - **Badges:** imported addresses and keys carry a "GitHub" badge.
 - **SSH keys:** commits signed with SSH keys are not verified; only GPG
   signatures are.

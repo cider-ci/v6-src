@@ -74,6 +74,10 @@
          :auth-http-unsafe #{:admin}}]
     ["/edit" {:name :user-edit
               :auth-http-safe #{:admin}}]
+    ;; the image shown in place of the user's name, see resources.avatars
+    ["/avatar" {:name :user-avatar
+                :bypass-spa true
+                :auth-http-safe #{:user}}]
     ["/password" {:name :user-password
                   :auth-http-unsafe #{:self :admin}}]
     ["/email-addresses"
@@ -160,6 +164,14 @@
     :bypass-spa     true
     :auth-http-safe #{:user}}])
 
+(def avatars
+  ;; the avatar of whoever owns the email address (md5 of the lower-cased
+  ;; address), else an identicon: commit authors and committers
+  ["/avatars/by-email/:email-hash"
+   {:name :avatar-by-email
+    :bypass-spa true
+    :auth-http-safe #{:user}}])
+
 (def workspace
   ["/commits"
    ["/" {:name :commits
@@ -179,6 +191,7 @@
              :auth-http-safe #{:public}
              :auth-http-unsafe #{:public}}]
    admin
+   avatars
    executor
    executors-ui
    projects

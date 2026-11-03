@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.branch
   (:require
    ["date-fns" :as date-fns]
+   [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.routes :refer [path]]
@@ -111,7 +112,9 @@
                                   {:project-id (project-id) :commit-id (:id c)})}
                   [:code.small (subs (:id c) 0 8)]]]
             [:td [:small (or (relative-time (:committer_date c)) "—")]]
-            [:td (:author_name c)]
+            [:td.author
+             [avatar/email-avatar {:email-hash (:author_email_hash c)
+                                   :name (:author_name c) :email (:author_email c)}]]
             [:td [signature-cell (:signature_fingerprint c)]]
             [:td
              (if (seq (:jobs c))

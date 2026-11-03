@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [keyword str])
   (:require
    ["react-bootstrap" :as bs]
+   [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
    [cider-ci.server.http.client.main :as http-client]
@@ -56,12 +57,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn user-uid-component [user]
+(defn user-uid
+  [user]
+  (or (some-> user :login)
+      (some-> user :github_login)
+      (some-> user :email_addresses first)
+      (some-> user :id (string/split "-") first)))
+
+(defn user-uid-component
+  "The signed-in user as avatar; the uid is the alt text and in the tooltip."
+  [user]
   [:span.user-uid
-   (or (some-> user :login)
-       (some-> user :github_login)
-       (some-> user :email_addresses first)
-       (some-> user :id (string/split "-") first))])
+   [avatar/user-avatar user :size 24 :href false :alt (user-uid user)]])
 
 (defn sign-out [& args]
   (go (when (-> {:url (path :sign-out {} {:foo :bar})
@@ -71,13 +78,7 @@
         (navigate! (path :root) nil :reload true))))
 
 (defn user-component [user]
-  [:<>
-   [:span.user-icon
-    (if (:is_admin user)
-      [icons/user-admin]
-      [icons/user])
-    " "]
-   [user-uid-component user]])
+  [user-uid-component user])
 
 (defn navbar-user [user]
   [:> bs/NavDropdown {:title (reagent/as-element [user-component user])}

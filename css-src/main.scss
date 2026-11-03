@@ -10,6 +10,20 @@
 }
 
 
+// Avatars shown in place of names (cider-ci.server.html.avatar)
+img.avatar {
+  object-fit: cover;
+  vertical-align: middle;
+  background: #f0f0f0;
+  flex-shrink: 0;
+}
+.navbar .dropdown-toggle img.avatar {
+  margin-right: 0.3em;
+}
+table td img.avatar {
+  margin: -0.15em 0;
+}
+
 // Split button appended to an input group (header sign-in): square the
 // corners next to the input like a plain appended button
 .input-group > .btn-group:not(:first-child) > .btn:first-child {

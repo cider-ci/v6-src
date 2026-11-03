@@ -13,9 +13,11 @@
         [:c.depth         :depth]
         [:c.author_name   :author_name]
         [:c.author_email  :author_email]
+        [[:md5 [:lower :c.author_email]] :author_email_hash]
         [:c.author_date   :author_date]
         [:c.committer_name  :committer_name]
         [:c.committer_email :committer_email]
+        [[:md5 [:lower :c.committer_email]] :committer_email_hash]
         [:c.committer_date  :committer_date]
         [:c.subject :subject]
         [:c.body    :body]
@@ -24,7 +26,8 @@
         [:c.signature_fingerprint :signature_fingerprint]
         [:gk.name :signing_key_name]
         [:gk.user_id :signing_key_user_id]
-        [:u.login :signing_key_user_login])
+        [:u.name :signing_key_user_name]
+        [[:coalesce :u.login :u.github_login] :signing_key_user_login])
       (sql/from [:commits :c])
       (sql/left-join [:gpg_keys :gk] [:= :gk.fingerprint :c.signature_fingerprint])
       (sql/left-join [:users :u] [:= :u.id :gk.user_id])

@@ -3,6 +3,7 @@
     [cider-ci.server.resources.admin.executors :as admin-executors]
     [cider-ci.server.resources.admin.gpg-keys :as admin-gpg-keys]
     [cider-ci.server.resources.admin.settings :as admin-settings]
+    [cider-ci.server.resources.avatars :as avatars]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.jobs.main :as jobs-dashboard]
     [cider-ci.server.executors.handler :as executors]
@@ -39,6 +40,8 @@
    :executor-edit             #'admin-executors/handler
    :admin-gpg-key             #'admin-gpg-keys/handler
    :admin-gpg-keys            #'admin-gpg-keys/handler
+   :avatar-by-email           #'avatars/handler
+   :user-avatar               #'avatars/handler
    :executor-sync                  #'executors/handler
    :executor-trial                 #'executors/handler
    :executor-trial-attachment      #'executors/handler

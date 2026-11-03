@@ -26,12 +26,24 @@
 ;; Maps exclusive-resource-name → Clojure agent (for serial execution per resource).
 (defonce ^:private exclusive-resource-agents* (atom {}))
 
+(defn- destroy-tree!
+  "Kills the script's shell and everything it started. destroyForcibly alone
+   kills only the shell: a server started with `&` by a script that then
+   timed out (or rspec with its Firefox) lived on as an orphan, with the
+   working dir deleted under it, logging into a deleted file until the
+   disk was full."
+  [^Process proc]
+  (let [descendants (vec (.toArray (.descendants (.toHandle proc))))]
+    (doseq [^java.lang.ProcessHandle d descendants]
+      (.destroyForcibly d))
+    (.destroyForcibly proc)))
+
 (defn abort-trial!
   "Signals abort for trial-id and forcibly destroys all its running processes."
   [trial-id]
   (swap! aborting-trials* conj trial-id)
   (doseq [^Process proc (vals (get @running-procs* trial-id {}))]
-    (.destroyForcibly proc)))
+    (destroy-tree! proc)))
 
 (defn clear-abort! [trial-id]
   (swap! aborting-trials* disj trial-id)
@@ -194,7 +206,7 @@
         (try
           (cond
             (not (.waitFor proc timeout-sec TimeUnit/SECONDS))
-            (do (.destroyForcibly proc)
+            (do (destroy-tree! proc)
                 {:state      "defective"
                  :error      (str "Script timed out after " timeout-sec "s")
                  :started_at (str started-at)
@@ -216,7 +228,7 @@
 
 (defn- terminate-script! [trial-id key-str]
   (when-let [^Process proc (get-in @running-procs* [trial-id key-str])]
-    (.destroyForcibly proc)))
+    (destroy-tree! proc)))
 
 
 (defn- terminate-when-satisfied? [spec script-results]

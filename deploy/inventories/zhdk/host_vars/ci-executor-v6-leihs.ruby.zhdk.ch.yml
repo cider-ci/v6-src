@@ -1,0 +1,19 @@
+---
+# ZHdK VM for the leihs projects (Debian 13 trixie, 2 cores, 3 GB, 20 GB
+# disk). Being prepared: accepts no load yet (ci_executor_max_load 0). Same
+# trait set as ex01/ex02 except incus: too small for container builds. Its
+# own executor record on the server, token in secrets.yml.
+ci_executor_token: "{{ ci_executor_token_leihs }}"
+ci_executor_max_load: 0
+
+ci_executor_trait_mise: true
+ci_executor_trait_ruby: true
+ci_executor_trait_postgresql: true
+ci_executor_trait_stress_ng: true
+ci_executor_trait_git: true
+ci_executor_trait_misc: true
+ci_executor_trait_apache2: true
+
+# Dispatch-marker traits, see ex01 host_vars for the rationale.
+ci_executor_extra_traits:
+  - "postgresql 15"

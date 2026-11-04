@@ -1,0 +1,19 @@
+---
+# Host firewall (ufw), applied by init.yml, server.yml and executor.yml.
+#
+#   present — ufw installed and enabled: default deny incoming, allow outgoing,
+#             SSH (ci_ssh_port) and ci_firewall_open_ports allowed, logging off.
+#             The default for the Hetzner hosts, which face the internet.
+#   absent  — ufw disabled and purged, iptables alternatives back to auto.
+#             For hosts behind a perimeter firewall (the ZHdK VMs).
+ci_firewall_state: present
+
+# Hetzner (and some other cloud) kernels lack nf_tables support; iptables
+# defaults to the nf_tables backend and ufw fails. Switch to the legacy
+# backend before ufw touches the ruleset.
+ci_firewall_iptables_legacy: true
+
+# Inbound ports allowed from anywhere, besides SSH (ci_ssh_port).
+ci_firewall_open_ports:
+  - 80
+  - 443

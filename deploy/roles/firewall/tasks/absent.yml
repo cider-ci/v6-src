@@ -1,0 +1,36 @@
+---
+# Undo what present.yml (formerly init.yml) set up: unload the rules, purge
+# the package and its configuration, and put the iptables alternatives back
+# into auto mode (the nf_tables backend on Debian).
+- name: Check whether ufw is installed
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: firewall_ufw_bin
+
+- name: Disable ufw (unloads its rules)
+  community.general.ufw:
+    state: disabled
+  when: firewall_ufw_bin.stat.exists
+
+- name: Purge ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: absent
+    purge: yes
+
+- name: Check for the iptables alternatives groups
+  ansible.builtin.command: update-alternatives --query {{ item }}
+  loop: [iptables, ip6tables]
+  register: firewall_alternatives
+  changed_when: false
+  failed_when: false
+
+- name: Reset the iptables alternatives to auto
+  community.general.alternatives:
+    name: "{{ item.item }}"
+    path: "/usr/sbin/{{ item.item }}-legacy"
+    state: auto
+  loop: "{{ firewall_alternatives.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.rc == 0

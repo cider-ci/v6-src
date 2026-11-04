@@ -8,6 +8,8 @@
 # Required inventory variables (none have defaults):
 #   ci_ssh_port          — SSH port to open and configure (e.g. 22)
 #   ci_authorized_keys   — list of public key strings for root access
+# Optional:
+#   ci_firewall_state    — present (default, ufw) or absent (roles/firewall)
 #
 # Example host_vars entry:
 #   ci_ssh_port: 22
@@ -111,64 +113,12 @@
         owner: root
         group: root
 
+    # Host firewall; ci_firewall_state (present/absent) per host, see
+    # roles/firewall/defaults/main.yml. server.yml and executor.yml apply
+    # the same role on every deploy.
     - name: Firewall
-      block:
-        - name: Install ufw and iptables
-          ansible.builtin.apt:
-            pkg: [ufw, iptables]
-            state: present
-            update_cache: yes
-            cache_valid_time: 3600
-
-        # Hetzner (and some other cloud) kernels lack nf_tables support;
-        # iptables defaults to the nf_tables backend and ufw fails.
-        # Switch to the legacy backend before ufw touches the ruleset.
-        - name: Use iptables-legacy backend
-          ansible.builtin.alternatives:
-            name: iptables
-            path: /usr/sbin/iptables-legacy
-
-        - name: Use ip6tables-legacy backend
-          ansible.builtin.alternatives:
-            name: ip6tables
-            path: /usr/sbin/ip6tables-legacy
-
-        - name: Disable ufw before reconfiguring rules
-          community.general.ufw:
-            state: disabled
-
-        - name: Allow SSH
-          community.general.ufw:
-            rule: allow
-            port: "{{ ci_ssh_port | string }}"
-
-        - name: Allow HTTP
-          community.general.ufw:
-            rule: allow
-            port: "80"
-
-        - name: Allow HTTPS
-          community.general.ufw:
-            rule: allow
-            port: "443"
-
-        - name: Default allow outgoing
-          community.general.ufw:
-            default: allow
-            direction: outgoing
-
-        - name: Default deny incoming
-          community.general.ufw:
-            default: deny
-            direction: incoming
-
-        - name: Disable ufw logging
-          community.general.ufw:
-            logging: "off"
-
-        - name: Enable ufw
-          community.general.ufw:
-            state: enabled
+      ansible.builtin.include_role:
+        name: firewall
 
     - name: SSH hardening
       block:

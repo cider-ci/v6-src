@@ -39,6 +39,10 @@ ci_executor_server_url: "https://ci.zhdk.cider-ci.com"
 ci_executor_accepted_repositories:
   - '^https://github\.com/(cider-ci|leihs|Madek)/.+$'
 
+# --- Firewall (roles/firewall) -----------------------------------------------
+# ufw on the Hetzner hosts; the ZHdK VMs set absent in their host_vars.
+ci_firewall_state: present
+
 # --- SSH (used by init.yml) --------------------------------------------------
 ci_ssh_port: 22
 ci_authorized_keys:

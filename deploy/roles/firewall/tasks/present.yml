@@ -1,0 +1,48 @@
+---
+# Runs on every deploy, so the firewall is never disabled here: rules are
+# added live (ufw applies them immediately) and SSH is allowed before ufw is
+# enabled on a fresh host.
+- name: Install ufw and iptables
+  ansible.builtin.apt:
+    pkg: [ufw, iptables]
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Use the iptables-legacy backends
+  community.general.alternatives:
+    name: "{{ item.name }}"
+    path: "{{ item.path }}"
+  loop:
+    - {name: iptables, path: /usr/sbin/iptables-legacy}
+    - {name: ip6tables, path: /usr/sbin/ip6tables-legacy}
+  when: ci_firewall_iptables_legacy
+
+- name: Allow SSH
+  community.general.ufw:
+    rule: allow
+    port: "{{ ci_ssh_port | string }}"
+
+- name: Allow open ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item | string }}"
+  loop: "{{ ci_firewall_open_ports }}"
+
+- name: Default allow outgoing
+  community.general.ufw:
+    default: allow
+    direction: outgoing
+
+- name: Default deny incoming
+  community.general.ufw:
+    default: deny
+    direction: incoming
+
+- name: Disable ufw logging
+  community.general.ufw:
+    logging: "off"
+
+- name: Enable ufw
+  community.general.ufw:
+    state: enabled

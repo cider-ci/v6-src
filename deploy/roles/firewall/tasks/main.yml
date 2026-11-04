@@ -1,0 +1,13 @@
+---
+- name: Check ci_firewall_state
+  ansible.builtin.assert:
+    that: ci_firewall_state in ['present', 'absent']
+    fail_msg: "ci_firewall_state must be 'present' or 'absent', got '{{ ci_firewall_state }}'"
+
+- name: Set up ufw
+  ansible.builtin.include_tasks: present.yml
+  when: ci_firewall_state == 'present'
+
+- name: Remove ufw
+  ansible.builtin.include_tasks: absent.yml
+  when: ci_firewall_state == 'absent'

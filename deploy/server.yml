@@ -11,6 +11,9 @@
     - role: common
       tags: [common]
 
+    - role: firewall
+      tags: [firewall]
+
     - role: java
       tags: [java]
 

@@ -6,6 +6,10 @@
 ci_executor_token: "{{ ci_executor_token_leihs }}"
 ci_executor_max_load: 0
 
+# ZHdK network: no host firewall (init.yml had set ufw up on 2026-11-04,
+# the role removes it again on deploy).
+ci_firewall_state: absent
+
 ci_executor_trait_mise: true
 ci_executor_trait_ruby: true
 ci_executor_trait_postgresql: true

@@ -11,6 +11,8 @@ ci_executor_trait_incus: true
 ci_executor_trait_misc: true
 # leihs integration tests run their own apache2 reverse proxy per trial
 ci_executor_trait_apache2: true
+# gettext + translate-toolkit (leihs legacy meta: pofilter)
+ci_executor_trait_translation_tools: true
 
 # Dispatch-marker traits required by projects so their tasks match this
 # executor. The projects' pinned toolchains (Ruby, Java, Clojure, Node,

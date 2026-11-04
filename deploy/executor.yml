@@ -52,3 +52,7 @@
     - role: trait-apache2
       when: ci_executor_trait_apache2 | default(false)
       tags: [trait-apache2]
+
+    - role: trait-translation-tools
+      when: ci_executor_trait_translation_tools | default(false)
+      tags: [trait-translation-tools]

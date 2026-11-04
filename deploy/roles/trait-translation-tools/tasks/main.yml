@@ -1,0 +1,23 @@
+---
+# Ported from the legacy ZHdK inventory role traits/translation-tools:
+# gettext and the translate-toolkit (pofilter, pocount, ...). leihs legacy's
+# meta job extracts missing and fuzzy translations with pofilter.
+- name: Install gettext and translate-toolkit
+  ansible.builtin.apt:
+    name:
+      - gettext
+      - translate-toolkit
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+# Same trait vocabulary as legacy (the server lowercases traits on both sides).
+# Picked up by the executor at its next restart, like the other trait roles.
+- name: Register translation tool traits in executor traits file
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: "{{ item }}"
+  loop:
+    - translation-tools
+    - gettext
+    - translate-toolkit

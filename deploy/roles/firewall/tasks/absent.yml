@@ -36,12 +36,13 @@
   when: item.rc == 0
 
 # `ufw disable` leaves its (now empty) chains and the jumps into them in the
-# filter tables until the next reboot. Flush and delete them from every
+# filter tables (chains ufw-* and, for IPv6, ufw6-*) until the next reboot.
+# Flush and delete them from every
 # backend where ufw chains exist; with no host firewall there are no other
 # filter rules to keep.
 - name: Check for leftover ufw chains
   ansible.builtin.shell: >
-    test -x /usr/sbin/{{ item }} && /usr/sbin/{{ item }} -S | grep -q '^-N ufw-'
+    test -x /usr/sbin/{{ item }} && /usr/sbin/{{ item }} -S | grep -Eq '^-N ufw6?-'
   loop: [iptables-legacy, ip6tables-legacy, iptables-nft, ip6tables-nft]
   register: firewall_ufw_chains
   changed_when: false

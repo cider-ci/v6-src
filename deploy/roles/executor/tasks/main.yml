@@ -55,6 +55,19 @@
     group: "{{ ci_executor_exec_user }}"
     mode: '0750'
 
+# Trial scripts run as the service user (not as the exec-user). Projects that
+# ssh from a trial into a container they created rely on ~/.ssh/id_rsa.pub
+# (leihs container-deploy copies it into the container's authorized_keys),
+# so the service user gets a host-local key pair, like the exec-user above.
+- name: Generate an SSH key pair for the service user
+  ansible.builtin.user:
+    name: "{{ cider_ci_user }}"
+    generate_ssh_key: yes
+    ssh_key_type: rsa
+    ssh_key_bits: 4096
+    ssh_key_file: .ssh/id_rsa
+    ssh_key_comment: "{{ cider_ci_user }}@{{ inventory_hostname }}"
+
 - name: Create config directory
   ansible.builtin.file:
     path: /etc/cider-ci

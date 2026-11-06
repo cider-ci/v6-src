@@ -28,6 +28,17 @@ ci_executor_trait_misc: true
 ci_executor_trait_apache2: true
 # gettext + translate-toolkit (leihs legacy meta: pofilter)
 ci_executor_trait_translation_tools: true
+# Key pair for decrypting the leihs inventory's transcrypt password (recipient
+# of zhdk-inventory .transcrypt_key.txt.asc); public key in gpg-pubkeys/.
+ci_executor_trait_gpg: true
+
+# Deploy targets the trial scripts ssh into (ssh-keyscan from this VM,
+# 2026-11-06). The service user's public key (ssh-pubkeys/) must be
+# authorized there via the leihs inventory's ssh_keys_present.
+ci_executor_ssh_known_hosts:
+  - 'tom-leihs.ruby.zhdk.ch ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCYSpkzzmHKP2uYem4cEusS7/hphFHywDHTCW+WduEvcTIRhiNKEbzSb/fKGY01LkedEuvsTnltcekQRki+h/JoqjZ4F2q5x6yr4VDBy0dVgz4jLEC0Exx0mEEkvRGE3bDI0ScnlIOVFtjw/dZo+XPa/LVQKqnCjdhKDptz/jBB5mONulXNklJs3Pm4X+J/IQY3zm1x/il0aWBoYdJRgQ3l8qwvo9nRBRGssBmcne4qw4wwK9mbc2+wSFpwC7TxOsZjMororptU2SwbFS9aC/YPIy96CFGnoUihp7JTOYQj3bAZevdSdtXh1UGQzIYzr4ZWKfnEknu+eo0dpH8ylsbkhUMuVLJKmuzW49AhJOYJzXXjGXaUcE8B2Jxbk+gHtYXH5XHUu1DuzUt3cZPx2g2KCEexSDTthF3HfIS8nDyX9wOVNNMUHnSWEM8b1haOqFJo2dSE4zOcVw5fMyOrwlkIQtyG565Khar0aXr6YZzcUgdXeCqkRJUBhFmR1zT/568='
+  - 'tom-leihs.ruby.zhdk.ch ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBPX8c71dPWk9/3ICXQvuryUtCi89KXhsASVGs1e3JA/XOXZZ0uDuEzkfhuZqfR66O8WTHLKUlyPPbxtEGZER7jU='
+  - 'tom-leihs.ruby.zhdk.ch ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICZNyVWgQ33MOc7wQN+DHanijkVWlBWqS5t3Rrlnxm9e'
 
 # Dispatch-marker traits, see ex01 host_vars for the rationale.
 ci_executor_extra_traits:

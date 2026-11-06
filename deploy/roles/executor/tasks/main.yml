@@ -68,6 +68,30 @@
     ssh_key_file: .ssh/id_rsa
     ssh_key_comment: "{{ cider_ci_user }}@{{ inventory_hostname }}"
 
+- name: Fetch the service user's SSH public key into the inventory (ssh-pubkeys/<host>.pub)
+  ansible.builtin.fetch:
+    src: "{{ cider_ci_base_dir }}/.ssh/id_rsa.pub"
+    dest: "{{ inventory_dir }}/ssh-pubkeys/{{ inventory_hostname }}.pub"
+    flat: yes
+
+# Hosts the trial scripts ssh into (deploy targets): pin their host keys.
+- name: Add known hosts for the service user
+  ansible.builtin.known_hosts:
+    path: "{{ cider_ci_base_dir }}/.ssh/known_hosts"
+    name: "{{ item.split(' ')[0] }}"
+    key: "{{ item }}"
+  loop: "{{ ci_executor_ssh_known_hosts | default([]) }}"
+  loop_control:
+    label: "{{ item.split(' ')[0] }} {{ item.split(' ')[1] }}"
+
+- name: Own the service user's known_hosts
+  ansible.builtin.file:
+    path: "{{ cider_ci_base_dir }}/.ssh/known_hosts"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0644'
+  when: (ci_executor_ssh_known_hosts | default([])) | length > 0
+
 - name: Create config directory
   ansible.builtin.file:
     path: /etc/cider-ci

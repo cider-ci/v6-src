@@ -1,0 +1,10 @@
+---
+# GPG trait: a passphrase-less key pair for the executor service user, so
+# trial scripts can decrypt what is encrypted to the executor (leihs
+# zhdk-inventory bin/unlock decrypts the transcrypt password with gpg).
+# Ported from the legacy ZHdK inventory role traits/gpg; differences: the key
+# is RSA 4096 for the service user, nothing is imported, and the public key
+# is fetched into the inventory (gpg-pubkeys/<host>.asc) to be added as a
+# recipient.
+ci_executor_trait_gpg_email: "{{ cider_ci_user }}@{{ inventory_hostname }}"
+ci_executor_trait_gpg_real_name: "{{ ci_executor_trait_gpg_email }}"

@@ -1,0 +1,53 @@
+---
+- name: Install gnupg
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Check for the executor's secret key
+  ansible.builtin.command: gpg --batch --list-secret-keys --with-colons {{ ci_executor_trait_gpg_email }}
+  become: yes
+  become_user: "{{ cider_ci_user }}"
+  register: trait_gpg_secret_key
+  changed_when: false
+  failed_when: false
+
+- name: Generate the executor's key pair
+  when: trait_gpg_secret_key.rc != 0
+  block:
+    - name: Template the key generation batch script
+      ansible.builtin.template:
+        src: gen-key-script.j2
+        dest: "{{ cider_ci_base_dir }}/.gnupg-gen-key-script"
+        owner: "{{ cider_ci_user }}"
+        group: "{{ cider_ci_group }}"
+        mode: '0600'
+
+    - name: Generate the key pair (no passphrase)
+      ansible.builtin.command: gpg --batch --generate-key {{ cider_ci_base_dir }}/.gnupg-gen-key-script
+      become: yes
+      become_user: "{{ cider_ci_user }}"
+
+    - name: Remove the batch script
+      ansible.builtin.file:
+        path: "{{ cider_ci_base_dir }}/.gnupg-gen-key-script"
+        state: absent
+
+- name: Export the public key
+  ansible.builtin.shell: gpg --batch --armor --export {{ ci_executor_trait_gpg_email }} > {{ cider_ci_base_dir }}/gpg-pubkey.asc
+  become: yes
+  become_user: "{{ cider_ci_user }}"
+  changed_when: false
+
+- name: Fetch the public key into the inventory (gpg-pubkeys/<host>.asc)
+  ansible.builtin.fetch:
+    src: "{{ cider_ci_base_dir }}/gpg-pubkey.asc"
+    dest: "{{ inventory_dir }}/gpg-pubkeys/{{ inventory_hostname }}.asc"
+    flat: yes
+
+- name: Register the gpg trait
+  ansible.builtin.lineinfile:
+    path: /etc/cider-ci/traits
+    line: gpg

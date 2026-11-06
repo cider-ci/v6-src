@@ -34,6 +34,7 @@
                                        "Content-Type"  "application/json"
                                        "Accept"        "application/json"}
                              :body    (json/generate-string {:available_load         available-load
+                                                             :max_load               (double max-load)
                                                              :traits                 (read-traits)
                                                              :accepted_repositories  (accepted-repositories/current)
                                                              :accepted_gpg_keys      (accepted-gpg-keys/entries)

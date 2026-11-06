@@ -186,6 +186,13 @@
     (jdbc/execute-one! tx
       ["UPDATE executors SET last_seen_at = now(), updated_at = now() WHERE id = ?"
        (:id executor)]))
+  ;; The executor's configured maximum load (CIDER_CI_EXECUTOR_MAX_LOAD); the
+  ;; value given at registration is only a placeholder until the first sync.
+  (when (number? (:max_load body))
+    (let [max-load (double (:max_load body))]
+      (jdbc/execute-one! tx
+        ["UPDATE executors SET max_load = ? WHERE id = ? AND max_load IS DISTINCT FROM ?"
+         max-load (:id executor) max-load])))
   (when (sequential? (:accepted_repositories body))
     (let [entries (json/generate-string
                     (accepted-repositories/normalize-entries (:accepted_repositories body)))]

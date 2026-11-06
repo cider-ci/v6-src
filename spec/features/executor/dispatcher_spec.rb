@@ -19,13 +19,14 @@ feature 'Dispatcher' do
     )
   end
 
-  def executor_sync(tok, available_load: 4.0, accepted_repositories: nil, accepted_gpg_keys: nil)
+  def executor_sync(tok, available_load: 4.0, max_load: nil, accepted_repositories: nil, accepted_gpg_keys: nil)
     uri = URI("#{http_base_url}/executor/sync")
     req = Net::HTTP::Post.new(uri)
     req['Authorization'] = "Bearer #{tok}"
     req['Content-Type']  = 'application/json'
     req['Accept']        = 'application/json'
     payload = { available_load: available_load }
+    payload[:max_load] = max_load if max_load
     payload[:accepted_repositories] = accepted_repositories if accepted_repositories
     payload[:accepted_gpg_keys] = accepted_gpg_keys if accepted_gpg_keys
     req.body             = payload.to_json
@@ -78,6 +79,16 @@ feature 'Dispatcher' do
     expect(body['trials_to_execute'].length).to eq 1
     expect(database[:trials].where(state: 'dispatching').count).to eq 1
     expect(database[:trials].where(state: 'pending').count).to eq 1
+  end
+
+  scenario 'the sync records the max load the executor reports' do
+    seed_executor(max_load: 4.0)
+
+    executor_sync(token, max_load: 1.0)
+    expect(database[:executors].where(token_hash: token_hash).first[:max_load]).to eq 1.0
+
+    executor_sync(token)
+    expect(database[:executors].where(token_hash: token_hash).first[:max_load]).to eq 1.0
   end
 
   context 'accepted repositories' do

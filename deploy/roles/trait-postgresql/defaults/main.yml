@@ -1,8 +1,10 @@
 ---
 ci_executor_trait_postgresql_version_major: 15
 ci_executor_trait_postgresql_port: "54{{ ci_executor_trait_postgresql_version_major }}"
-ci_executor_trait_postgresql_exec_user: "{{ ci_executor_exec_user }}"
-ci_executor_trait_postgresql_exec_user_password: "{{ ci_executor_exec_user }}"
+# PostgreSQL role (and password) the trials connect as; the name is historic
+# (the legacy CI's OS user) and kept so project configs keep working.
+ci_executor_trait_postgresql_exec_user: ci-exec-user
+ci_executor_trait_postgresql_exec_user_password: ci-exec-user
 ci_executor_trait_postgresql_max_connections: 500
 # NOT under /tmp: Debian trixie's systemd-tmpfiles ages out /tmp entries older
 # than 10 days (`q /tmp 1777 root root 10d`); it deleted untouched catalog

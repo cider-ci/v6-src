@@ -15,31 +15,33 @@
     home: "{{ cider_ci_base_dir }}"
     create_home: no
 
-- name: Create exec-user group
-  ansible.builtin.group:
-    name: "{{ ci_executor_exec_user }}"
-
-- name: Create exec-user (runs trial scripts; unprivileged)
-  ansible.builtin.user:
-    name: "{{ ci_executor_exec_user }}"
-    group: "{{ ci_executor_exec_user }}"
-    shell: /bin/bash
-    home: "/home/{{ ci_executor_exec_user }}"
-    generate_ssh_key: yes
-
-- name: Configure git email for exec-user
+- name: Configure git email for the service user
   community.general.git_config:
     name: user.email
-    value: "{{ ci_executor_exec_user }}@{{ inventory_hostname }}"
+    value: "{{ cider_ci_user }}@{{ inventory_hostname }}"
     scope: global
-  become_user: "{{ ci_executor_exec_user }}"
+  become_user: "{{ cider_ci_user }}"
 
-- name: Configure git name for exec-user
+- name: Configure git name for the service user
   community.general.git_config:
     name: user.name
-    value: "{{ ci_executor_exec_user }}"
+    value: "{{ cider_ci_user }}"
     scope: global
-  become_user: "{{ ci_executor_exec_user }}"
+  become_user: "{{ cider_ci_user }}"
+
+# Until 2026-11 the role also created a legacy "ci-exec-user" (the legacy CI's
+# trial user); on v6 nothing ever ran as it. Remove it, its home (mise installs)
+# and its group where they still exist.
+- name: Remove the legacy exec-user
+  ansible.builtin.user:
+    name: ci-exec-user
+    state: absent
+    remove: yes
+
+- name: Remove the legacy exec-user group
+  ansible.builtin.group:
+    name: ci-exec-user
+    state: absent
 
 - name: Create executor directory
   ansible.builtin.file:
@@ -53,26 +55,34 @@
   ansible.builtin.file:
     path: "{{ ci_executor_dir }}/tmp"
     state: directory
-    owner: "{{ ci_executor_exec_user }}"
-    group: "{{ ci_executor_exec_user }}"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
     mode: '0750'
 
-# Trial scripts run as the service user (not as the exec-user). Projects that
-# ssh from a trial into a container they created rely on ~/.ssh/id_rsa.pub
-# (leihs container-deploy copies it into the container's authorized_keys),
-# so the service user gets a host-local key pair, like the exec-user above.
+# Trial scripts run as the service user. Projects that ssh from a trial into a
+# deploy target or a container they created rely on ~/.ssh/id_ed25519.pub
+# (leihs container-deploy copies it into the container's authorized_keys), so
+# the service user gets a host-local key pair. Ed25519 is OpenSSH's default
+# key type; post-quantum signature keys are still experimental in OpenSSH
+# (10.4, not in Debian 13), the key exchange on Debian 13 is already hybrid
+# PQ (mlkem768x25519) by default.
 - name: Generate an SSH key pair for the service user
   ansible.builtin.user:
     name: "{{ cider_ci_user }}"
     generate_ssh_key: yes
-    ssh_key_type: rsa
-    ssh_key_bits: 4096
-    ssh_key_file: .ssh/id_rsa
+    ssh_key_type: ed25519
+    ssh_key_file: .ssh/id_ed25519
     ssh_key_comment: "{{ cider_ci_user }}@{{ inventory_hostname }}"
+
+- name: Remove the service user's former RSA key pair
+  ansible.builtin.file:
+    path: "{{ cider_ci_base_dir }}/.ssh/{{ item }}"
+    state: absent
+  loop: [id_rsa, id_rsa.pub]
 
 - name: Fetch the service user's SSH public key into the inventory (ssh-pubkeys/<host>.pub)
   ansible.builtin.fetch:
-    src: "{{ cider_ci_base_dir }}/.ssh/id_rsa.pub"
+    src: "{{ cider_ci_base_dir }}/.ssh/id_ed25519.pub"
     dest: "{{ inventory_dir }}/ssh-pubkeys/{{ inventory_hostname }}.pub"
     flat: yes
 
@@ -284,43 +294,45 @@
   # A running PostgreSQL only sees a newly generated locale after a restart.
   notify: Restart trait postgresql
 
-- name: Install mise (tool version manager) for exec-user
+# mise is installed for the service user, i.e. the user the trials run as, so
+# the pre-installed tool versions land in the cache the trials use.
+- name: Install mise (tool version manager) for the service user
   ansible.builtin.shell:
     cmd: curl -fsSL https://mise.run | sh
-    creates: "/home/{{ ci_executor_exec_user }}/.local/bin/mise"
-  become_user: "{{ ci_executor_exec_user }}"
+    creates: "{{ cider_ci_base_dir }}/.local/bin/mise"
+  become_user: "{{ cider_ci_user }}"
 
 - name: Copy .tool-versions for tool pre-warming
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../.tool-versions"
-    dest: "/home/{{ ci_executor_exec_user }}/.tool-versions"
-    owner: "{{ ci_executor_exec_user }}"
-    group: "{{ ci_executor_exec_user }}"
+    dest: "{{ cider_ci_base_dir }}/.tool-versions"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
     mode: '0644'
 
 - name: Install custom mise plugin for firefox
   ansible.builtin.shell:
     cmd: >
-      /home/{{ ci_executor_exec_user }}/.local/bin/mise plugin install
+      {{ cider_ci_base_dir }}/.local/bin/mise plugin install
       firefox https://github.com/DrTom/asdf-firefox.git
-    creates: "/home/{{ ci_executor_exec_user }}/.local/share/mise/plugins/firefox"
-  become_user: "{{ ci_executor_exec_user }}"
+    creates: "{{ cider_ci_base_dir }}/.local/share/mise/plugins/firefox"
+  become_user: "{{ cider_ci_user }}"
 
 - name: Install custom mise plugin for geckodriver
   ansible.builtin.shell:
     cmd: >
-      /home/{{ ci_executor_exec_user }}/.local/bin/mise plugin install
+      {{ cider_ci_base_dir }}/.local/bin/mise plugin install
       geckodriver https://github.com/DrTom/asdf-geckodriver.git
-    creates: "/home/{{ ci_executor_exec_user }}/.local/share/mise/plugins/geckodriver"
-  become_user: "{{ ci_executor_exec_user }}"
+    creates: "{{ cider_ci_base_dir }}/.local/share/mise/plugins/geckodriver"
+  become_user: "{{ cider_ci_user }}"
 
 - name: Pre-install tool versions defined in .tool-versions (excluding geckodriver)
   ansible.builtin.shell:
     cmd: >
-      /home/{{ ci_executor_exec_user }}/.local/bin/mise install
+      {{ cider_ci_base_dir }}/.local/bin/mise install
       java ruby node clojure firefox
-    chdir: "/home/{{ ci_executor_exec_user }}"
-  become_user: "{{ ci_executor_exec_user }}"
+    chdir: "{{ cider_ci_base_dir }}"
+  become_user: "{{ cider_ci_user }}"
   register: mise_install_result
   changed_when: "'installed' in mise_install_result.stderr"
   # Ruby 3.1.x fails to build on Debian 13 (ruby-build tries to compile OpenSSL 3.0.x
@@ -332,9 +344,16 @@
     cmd: >
       curl -fsSL
       https://github.com/mozilla/geckodriver/releases/download/v0.37.1/geckodriver-v0.37.1-linux64.tar.gz
-      | tar -xz -C /usr/local/bin &&
+      | tar --no-same-owner -xz -C /usr/local/bin &&
       touch /usr/local/bin/.geckodriver-v0.37.1
     creates: /usr/local/bin/.geckodriver-v0.37.1
+
+- name: Own geckodriver by root (older extractions kept the archive's uid)
+  ansible.builtin.file:
+    path: /usr/local/bin/geckodriver
+    owner: root
+    group: root
+    mode: '0755'
 
 - name: Raise inotify max_user_instances for concurrent Firefox sessions
   ansible.posix.sysctl:

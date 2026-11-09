@@ -1,5 +1,5 @@
 ---
-# The executor role installs mise for ci_executor_exec_user under ~/.local/bin/mise.
+# The executor role installs mise for the service user under ~/.local/bin/mise.
 # This role makes it accessible system-wide and registers the trait.
 
 - name: Copy mise into system PATH

@@ -26,27 +26,27 @@
 
 - name: Create asdf home directory
   ansible.builtin.file:
-    path: "/home/{{ ci_executor_exec_user }}/.asdf"
+    path: "{{ cider_ci_base_dir }}/.asdf"
     state: directory
-    owner: "{{ ci_executor_exec_user }}"
-    group: "{{ ci_executor_exec_user }}"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
     mode: '0755'
 
 - name: Create asdf plugins directory
   ansible.builtin.file:
-    path: "/home/{{ ci_executor_exec_user }}/.asdf/plugins"
+    path: "{{ cider_ci_base_dir }}/.asdf/plugins"
     state: directory
-    owner: "{{ ci_executor_exec_user }}"
-    group: "{{ ci_executor_exec_user }}"
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
     mode: '0755'
 
 - name: Download and unpack asdf {{ ci_executor_trait_asdf_version }}
   ansible.builtin.unarchive:
     src: "https://github.com/asdf-vm/asdf/archive/refs/tags/v{{ ci_executor_trait_asdf_version }}.tar.gz"
     remote_src: yes
-    dest: "/home/{{ ci_executor_exec_user }}/.asdf"
+    dest: "{{ cider_ci_base_dir }}/.asdf"
     owner: root
-    group: "{{ ci_executor_exec_user }}"
+    group: "{{ cider_ci_group }}"
     creates: "{{ ci_executor_trait_asdf_dir }}/asdf.sh"
 
 - name: Install asdf profile.d snippet

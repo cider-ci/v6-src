@@ -4,12 +4,14 @@
     name: "{{ cider_ci_group }}"
     system: yes
 
+# The service user runs the executor process and the trial scripts. It gets a
+# real shell so developers can ssh in as this user (ci_executor_ssh_authorized_keys).
 - name: Create cider-ci user (service user running the executor process)
   ansible.builtin.user:
     name: "{{ cider_ci_user }}"
     group: "{{ cider_ci_group }}"
     system: yes
-    shell: /usr/sbin/nologin
+    shell: /bin/bash
     home: "{{ cider_ci_base_dir }}"
     create_home: no
 
@@ -73,6 +75,23 @@
     src: "{{ cider_ci_base_dir }}/.ssh/id_rsa.pub"
     dest: "{{ inventory_dir }}/ssh-pubkeys/{{ inventory_hostname }}.pub"
     flat: yes
+
+- name: Authorize developer SSH keys for the service user
+  ansible.posix.authorized_key:
+    user: "{{ cider_ci_user }}"
+    key: "{{ item }}"
+  loop: "{{ ci_executor_ssh_authorized_keys }}"
+  loop_control:
+    label: "{{ item.split(' ')[2] | default(item.split(' ')[1][:24]) }}"
+
+- name: Revoke removed developer SSH keys for the service user
+  ansible.posix.authorized_key:
+    user: "{{ cider_ci_user }}"
+    key: "{{ item }}"
+    state: absent
+  loop: "{{ ci_executor_ssh_removed_keys }}"
+  loop_control:
+    label: "{{ item.split(' ')[2] | default(item.split(' ')[1][:24]) }}"
 
 # Hosts the trial scripts ssh into (deploy targets): pin their host keys.
 - name: Add known hosts for the service user

@@ -6,3 +6,11 @@
 ci_executor_accepted_gpg_keys:
   # Thomas Schank, D180BE89E69F6399711D1590E293459CB10B0442
   - "{{ lookup('file', inventory_dir ~ '/files/gpg/thomas-schank-B10B0442.asc') }}"
+
+# Developers who may ssh into the executors as the service user (the user the
+# trials run as): ssh cider-ci@<executor>. Keys in files/ssh/.
+ci_executor_ssh_authorized_keys:
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/drtom.pub') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/manuel.pub') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/nimaai.pub') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/uvb.pub') }}"

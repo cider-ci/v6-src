@@ -48,3 +48,10 @@ ci_executor_accepted_gpg_keys: []
 # from a branch or tag of the repository's real remote (git ls-remote), not
 # only on the CIDER-CI server it fetched it from.
 ci_executor_verify_origin: true
+
+# SSH public keys (one authorized_keys line each) that may log in as the
+# service user, i.e. as the user the trial scripts run as. Developers use this
+# to inspect an executor the way a trial sees it (mise installs, gpg and ssh
+# state, working directories). Keys listed in the removed list are revoked.
+ci_executor_ssh_authorized_keys: []
+ci_executor_ssh_removed_keys: []

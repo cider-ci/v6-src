@@ -5,15 +5,16 @@
 # record on the server, token in secrets.yml.
 ci_executor_token: "{{ ci_executor_token_leihs }}"
 
-# Cautious start (2026-11-06): one trial at a time, and only the tom-deploy
-# job (deploy to the tom dev server) for heads of tom.* branches of the
-# leihs superproject; the legacy deploy executor keeps serving everything
-# else. Widen job by job (docs/executors/accepted-repositories.md).
+# Cautious start (2026-11-06): one trial at a time, and only the two jobs
+# deploying to the tom dev server (tom-deploy, tom-restore-deploy; 2026-11-10)
+# for heads of tom.* branches of the leihs superproject; the legacy deploy
+# executor keeps serving everything else. Widen job by job
+# (docs/executors/accepted-repositories.md).
 ci_executor_max_load: 1
 ci_executor_accepted_repositories:
   - url: 'https://github.com/leihs/leihs.git'
     branches: ['^tom.*$']
-    jobs: ['^tom-deploy$']
+    jobs: ['^tom-deploy$', '^tom-restore-deploy$']
 
 # ZHdK network: no host firewall (init.yml had set ufw up on 2026-11-04,
 # the role removes it again on deploy).

@@ -11,6 +11,11 @@ ci_executor_token: "{{ ci_executor_token_leihs }}"
 # executor keeps serving everything else. Widen job by job
 # (docs/executors/accepted-repositories.md).
 ci_executor_max_load: 1
+
+# ZHdK IT gave the VM a dedicated /tmp disk (40 GB, /etc/fstab, 2026-11-02);
+# the role must not mask the fstab-generated tmp.mount (emergency mode at
+# boot, 2026-11-10).
+ci_executor_tmp_on_disk: false
 ci_executor_accepted_repositories:
   - url: 'https://github.com/leihs/leihs.git'
     branches: ['^tom.*$']

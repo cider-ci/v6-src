@@ -12,7 +12,9 @@ ci_executor_java_xmx: 256m
 ci_executor_java_opts: "-Djdk.nio.maxCachedBufferSize=1048576"
 
 # Mask Debian 13's tmpfs on /tmp so trial working dirs live on disk (needs
-# a reboot to take effect, see the task).
+# a reboot to take effect, see the task). Skipped automatically when
+# /etc/fstab mounts /tmp (a dedicated disk): masking the fstab-generated
+# tmp.mount breaks the next boot.
 ci_executor_tmp_on_disk: true
 
 # Traits removed from executors on deploy (the extra-trait lines are only ever

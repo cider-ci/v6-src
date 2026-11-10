@@ -23,3 +23,8 @@ ci_executor_trait_translation_tools: true
 # Dispatch-marker traits, see ex01 host_vars for the rationale.
 ci_executor_extra_traits:
   - "postgresql 15"
+
+# ZHdK IT gave the VM a dedicated /tmp disk (20 GB, /etc/fstab, 2026-11-02);
+# the role must not mask the fstab-generated tmp.mount (emergency mode at
+# boot, 2026-11-10).
+ci_executor_tmp_on_disk: false

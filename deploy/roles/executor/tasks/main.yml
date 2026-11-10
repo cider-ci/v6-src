@@ -213,15 +213,32 @@
   loop: "{{ ci_executor_retired_traits | default([]) }}"
   notify: Restart cider-ci-executor
 
+- name: Check whether /etc/fstab mounts /tmp itself
+  # A /tmp line in fstab makes systemd generate its own tmp.mount, required
+  # by local-fs.target. Masking that one fails the target and the next boot
+  # ends in emergency mode with a read-only root (ZHdK VMs, 2026-11-10).
+  ansible.builtin.command: grep -Eq '^[^#[:space:]]+[[:space:]]+/tmp[[:space:]]' /etc/fstab
+  register: ci_executor_fstab_tmp
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
 - name: Keep /tmp on disk (mask the tmpfs tmp.mount of Debian 13)
   # trixie mounts /tmp as a tmpfs capped at 50% of RAM: trial working dirs
   # (checkouts, node_modules, jars) fill it and compete with the trials for
   # memory. Masking tmp.mount is Debian's way to opt out; it takes effect
-  # at the next reboot (an active tmpfs is not unmounted).
+  # at the next reboot (an active tmpfs is not unmounted). Never when fstab
+  # provides /tmp (see above).
   ansible.builtin.systemd:
     name: tmp.mount
     masked: true
-  when: ci_executor_tmp_on_disk
+  when: ci_executor_tmp_on_disk and ci_executor_fstab_tmp.rc != 0
+
+- name: Unmask tmp.mount where /tmp comes from fstab or the tmpfs is wanted
+  ansible.builtin.systemd:
+    name: tmp.mount
+    masked: false
+  when: not ci_executor_tmp_on_disk or ci_executor_fstab_tmp.rc == 0
 
 - name: Exclude CI working data from systemd-tmpfiles age cleanup
   # trixie: `q /tmp 10d` / `q /var/tmp 30d` would delete untouched files

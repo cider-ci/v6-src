@@ -154,9 +154,7 @@
     owner: root
     group: root
     mode: '0644'
-  notify:
-    - Reload systemd
-    - Restart cider-ci-executor
+  notify: Restart cider-ci-executor
 
 - name: Write default executor traits file
   ansible.builtin.copy:

@@ -1,9 +1,9 @@
 ---
-- name: Reload systemd
-  ansible.builtin.systemd:
-    daemon_reload: yes
-
+# The restart reloads the daemon itself: a separate "Reload systemd" handler
+# shared its name with the trait-postgresql one, which ran after the restart,
+# so a changed unit file (new ExecStart) was restarted with the old command.
 - name: Restart cider-ci-executor
-  ansible.builtin.service:
+  ansible.builtin.systemd:
     name: cider-ci-executor
     state: restarted
+    daemon_reload: yes

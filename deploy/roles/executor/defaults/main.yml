@@ -7,6 +7,9 @@ ci_executor_server_url: "http://localhost:3838"
 # ci_executor_token: set in vault (the bearer token created via admin UI)
 ci_executor_max_load: 4
 ci_executor_java_xmx: 256m
+# Further JVM flags; same per-thread temporary direct buffer cap as the
+# server (see the server role defaults), relevant for attachment uploads.
+ci_executor_java_opts: "-Djdk.nio.maxCachedBufferSize=1048576"
 
 # Mask Debian 13's tmpfs on /tmp so trial working dirs live on disk (needs
 # a reboot to take effect, see the task).

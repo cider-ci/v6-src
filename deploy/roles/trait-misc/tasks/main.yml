@@ -3,10 +3,13 @@
 # projects rely on implicitly (leihs legacy uploads images via ImageMagick,
 # reads metadata via ExifTool, ...). libgconf-2-4 (GNOME 2 config, gone in
 # trixie) is not ported — nothing uses it any more.
-- name: Install misc tools (ImageMagick, ExifTool, Graphviz, Hunspell, Xvfb, curl)
+# xxd: transcrypt (leihs zhdk-inventory bin/unlock) requires it; it came with
+# vim-common on older Debians, trixie ships it as its own package.
+- name: Install misc tools (ImageMagick, ExifTool, Graphviz, Hunspell, Xvfb, curl, xxd)
   ansible.builtin.apt:
     name:
       - curl
+      - xxd
       - graphviz
       - hunspell
       - hunspell-de-ch

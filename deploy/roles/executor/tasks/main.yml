@@ -15,6 +15,16 @@
     home: "{{ cider_ci_base_dir }}"
     create_home: no
 
+# The home directory (git config, ssh keys, mise, trait roles build on it).
+# 0751: system users such as postgres must traverse it (trait-postgresql).
+- name: Create the service user's home directory
+  ansible.builtin.file:
+    path: "{{ cider_ci_base_dir }}"
+    state: directory
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: '0751'
+
 - name: Configure git email for the service user
   community.general.git_config:
     name: user.email

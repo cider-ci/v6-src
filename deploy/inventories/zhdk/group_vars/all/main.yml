@@ -29,8 +29,9 @@ ci_server_github_sign_in:
     - {organization: zhdk, team: 'Ruby Developers'}
 
 # --- Executor ----------------------------------------------------------------
-# ci_executor_token — defined in secrets.yml (transcrypt-encrypted); ex02
-# overrides it per host (ci_executor_token_ex02). ci_executor_name is only
+# ci_executor_token — defined in secrets.yml (transcrypt-encrypted); ex02,
+# ex03 and ex04 override it per host (ci_executor_token_ex02 etc.).
+# ci_executor_name is only
 # used by provision.yml to seed the first executor record; further
 # executors are registered via the admin UI (/executors/new).
 ci_executor_name: ex01.ci.zhdk.cider-ci.com

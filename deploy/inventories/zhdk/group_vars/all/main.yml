@@ -16,6 +16,9 @@ ci_admin_login: admin
 # --- Server ------------------------------------------------------------------
 ci_server_http_port: 3838
 ci_server_http_bind: "127.0.0.1"
+# The role default (512m) ran out of heap when two fresh executors cloned
+# madek_webapp at once (2026-11-12); the host has 128 GB.
+ci_server_java_xmx: 4g
 
 # --- GitHub sign-in (docs/github-sign-in.md) --------------------------------
 # Active once ci_github_client_id and ci_github_client_secret are defined in

@@ -11,30 +11,66 @@
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
+    [org.httpkit.server :as http-kit]
+    [taoensso.timbre :refer [debug warn]]
     )
 
   (:import
-    [java.io DataInputStream]
+    [java.io ByteArrayInputStream DataInputStream InputStream]
     [java.lang ProcessBuilder]
+    [java.util Arrays]
     ))
 
 ;;; http git ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn build-response [process]
-  (let [pout (-> process .getInputStream DataInputStream.)
-        response (loop [response {}
-                        line (.readLine pout)]
-                   (if-not (and line (not (re-matches #"^\s*$" line)))
-                     response
-                     (let [[k v] (clojure.string/split line #":\s+" 2)]
-                       (recur
-                         (if (re-matches #"(?i)^status" k)
-                           (let [status (-> v (clojure.string/split #"\s+" 2) first Integer/parseInt)]
-                             (assoc response :status status))
-                           (assoc-in response [:headers k] v))
-                         (.readLine pout)))))
-        body (.readAllBytes pout)]
-    (assoc response :body body)))
+;; git http-backend writes CGI style: header lines (Status, Content-Type, ...)
+;; up to an empty line, then the body. The body of a git-upload-pack response
+;; is the pack a clone or fetch asks for, hundreds of MB for the bigger
+;; projects, so it is streamed to the client in chunks (chunked transfer
+;; encoding) instead of being read into memory: reading it all exhausted a
+;; 512 MB heap when two fresh executors cloned at once (2026-11-12), and the
+;; handler would hold its DB connection for the whole transfer.
+
+(defn- read-cgi-head
+  "Reads the CGI header lines, up to and including the empty line."
+  [^DataInputStream pout]
+  (loop [response {:status 200 :headers {}}
+         line (.readLine pout)]
+    (if-not (and line (not (re-matches #"^\s*$" line)))
+      response
+      (let [[k v] (clojure.string/split line #":\s+" 2)]
+        (recur
+          (if (re-matches #"(?i)^status" k)
+            (let [status (-> v (clojure.string/split #"\s+" 2) first Integer/parseInt)]
+              (assoc response :status status))
+            (assoc-in response [:headers k] v))
+          (.readLine pout))))))
+
+(def ^:private chunk-size (* 64 1024))
+
+(defn- stream-response!
+  "Sends the head and then the rest of the process output in chunks over
+   the http-kit channel; closes the channel at the end. When the client
+   goes away, the git process is killed."
+  [ch ^Process process]
+  (let [^InputStream pout (.getInputStream process)
+        buf (byte-array chunk-size)]
+    (try
+      (let [head (read-cgi-head (DataInputStream. pout))]
+        (http-kit/send! ch (assoc head :body nil) false)
+        (loop []
+          (let [n (.read pout buf)]
+            (when-not (neg? n)
+              (if (http-kit/send! ch (ByteArrayInputStream. (Arrays/copyOf buf n)) false)
+                (recur)
+                (do (debug "git http-backend: client went away, killing the process")
+                    (.destroy process)))))))
+      (catch Throwable th
+        (warn "git http-backend: streaming failed:" (.getMessage th))
+        (.destroy process))
+      (finally
+        (http-kit/close ch)
+        (.close pout)))))
 
 (defn- repository-exists? [project-id tx]
   (some? (jdbc/execute-one! tx
@@ -83,5 +119,8 @@
               (let [os (.getOutputStream process)]
                 (future (try (.transferTo is os)
                              (finally (.close is) (.close os))))))]
-      (build-response process))))
+      ;; the response is streamed after the handler (and its transaction)
+      ;; returned; authorization happened above
+      (http-kit/as-channel request
+        {:on-open (fn [ch] (future (stream-response! ch process)))}))))
 

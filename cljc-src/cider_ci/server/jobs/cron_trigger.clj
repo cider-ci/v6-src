@@ -97,6 +97,30 @@
   (memo/lru cron-jobs-unmemoized :lru/threshold 1000))
 
 
+;; Heads whose configuration cannot be evaluated (typically a stale PR branch
+;; pointing to a submodule commit no project contains) are retried every
+;; failure-retry-ms only and warned about once, instead of every 30 seconds.
+(defonce ^:private failed* (atom {}))   ; [project-id commit-id] -> last attempt (ms)
+
+(def ^:private failure-retry-ms (* 10 60 1000))
+
+(defn- skip-failed? [k now-ms]
+  (when-let [last (get @failed* k)]
+    (< (- now-ms last) failure-retry-ms)))
+
+(defn- note-failure! [k now-ms e]
+  (let [first? (nil? (get @failed* k))
+        msg    (str "cron-trigger: cannot evaluate the configuration of " (first k) " " (second k)
+                    ": " (.getMessage e))]
+    (swap! failed* assoc k now-ms)
+    (if first?
+      (warn msg "(retried every 10 minutes)")
+      (debug msg))))
+
+(defn- prune-failures! [now-ms]
+  (swap! failed* (fn [m] (into {} (remove (fn [[_ t]] (> (- now-ms t) (* 24 60 60 1000))) m)))))
+
+
 ;;; creation ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- delete-finished-job!
@@ -159,18 +183,23 @@
    abort the cycle."
   ([ds] (run-cycle! ds (cron/now-utc)))
   ([ds now]
-   (doseq [{:keys [project_id commit_id branch_name]} (heads ds)]
-     (try
-       (doseq [job (cron-jobs project_id commit_id)]
-         (when-let [entry (due-entry job branch_name now)]
-           (try
-             (create-job! ds project_id commit_id branch_name job entry)
-             (catch Exception e
-               (warn "cron-trigger: failed to create job" (:key job)
-                     "for" project_id commit_id "on" branch_name ":" (.getMessage e))))))
-       (catch Exception e
-         (warn "cron-trigger: cannot evaluate the configuration of" project_id commit_id
-               "(" branch_name "):" (.getMessage e)))))))
+   (let [now-ms (System/currentTimeMillis)]
+     (prune-failures! now-ms)
+     (doseq [{:keys [project_id commit_id branch_name]} (heads ds)
+             :let [k [project_id commit_id]]
+             :when (not (skip-failed? k now-ms))]
+       (try
+         (let [jobs (cron-jobs project_id commit_id)]
+           (swap! failed* dissoc k)
+           (doseq [job jobs]
+             (when-let [entry (due-entry job branch_name now)]
+               (try
+                 (create-job! ds project_id commit_id branch_name job entry)
+                 (catch Exception e
+                   (warn "cron-trigger: failed to create job" (:key job)
+                         "for" project_id commit_id "on" branch_name ":" (.getMessage e)))))))
+         (catch Exception e
+           (note-failure! k now-ms e)))))))
 
 
 (defdaemon "cron-trigger" 30

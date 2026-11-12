@@ -31,7 +31,7 @@
         offset  (* (dec page-n) page-size)
         order   (order-clause sort)]
     {:list-query  (into [(format "SELECT j.id::text, j.key, j.name, j.state,
-                                         j.created_at, j.project_id, j.commit_id,
+                                         j.created_at, j.finished_at, j.project_id, j.commit_id,
                                          r.name AS project_name,
                                          (SELECT MAX(t.created_at) FROM trials t
                                           JOIN tasks tk ON t.task_id = tk.id

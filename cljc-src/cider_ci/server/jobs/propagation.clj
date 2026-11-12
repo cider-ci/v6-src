@@ -59,7 +59,7 @@
                                      sql-format)))]
     (when-let [new-state (job-state-from-tasks states job-state)]
       (jdbc/execute-one! tx
-        ["UPDATE jobs SET state = ?, updated_at = now() WHERE id = ?"
+        ["UPDATE jobs SET state = ?, finished_at = now(), updated_at = now() WHERE id = ?"
          new-state job-id]))))
 
 

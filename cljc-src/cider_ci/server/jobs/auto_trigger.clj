@@ -91,12 +91,12 @@
         task-specs (decompose/decompose expanded)
         new-job-id (java.util.UUID/randomUUID)
         result     (jdbc/execute-one! tx
-                     ["INSERT INTO jobs (id, project_id, commit_id, key, name, state, spec, priority)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     ["INSERT INTO jobs (id, project_id, commit_id, key, name, state, spec, priority, finished_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'passed' THEN now() END)
                        ON CONFLICT (project_id, commit_id, key) DO NOTHING"
                       new-job-id project-id (str commit-id) key name
                       (initial-job-state task-specs) expanded
-                      (spec-priority expanded)])]
+                      (spec-priority expanded) (initial-job-state task-specs)])]
     (when (= 1 (:next.jdbc/update-count result))
       (info "Auto-triggered job" key "for" project-id commit-id)
       (doseq [task-spec task-specs]

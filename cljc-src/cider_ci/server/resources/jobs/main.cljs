@@ -1,7 +1,7 @@
 (ns cider-ci.server.resources.jobs.main
   (:require
-    ["date-fns" :as date-fns]
     [cider-ci.server.html.icons :as icons]
+    [cider-ci.server.html.utils.times :as times]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.routes :refer [path navigate!]]
     [cider-ci.server.state :as state]
@@ -45,13 +45,7 @@
 
 
 (defn- job-row [j]
-  (let [short-commit (subs (:commit_id j) 0 7)
-        date-str     (when (:created_at j)
-                       (try
-                         (date-fns/formatDistanceToNow
-                           (js/Date. (:created_at j))
-                           #js{:addSuffix true})
-                         (catch js/Error _ (str (:created_at j)))))]
+  (let [short-commit (subs (:commit_id j) 0 7)]
     ^{:key (:id j)}
     [:tr
      [:td [:span.badge {:class (state-cls (:state j))} (:state j)]]
@@ -77,7 +71,9 @@
       [:a {:href (path :project-commit {:project-id (:project_id j)
                                         :commit-id  (:commit_id j)})}
        [:code short-commit]]]
-     [:td [:span.text-muted {:title (str (:created_at j))} date-str]]]))
+     [:td.text-muted [times/stamp (:created_at j)]]
+     ;; when the final state was reached (what matters for a deploy job)
+     [:td.text-muted [times/stamp (:finished_at j)]]]))
 
 
 (defn- filter-bar []
@@ -148,7 +144,7 @@
     [:table.table.table-sm.table-hover
      [:thead
       [:tr
-       [:th "State"] [:th "Job"] [:th "Project"] [:th "Commit"] [:th "Created"]]]
+       [:th "State"] [:th "Job"] [:th "Project"] [:th "Commit"] [:th "Created"] [:th "Finished"]]]
      [:tbody
       (for [j jobs] [job-row j])]]))
 

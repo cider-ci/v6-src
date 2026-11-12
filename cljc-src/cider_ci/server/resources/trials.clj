@@ -11,6 +11,8 @@
            ["SELECT
                t.id::text      AS trial_id,
                t.state         AS trial_state,
+               t.created_at,
+               t.dispatched_at,
                t.started_at,
                t.finished_at,
                t.error,

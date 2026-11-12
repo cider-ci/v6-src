@@ -130,6 +130,7 @@
                                   :state       job-state
                                   :spec        [:lift full-spec]
                                   :priority    (auto-trigger/spec-priority full-spec)
+                                  :finished_at (when (= job-state "passed") [:raw "now()"])
                                   :created_by  created-by}])
                     sql-format))
               (doseq [task-spec task-specs]
@@ -157,7 +158,7 @@
 
 (defn- get-trials-for-task [task-id]
   (jdbc-sql/query (get-ds)
-    (-> (sql/select :id :state :started_at :finished_at :error :result)
+    (-> (sql/select :id :state :created_at :dispatched_at :started_at :finished_at :error :result)
         (sql/from :trials)
         (sql/where [:= :task_id task-id])
         (sql/order-by [:created_at :asc])
@@ -227,7 +228,7 @@
     (jdbc/with-transaction [tx (get-ds)]
       ;; Pending trials have no executor — abort them immediately.
       (jdbc/execute! tx
-        ["UPDATE trials t SET state = 'aborted', updated_at = now()
+        ["UPDATE trials t SET state = 'aborted', finished_at = now(), updated_at = now()
           FROM tasks tsk WHERE t.task_id = tsk.id AND tsk.job_id = ?
             AND t.state = 'pending'"
          job-uuid])
@@ -279,7 +280,7 @@
           WHERE job_id = ? AND state IN ('failed', 'defective', 'aborted')"
          job-uuid])
       (jdbc/execute-one! tx
-        ["UPDATE jobs SET state = 'executing', updated_at = now()
+        ["UPDATE jobs SET state = 'executing', finished_at = NULL, updated_at = now()
           WHERE id = ? AND state IN ('failed', 'defective', 'aborted')"
          job-uuid]))
     {:status 200 :body {:status "retrying"}}))
@@ -305,7 +306,7 @@
           WHERE id = ? AND state NOT IN ('pending', 'passed')"
          task-uuid])
       (jdbc/execute-one! tx
-        ["UPDATE jobs SET state = 'executing', updated_at = now()
+        ["UPDATE jobs SET state = 'executing', finished_at = NULL, updated_at = now()
           WHERE id = ? AND state IN ('failed', 'defective', 'aborted')"
          job-uuid]))
     {:status 200 :body {:status "retrying"}}))

@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.trials
   (:require
     [cider-ci.server.html.icons :as icons]
+    [cider-ci.server.html.utils.times :as times]
     [cider-ci.server.http.client.main :as http-client]
     [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
     [cider-ci.server.routes :refer [path]]
@@ -166,6 +167,22 @@
         (str (.floor js/Math (/ s 60)) "m " (mod s 60) "s")
         (str s "s")))))
 
+
+(defn- trial-times-line
+  "Created, dispatched, started and finished, plus how long the trial waited
+   for an executor and how long it ran."
+  [{:keys [created_at dispatched_at started_at finished_at trial_state]}]
+  [:p.small.mb-2.trial-times
+   [times/stamps-line [["created" created_at] ["dispatched" dispatched_at]
+                       ["started" started_at] ["finished" finished_at]]]
+   (when (and created_at started_at)
+     [:span.text-muted " · waited " (times/duration created_at started_at)])
+   (cond
+     (and started_at finished_at)
+     [:span.text-muted " · ran " (times/duration started_at finished_at)]
+     (and started_at (= trial_state "executing"))
+     [:span.text-muted " · running for " (times/duration started_at)]
+     :else nil)])
 
 (defn- script-row [[key result] trial-id script-logs]
   (let [key-str     (name key)
@@ -334,6 +351,7 @@
          [state-badge (:trial_state trial)]
          (when-let [dur (trial-duration trial)]
            [:span.text-muted.ms-2.small dur])]
+        [trial-times-line trial]
         (when-let [err (:error trial)]
           [:div.alert.alert-danger.mt-3 err])
         (when (seq scripts)

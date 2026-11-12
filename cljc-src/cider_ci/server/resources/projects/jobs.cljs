@@ -6,6 +6,7 @@
    [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.job-states :as job-states]
+   [cider-ci.server.html.utils.times :as times]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.resources.projects.scripts-dag :as scripts-dag]
@@ -641,6 +642,25 @@
        [:span.badge.bg-light.text-dark.border.ms-1 (str "max " max-t)])]))
 
 
+(defn- trial-times
+  "The timestamps of a trial as [[label value] ...] in their order."
+  [trial]
+  [["created" (:created_at trial)]
+   ["dispatched" (:dispatched_at trial)]
+   ["started" (:started_at trial)]
+   ["finished" (:finished_at trial)]])
+
+(defn- job-times-line
+  "When the job was created and when it reached its final state (deploy jobs
+   are judged by the latter), with the time in between."
+  [{:keys [created_at finished_at state]}]
+  [:p.small.mb-2.job-times
+   [times/stamps-line [["created" created_at] ["finished" finished_at]]]
+   (cond
+     finished_at [:span.text-muted " (" (times/duration created_at finished_at) ")"]
+     (= state "executing") [:span.text-muted " (running for " (times/duration created_at) ")"]
+     :else nil)])
+
 (defn- task-row [t]
   ^{:key (:id t)}
   [:tr
@@ -657,7 +677,8 @@
       ^{:key (:id trial)}
       [:a.btn.btn-sm.ms-1
        {:class (trial-btn-cls (:state trial))
-        :href  (path :trial {:trial-id (:id trial)})}
+        :href  (path :trial {:trial-id (:id trial)})
+        :title (times/stamps-title (trial-times trial))}
        (:state trial)])
     [:button.btn.btn-sm.btn-outline-secondary.ms-2
      {:on-click #(retry-task! (:id t))}
@@ -902,6 +923,7 @@
          " / "
          [:code (:key job)]]
         [:h3 (:name job) " " [state-badge (:state job)]]
+        [job-times-line job]
         [job-progress-bar (:tasks job)]
         [trial-fail-rate (:tasks job)]
         (when-let [push (:status_push job)]
@@ -997,13 +1019,26 @@
      {:on-click #(retry-task! task-id)}
      [icons/retry] " Retry"]]
    (if (seq trials)
-     [:div
-      (for [trial trials]
-        ^{:key (:id trial)}
-        [:a.btn.btn-sm.ms-1.mb-1
-         {:class (trial-btn-cls (:state trial))
-          :href  (path :trial {:trial-id (:id trial)})}
-         (:state trial)])]
+     [:table.table.table-sm.trials
+      [:thead
+       [:tr [:th "Trial"] [:th "Created"] [:th "Dispatched"] [:th "Started"] [:th "Finished"] [:th "Duration"]]]
+      [:tbody
+       (for [trial trials]
+         ^{:key (:id trial)}
+         [:tr
+          [:td [:a.btn.btn-sm
+                {:class (trial-btn-cls (:state trial))
+                 :href  (path :trial {:trial-id (:id trial)})}
+                (:state trial)]]
+          [:td [times/stamp (:created_at trial)]]
+          [:td [times/stamp (:dispatched_at trial)]]
+          [:td [times/stamp (:started_at trial)]]
+          [:td [times/stamp (:finished_at trial)]]
+          [:td.text-muted
+           (cond
+             (:finished_at trial) (times/duration (:started_at trial) (:finished_at trial))
+             (:started_at trial)  (str "running for " (times/duration (:started_at trial)))
+             :else "—")]])]]
      [:p.text-muted "No trials yet."])])
 
 (defn- scripts-dag-panel [spec]

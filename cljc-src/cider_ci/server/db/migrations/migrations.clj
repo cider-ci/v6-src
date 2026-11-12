@@ -72,6 +72,8 @@
         :down (partial exec-resource-sql! "migrations/00034_executors_accepted_gpg_keys_down.sql")}
     35 {:up (partial exec-resource-sql! "migrations/00035_user_images_up.sql")
         :down (partial exec-resource-sql! "migrations/00035_user_images_down.sql")}
+    36 {:up (partial exec-resource-sql! "migrations/00036_jobs_finished_at_up.sql")
+        :down (partial exec-resource-sql! "migrations/00036_jobs_finished_at_down.sql")}
     ))
 
 (defn available []

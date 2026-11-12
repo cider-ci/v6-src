@@ -6,6 +6,14 @@
 ci_executor_accepted_gpg_keys:
   # Thomas Schank, D180BE89E69F6399711D1590E293459CB10B0442
   - "{{ lookup('file', inventory_dir ~ '/files/gpg/thomas-schank-B10B0442.asc') }}"
+  # Urs van Binsbergen (GitHub urs-van-binsbergen),
+  # 6F032AC37B9AF6509FDF977C2E7F64FC1B8DDEC3
+  - "{{ lookup('file', inventory_dir ~ '/files/gpg/urs-van-binsbergen-1B8DDEC3.asc') }}"
+  # Manuel Radl (GitHub SeduroDotCom), two keys:
+  # 3BFD09133E1AB257AE650005009D5F7AC1110893 and
+  # 9BF934B66F907217DF7C20AF2ABABC6E63C40EE1
+  - "{{ lookup('file', inventory_dir ~ '/files/gpg/manuel-radl-C1110893.asc') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/gpg/manuel-radl-63C40EE1.asc') }}"
 
 # Developers who may ssh into the executors as the service user (the user the
 # trials run as): ssh cider-ci@<executor>. Keys in files/ssh/.

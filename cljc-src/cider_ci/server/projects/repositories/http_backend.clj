@@ -11,14 +11,13 @@
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]
-    [org.httpkit.server :as http-kit]
+    [clojure.java.io :as io]
     [taoensso.timbre :refer [debug warn]]
     )
 
   (:import
-    [java.io ByteArrayInputStream DataInputStream InputStream]
+    [java.io DataInputStream File InputStream]
     [java.lang ProcessBuilder]
-    [java.util Arrays]
     ))
 
 ;;; http git ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -26,10 +25,14 @@
 ;; git http-backend writes CGI style: header lines (Status, Content-Type, ...)
 ;; up to an empty line, then the body. The body of a git-upload-pack response
 ;; is the pack a clone or fetch asks for, hundreds of MB for the bigger
-;; projects, so it is streamed to the client in chunks (chunked transfer
-;; encoding) instead of being read into memory: reading it all exhausted a
-;; 512 MB heap when two fresh executors cloned at once (2026-11-12), and the
-;; handler would hold its DB connection for the whole transfer.
+;; projects. It must not be held in memory: reading it all exhausted a
+;; 512 MB heap when two fresh executors cloned at once (2026-11-12), and
+;; streaming it over the http-kit channel was worse, http-kit queues sent
+;; chunks without backpressure and a 4 GB heap filled within seconds. So the
+;; body is spooled to a temporary file and returned as a File: http-kit
+;; memory-maps it and writes it as the client reads, outside the heap. The
+;; files are swept after a few minutes; a file still being sent survives
+;; the unlink, the mapping keeps it.
 
 (defn- read-cgi-head
   "Reads the CGI header lines, up to and including the empty line."
@@ -46,31 +49,38 @@
             (assoc-in response [:headers k] v))
           (.readLine pout))))))
 
-(def ^:private chunk-size (* 64 1024))
+(def ^:private spool-dir
+  (delay (doto (io/file (System/getProperty "java.io.tmpdir") "cider-ci-git-http-backend")
+           .mkdirs)))
 
-(defn- stream-response!
-  "Sends the head and then the rest of the process output in chunks over
-   the http-kit channel; closes the channel at the end. When the client
-   goes away, the git process is killed."
-  [ch ^Process process]
-  (let [^InputStream pout (.getInputStream process)
-        buf (byte-array chunk-size)]
+(def ^:private spool-max-age-ms (* 10 60 1000))
+
+(defn- sweep-spool-dir!
+  "Deletes spool files older than spool-max-age-ms."
+  []
+  (let [limit (- (System/currentTimeMillis) spool-max-age-ms)]
+    (doseq [^File f (.listFiles ^File @spool-dir)]
+      (when (< (.lastModified f) limit)
+        (.delete f)))))
+
+(defn build-response
+  "The CGI head as status and headers, the body spooled to a temporary file."
+  [^Process process]
+  (sweep-spool-dir!)
+  (let [pout (DataInputStream. (.getInputStream process))
+        head (read-cgi-head pout)
+        file (File/createTempFile "git-http-backend-" ".body" @spool-dir)]
     (try
-      (let [head (read-cgi-head (DataInputStream. pout))]
-        (http-kit/send! ch (assoc head :body nil) false)
-        (loop []
-          (let [n (.read pout buf)]
-            (when-not (neg? n)
-              (if (http-kit/send! ch (ByteArrayInputStream. (Arrays/copyOf buf n)) false)
-                (recur)
-                (do (debug "git http-backend: client went away, killing the process")
-                    (.destroy process)))))))
+      (with-open [out (io/output-stream file)]
+        (.transferTo ^InputStream pout out))
+      (.waitFor process)
+      (debug "git http-backend: spooled" (.length file) "bytes to" (.getName file))
+      (assoc head :body file)
       (catch Throwable th
-        (warn "git http-backend: streaming failed:" (.getMessage th))
-        (.destroy process))
-      (finally
-        (http-kit/close ch)
-        (.close pout)))))
+        (warn "git http-backend: spooling failed:" (.getMessage th))
+        (.destroy process)
+        (.delete file)
+        (throw th)))))
 
 (defn- repository-exists? [project-id tx]
   (some? (jdbc/execute-one! tx
@@ -119,8 +129,5 @@
               (let [os (.getOutputStream process)]
                 (future (try (.transferTo is os)
                              (finally (.close is) (.close os))))))]
-      ;; the response is streamed after the handler (and its transaction)
-      ;; returned; authorization happened above
-      (http-kit/as-channel request
-        {:on-open (fn [ch] (future (stream-response! ch process)))}))))
+      (build-response process))))
 

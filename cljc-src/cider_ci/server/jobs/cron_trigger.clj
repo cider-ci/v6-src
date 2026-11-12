@@ -34,6 +34,7 @@
     [clojure.core.memoize :as memo]
     [clojure.string :as str]
     [next.jdbc :as jdbc]
+    [next.jdbc.result-set]
     [taoensso.timbre :refer [debug info warn]]))
 
 
@@ -118,9 +119,12 @@
   (jdbc/with-transaction [tx ds]
     (when (:rerun entry)
       (delete-finished-job! tx project-id commit-id key))
+    ;; with-transaction drops the datasource's builder options (the rows
+    ;; would come back with qualified keys, :jobs/key), hence the explicit one
     (let [existing (jdbc/execute! tx
                      ["SELECT key, state FROM jobs WHERE project_id = ? AND commit_id = ?"
-                      project-id commit-id])
+                      project-id commit-id]
+                     {:builder-fn next.jdbc.result-set/as-unqualified-lower-maps})
           by-key   (into {} (map (fn [j] [(:key j) j]) existing))]
       (when-not (contains? by-key key)
         (let [unmet (with-open [repo (repo-shared/file-repository

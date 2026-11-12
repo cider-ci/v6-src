@@ -16,6 +16,7 @@
         [[:raw "branch_trigger_max_commit_age::text"] :branch_trigger_max_commit_age]
         [[:raw "remote_fetch_interval::text"] :remote_fetch_interval]
         :public_view_permission
+        :cron_trigger_enabled
         :send_status_notifications
         :remote_api_endpoint :remote_api_namespace :remote_api_name :remote_api_type
         ;; the token itself is never returned
@@ -142,6 +143,8 @@
                       (some? exclude)  (assoc :branch_trigger_exclude_match exclude)
                       (some? max-age)  (assoc :branch_trigger_max_commit_age max-age)
                       (some? interval) (assoc :remote_fetch_interval interval)
+                      (contains? body :cron_trigger_enabled)
+                      (assoc :cron_trigger_enabled (boolean (:cron_trigger_enabled body)))
                       true             (merge (status-push-updates body)))
             updated (jdbc/execute-one! tx
                       (sql-format

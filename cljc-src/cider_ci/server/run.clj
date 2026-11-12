@@ -6,6 +6,7 @@
     [cider-ci.server.html.server :as http-server]
    [cider-ci.server.jobs.branch-trigger-retry :as branch-trigger-retry]
    [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
+   [cider-ci.server.jobs.cron-trigger :as cron-trigger]
    [cider-ci.server.jobs.dep-trigger :as dep-trigger]
     [cider-ci.server.jobs.stale-trials :as stale-trials]
     [cider-ci.server.projects.repositories.main :as repositories]
@@ -56,6 +57,7 @@
   (stale-trials/init)
   (dep-trigger/init)
   (branch-trigger-retry/init)
+  (cron-trigger/init)
   (submodule-resolutions/init)
   (status-pushes/init))
 

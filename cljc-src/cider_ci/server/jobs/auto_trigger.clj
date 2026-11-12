@@ -20,7 +20,10 @@
            (not (matches-pattern? repo-exclude branch-name)))))
 
 
-(defn- read-job-configs [repo commit-id]
+(defn read-job-configs
+  "The jobs of the project configuration of commit-id as
+   [{:key :name :spec}], [] when the commit has no configuration."
+  [repo commit-id]
   (try
     (let [cfg      (config/build repo (str commit-id))
           jobs-map (or (:jobs cfg) {})]

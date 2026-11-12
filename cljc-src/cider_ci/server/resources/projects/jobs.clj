@@ -7,6 +7,7 @@
     [cider-ci.server.jobs.generate :as generate]
     [cider-ci.server.projects.repositories.project-configuration.direct :as config]
     [cider-ci.server.projects.repositories.shared :as shared]
+    [cider-ci.utils.cron :as cron]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -30,6 +31,15 @@
         []
         (throw e)))))
 
+(defn- cron-info
+  "The English description of a cron entry's expression, or the error of an
+   invalid one (the cron-trigger ignores such entries)."
+  [value]
+  (try
+    {:description (str (cron/describe value) " UTC")}
+    (catch clojure.lang.ExceptionInfo e
+      {:error (ex-message e)})))
+
 (defn- annotate-job [job-entry created-by-key repo commit-id]
   (let [key-str       (:key job-entry)
         depends-on    (:depends_on (:full-spec job-entry))
@@ -48,15 +58,20 @@
         entries       (fn [m kind]
                         (->> m
                              (map (fn [[entry-name d]]
-                                    {:name      (name entry-name)
-                                     :kind      kind
-                                     :type      (some-> (:type d) name)
-                                     :job_key   (some-> (:job_key d) name)
-                                     :submodule (mapv name (or (:submodule d) []))
-                                     :states    (mapv name (or (:states d) []))
-                                     :include_match (:include_match d)
-                                     :exclude_match (:exclude_match d)
-                                     :value     (:value d)}))
+                                    (let [type (some-> (:type d) name)]
+                                      (cond-> {:name      (name entry-name)
+                                               :kind      kind
+                                               :type      type
+                                               :job_key   (some-> (:job_key d) name)
+                                               :submodule (mapv name (or (:submodule d) []))
+                                               :states    (mapv name (or (:states d) []))
+                                               :include_match (:include_match d)
+                                               :exclude_match (:exclude_match d)
+                                               :branch_include_match (:branch_include_match d)
+                                               :branch_exclude_match (:branch_exclude_match d)
+                                               :rerun     (boolean (:rerun d))
+                                               :value     (:value d)}
+                                        (= "cron" type) (merge (cron-info (:value d)))))))
                              vec))]
     {:key          key-str
      :name         (:name job-entry)

@@ -146,21 +146,30 @@
 
 (defn- jdag-trigger-lines
   "Node label of a branch / cron trigger source."
-  [{:keys [type include_match exclude_match value]}]
+  [{:keys [type include_match exclude_match value description error
+           branch_include_match branch_exclude_match rerun]}]
   (case type
     "branch" (cond-> [(str "push " (or include_match "^.*$"))]
                (seq exclude_match) (conj (str "except " exclude_match)))
-    "cron"   [(str "cron " value)]
+    "cron"   (cond-> [(str "cron " value)]
+               description (conj description)
+               error       (conj "invalid expression")
+               (seq branch_include_match)       (conj (str "on " branch_include_match))
+               (not (seq branch_include_match)) (conj "no branch_include_match: never fires")
+               (seq branch_exclude_match)       (conj (str "except " branch_exclude_match))
+               rerun (conj "rerun"))
     [type]))
 
 (defn- jdag-source-key
   "Graph node id of a dependency / trigger source. Job entries in a
    submodule get their own node (database/merged-to-master, as in the
    legacy UI); identical branch / cron triggers share one source node."
-  [_job-key {:keys [type job_key submodule include_match exclude_match value]}]
+  [_job-key {:keys [type job_key submodule include_match exclude_match value
+                    branch_include_match branch_exclude_match rerun]}]
   (case type
     "job" (str/join "/" (conj (vec submodule) job_key))
-    (str "trigger:" type ":" include_match ":" exclude_match ":" value)))
+    (str "trigger:" type ":" include_match ":" exclude_match ":" value
+         ":" branch_include_match ":" branch_exclude_match ":" rerun)))
 
 (defn- jdag-elk-graph
   "Builds the ELK input graph from the available jobs. Returns

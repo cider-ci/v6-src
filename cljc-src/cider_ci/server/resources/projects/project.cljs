@@ -211,6 +211,11 @@
      (when (:remote_fetch_interval p)
        [:<>
         [:dt.col-sm-3 "Fetch interval"] [:dd.col-sm-9 [:code (:remote_fetch_interval p)]]])
+     [:dt.col-sm-3 "Cron triggers"]
+     [:dd.col-sm-9.cron-triggers
+      (if (:cron_trigger_enabled p)
+        "enabled"
+        [:span.text-muted "disabled; jobs with a run_when entry of type cron are not started"])]
      [status-pushes-info]
      (when (and (-> @state/user* :is_admin) (:update_notification_token p))
        (let [hooks-link (remote-hooks-url (:git_url p))
@@ -386,6 +391,7 @@
                             :branch_trigger_exclude_match  (or (:branch_trigger_exclude_match p) "")
                             :branch_trigger_max_commit_age (or (:branch_trigger_max_commit_age p) "")
                             :remote_fetch_interval         (or (:remote_fetch_interval p) "")
+                            :cron_trigger_enabled          (boolean (:cron_trigger_enabled p))
                             :send_status_notifications     (boolean (:send_status_notifications p))
                             :remote_api_endpoint           (or (:remote_api_endpoint p) "")
                             :remote_api_namespace          (or (:remote_api_namespace p) "")
@@ -445,6 +451,17 @@
                 :value       (:remote_fetch_interval @form*)
                 :on-change   #(swap! form* assoc :remote_fetch_interval (.. % -target -value))}]
               [:div.form-text "PostgreSQL interval. How often to fetch from the remote."]]
+             [:div.form-check.mb-3
+              [:input.form-check-input
+               {:id "cron_trigger_enabled" :type "checkbox"
+                :checked (:cron_trigger_enabled @form*)
+                :on-change #(swap! form* update :cron_trigger_enabled not)}]
+              [:label.form-check-label {:html-for "cron_trigger_enabled"}
+               "Enable cron triggers"]
+              [:div.form-text
+               "Start jobs with a " [:code "run_when"] " entry of type " [:code "cron"]
+               " on the heads of the matching branches (times in UTC). Off by default so "
+               "that a forked or imported project does not run nightly deploys on its own."]]
              [status-pushes-fields form* p]
              [:div.d-flex.gap-2
               [:button.btn.btn-primary {:type "submit"} "Save"]

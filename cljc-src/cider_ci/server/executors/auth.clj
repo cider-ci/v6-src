@@ -16,7 +16,10 @@
 
 (defn find-executor
   "Returns the executor row for a valid 'Authorization: Bearer <token>' header,
-   or nil if the header is absent, malformed, or the token is not recognised."
+   or nil if the header is absent, malformed, or the token is not recognised.
+   A disabled executor authenticates like any other: it keeps syncing (last
+   seen, traits, load) and may finish its running trials; it merely gets no
+   new trials (see handler/handle-sync)."
   [tx auth-header]
   (when (and auth-header (str/starts-with? auth-header "Bearer "))
     (let [token      (subs auth-header 7)
@@ -25,5 +28,4 @@
                (-> (sql/select :*)
                    (sql/from :executors)
                    (sql/where [:= :token_hash token-hash])
-                   (sql/where [:= :enabled true])
                    sql-format))))))

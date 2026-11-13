@@ -208,7 +208,11 @@
           WHERE id = ? AND accepted_gpg_keys IS DISTINCT FROM ?::jsonb"
          entries (:id executor) entries])))
   (let [available-load (or (:available_load body) 1.0)
-        to-execute     (dispatch-trials tx executor available-load server-base-url)
+        ;; Disabled: stays in touch (the bookkeeping above) and may still
+        ;; abort/finish what it runs, but is not given new trials.
+        to-execute     (if (:enabled executor)
+                         (dispatch-trials tx executor available-load server-base-url)
+                         [])
         to-abort       (mapv (comp str :id)
                              (jdbc/execute! tx
                                ["SELECT t.id FROM trials t

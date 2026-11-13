@@ -72,21 +72,15 @@
             dest: "{{ ansible_facts['env']['HOME'] }}/.bashrc"
             line: set -o vi
 
-    # CI servers aggregate logs across timezones; UTC avoids ambiguity
+    # CI servers aggregate logs across timezones; UTC avoids ambiguity. Trial
+    # scripts and their browsers also render times in the host zone, and the
+    # projects' specs assume UTC (madek release_info_spec). timedatectl sets
+    # /etc/localtime, the one source of truth since Debian 12: writing
+    # /etc/timezone and reconfiguring tzdata left the Hetzner images on
+    # Europe/Berlin (debconf won).
     - name: UTC timezone
-      block:
-        - name: Set UTC timezone
-          ansible.builtin.copy:
-            content: "Etc/UTC"
-            dest: /etc/timezone
-            owner: root
-            group: root
-            mode: '0644'
-          register: set_utc_timezone
-
-        - name: Reconfigure tzdata
-          ansible.builtin.command: dpkg-reconfigure --frontend noninteractive tzdata
-          when: set_utc_timezone.changed
+      community.general.timezone:
+        name: Etc/UTC
 
     # Debian/Ubuntu default forwards journal to syslog — doubles disk writes
     - name: journald — disable ForwardToSyslog

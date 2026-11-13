@@ -250,6 +250,29 @@
     masked: false
   when: not ci_executor_tmp_on_disk or ci_executor_fstab_tmp.rc == 0
 
+# The mask above only takes effect at boot. A host that was deployed to
+# without a reboot afterwards keeps the 50%-of-RAM tmpfs and runs out of
+# /tmp under load (ex04, 2026-11-12: thousands of ENOSPC in trials). Refuse
+# to go on so a fresh host cannot be put into service in that state.
+- name: Check whether /tmp is still a tmpfs
+  ansible.builtin.command: findmnt -n -o FSTYPE /tmp
+  register: ci_executor_tmp_fstype
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Fail when /tmp should be on disk but a tmpfs is still mounted
+  ansible.builtin.fail:
+    msg: >-
+      /tmp on {{ inventory_hostname }} is still a tmpfs
+      ({{ ci_executor_tmp_fstype.stdout }}): tmp.mount is masked, but the
+      mount made at boot stays until a reboot. Reboot the host
+      (ansible '{{ inventory_hostname }}' -b -m reboot) and deploy again.
+  when:
+    - ci_executor_tmp_on_disk
+    - ci_executor_fstab_tmp.rc != 0
+    - ci_executor_tmp_fstype.stdout | trim == 'tmpfs'
+
 - name: Exclude CI working data from systemd-tmpfiles age cleanup
   # trixie: `q /tmp 10d` / `q /var/tmp 30d` would delete untouched files
   # (git cache packs, long-running trial dirs) from under the executor.

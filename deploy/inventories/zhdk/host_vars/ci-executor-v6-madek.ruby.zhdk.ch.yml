@@ -28,6 +28,10 @@ ci_executor_trait_misc: true
 ci_executor_trait_apache2: true
 # gettext + translate-toolkit (leihs legacy meta: pofilter)
 ci_executor_trait_translation_tools: true
+# Key pair for decrypting the madek-deploy transcrypt password (recipient of
+# madek-deploy .transcrypt_key.txt.asc, deploy/bin/unlock); public key in
+# gpg-pubkeys/.
+ci_executor_trait_gpg: true
 
 # Dispatch-marker traits, see ex01 host_vars for the rationale.
 ci_executor_extra_traits:

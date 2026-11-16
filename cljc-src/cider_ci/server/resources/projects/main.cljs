@@ -28,6 +28,33 @@
                 last-fetched-at (js/Date.) (clj->js {:addSuffix true}))])]]))
 
 
+(defn status-pushes-td-component
+  "Legacy parity: whether job states are pushed as GitHub statuses, green
+   when the last push succeeded, red when it failed (the error in the
+   tooltip) or the project cannot push."
+  [{:keys [enabled error last_success last_error last_at]}]
+  (let [ago (when last_at (date-fns/formatDistance (js/Date. last_at) (js/Date.)
+                                                   (clj->js {:addSuffix true})))]
+    (cond
+      (not enabled)
+      [:td.status-pushes.text-muted "off"]
+
+      error
+      [:td.status-pushes.table-danger {:title error} [icons/failure] " cannot push"]
+
+      (nil? last_success)
+      [:td.status-pushes "enabled"]
+
+      last_success
+      [:td.status-pushes.table-success {:title (str "last push succeeded " ago)}
+       [icons/success] " " ago]
+
+      :else
+      [:td.status-pushes.table-danger {:title (str "last push failed " ago
+                                                   (when last_error (str ": " last_error)))}
+       [icons/failure] " " ago])))
+
+
 (defn projects-component []
   [:div.projects
    [:div.d-flex.align-items-center.justify-content-between.mb-3
@@ -52,7 +79,8 @@
            [:tr
             [:th "ID"]
             [:th "Name"]
-            [:th "Fetch"]]]
+            [:th "Fetch"]
+            [:th "Status pushes"]]]
           [:tbody
            (for [project projects]
              ^{:key (:id project)}
@@ -61,7 +89,8 @@
                        (:id project)]]
               [:td.name [:a {:href (path :project {:project-id (:id project)})}
                          (:name project)]]
-              [:<> (fetch-td-component (:fetch-and-update project))]])]])))])
+              [:<> (fetch-td-component (:fetch-and-update project))]
+              [status-pushes-td-component (:status_pushes project)]])]])))])
 
 
 (defn page []

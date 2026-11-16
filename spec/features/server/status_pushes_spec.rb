@@ -136,6 +136,31 @@ feature 'GitHub status pushes' do
     expect(page).not_to have_css '.status-pushes'
   end
 
+  scenario 'the projects list shows whether statuses are pushed and how the last push went' do
+    visit '/projects/'
+    expect(page).to have_css 'tr.project td.status-pushes', text: 'off'
+
+    configure_pushes!
+    visit '/projects/'
+    expect(page).to have_css 'tr.project td.status-pushes', text: 'enabled'
+
+    create_job!(state: 'passed')
+    wait_for_github_request('success')
+    visit '/projects/'
+    expect(page).to have_css 'tr.project td.status-pushes.table-success'
+
+    @fake_github.respond_next(500, message: 'Something broke')
+    set_job_state!('failed')
+    wait_until(15) { github_requests.size >= 2 }
+    visit '/projects/'
+    expect(page).to have_css 'tr.project td.status-pushes.table-danger'
+    expect(find('tr.project td.status-pushes')[:title]).to include 'Something broke'
+
+    database[:repositories].where(id: project_id).update(git_url: 'local')
+    visit '/projects/'
+    expect(page).to have_css 'tr.project td.status-pushes.table-danger', text: 'cannot push'
+  end
+
   scenario 'the settings are edited in the project form; the token is write-only' do
     visit "/projects/#{project_id}/edit"
     expect(page).to have_field 'send_status_notifications', checked: true

@@ -1,6 +1,7 @@
 (ns cider-ci.server.executors.handler
   (:require
     [cheshire.core :as json]
+    [cider-ci.server.db.core :refer [get-ds]]
     [cider-ci.server.executors.auth :as auth]
     [cider-ci.server.jobs.propagation :as propagation]
     [cider-ci.server.projects.repositories.project-configuration.submodules :as submodules]
@@ -20,25 +21,28 @@
 (defn- git-proxies-for
   "{submodule-commit server-git-url} for the trial's commit (see
    submodules/git-proxies), so executors fetch submodules from this server
-   whenever a configured repository holds them. Computed per (project,
-   commit) and cached for 5 minutes: a new project can make more submodules
-   resolvable."
+   whenever a configured repository holds them. Computed once per (project,
+   commit): concurrent requests (a restarted executor asks for a whole
+   batch at once) share one delay instead of walking the tree each. Cached
+   for 5 minutes: a new project can make more submodules resolvable. Not
+   called inside a request transaction (see db.core/no-tx-paths)."
   [project-id commit-id server-base-url]
   (let [k   [project-id commit-id]
         now (System/currentTimeMillis)
         hit (get @git-proxies-cache* k)]
     (if (and hit (< (- now (:at hit)) (* 5 60 1000)))
-      (:value hit)
-      (let [m (try
-                (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
-                  (submodules/git-proxies repo commit-id))
-                (catch Exception e
-                  (warn "git proxies for" project-id commit-id "failed:" (.getMessage e))
-                  {}))
-            v (into {} (map (fn [[sha id]] [sha (str server-base-url "/projects/" id "/git")]) m))]
+      (force (:value hit))
+      (let [d (delay
+                (let [m (try
+                          (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project-id}))]
+                            (submodules/git-proxies repo commit-id))
+                          (catch Exception e
+                            (warn "git proxies for" project-id commit-id "failed:" (.getMessage e))
+                            {}))]
+                  (into {} (map (fn [[sha id]] [sha (str server-base-url "/projects/" id "/git")]) m))))]
         (when (> (count @git-proxies-cache*) 500) (reset! git-proxies-cache* {}))
-        (swap! git-proxies-cache* assoc k {:at now :value v})
-        v))))
+        ;; whoever gets the entry in first wins; everyone forces that delay
+        (force (:value (get (swap! git-proxies-cache* update k #(or % {:at now :value d})) k)))))))
 
 (def ^:private candidates-query
   "The pending trials this executor may run, in dispatch order (legacy
@@ -132,9 +136,13 @@
           raw-trials)))
 
 
-(defn- handle-trial-git-proxies-get [tx trial-id server-base-url]
+(defn- handle-trial-git-proxies-get
+  "Outside the request transaction (db.core/no-tx-paths): a short lookup,
+   then the (possibly slow, shared) proxies computation without holding a
+   pooled connection."
+  [trial-id server-base-url]
   (if-let [{:keys [project_id commit_id]}
-           (jdbc/execute-one! tx
+           (jdbc/execute-one! (get-ds)
              ["SELECT j.project_id, j.commit_id
                FROM trials t JOIN tasks tsk ON tsk.id = t.task_id JOIN jobs j ON j.id = tsk.job_id
                WHERE t.id = ?::uuid" trial-id])]
@@ -354,7 +362,8 @@
                              (and (= public-scheme :http)  (= server-port 80)))
         server-base-url  (str (name public-scheme) "://" server-name
                               (when-not default-port? (str ":" server-port)))]
-    (if-let [executor (auth/find-executor tx auth-header)]
+    ;; no tx for the no-tx paths (db.core): the lookup takes its own connection
+    (if-let [executor (auth/find-executor (or tx (get-ds)) auth-header)]
       (case route-name
         :executor-sync
         (case request-method
@@ -368,7 +377,7 @@
 
         :executor-trial-git-proxies
         (case request-method
-          :get (handle-trial-git-proxies-get tx trial-id server-base-url)
+          :get (handle-trial-git-proxies-get trial-id server-base-url)
           {:status 405 :body "Method not allowed"})
 
         :executor-trial-attachment

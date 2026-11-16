@@ -76,9 +76,20 @@
 
 
 
+(def ^:private no-tx-paths
+  "Requests that must not hold a pooled connection for their whole duration:
+   the executors' git-proxies lookups walk the submodule tree (slow when
+   cold) and arrive by the dozen after an executor restart; holding a
+   connection each starved the pool (ZHdK 2026-11-16: 16 active, 57
+   waiting, 30 s timeouts). Their handlers take short connections from the
+   pool themselves."
+  #"^/executor/trials/[^/]+/git-proxies$")
+
 (defn wrap-tx [handler]
   (fn [request]
-    (jdbc/with-transaction [tx @ds*]
+    (if (re-matches no-tx-paths (or (:uri request) ""))
+      (handler request)
+      (jdbc/with-transaction [tx @ds*]
       (try
         (let [tx-with-opts  (jdbc/with-options tx builder-fn-options-default )]
           (let [resp (handler (assoc request :tx tx-with-opts))]
@@ -91,7 +102,7 @@
           (warn "Rolling back transaction because of " (.getMessage th))
           (debug (.get-cause th))
           (.rollback tx)
-          (throw th))))))
+          (throw th)))))))
 
 
 

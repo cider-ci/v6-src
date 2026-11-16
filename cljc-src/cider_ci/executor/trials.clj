@@ -197,15 +197,22 @@
   [{:keys [id git_proxies_path]} {:keys [server-url token]}]
   (if-not git_proxies_path
     {}
-    (let [resp @(http-client/get (str server-url git_proxies_path)
-                                 {:headers {"Authorization" (str "Bearer " token)
-                                            "Accept"        "application/json"}
-                                  :timeout 60000})]
-      (if (= 200 (:status resp))
-        (json/parse-string (:body resp))
-        (do (warn "Trial" id ": git proxies not available:"
-                  (if-let [e (:error resp)] (.getMessage ^Throwable e) (:status resp)))
-            {})))))
+    (loop [attempt 1]
+      (let [resp @(http-client/get (str server-url git_proxies_path)
+                                   {:headers {"Authorization" (str "Bearer " token)
+                                              "Accept"        "application/json"}
+                                    :timeout 120000})
+            problem (when-not (= 200 (:status resp))
+                      (if-let [e (:error resp)] (.getMessage ^Throwable e) (str "HTTP " (:status resp))))]
+        (cond
+          (nil? problem) (json/parse-string (:body resp))
+          ;; a busy server right after a restart: once more after a pause
+          (< attempt 3) (do (warn "Trial" id ": git proxies not available (" problem "), retrying")
+                            (Thread/sleep 5000)
+                            (recur (inc attempt)))
+          :else (do (warn "Trial" id ": git proxies not available:" problem
+                          "; submodules come from their declared hosts")
+                    {}))))))
 
 (defn execute! [{:keys [id git_url repository_git_url git_proxies commit_id
                         job_id job_key task_id tree_id task_spec] :as trial} opts]

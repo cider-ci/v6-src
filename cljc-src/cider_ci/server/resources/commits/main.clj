@@ -8,13 +8,20 @@
 
 (defn- mine? [mine] (= "true" (str mine)))
 
+(defn- heads-only?
+  "The default: only the current heads of the branches. `heads=false` lists
+   every commit reachable from a branch, which is how one finds the results of
+   a commit that has been superseded since."
+  [heads]
+  (not= "false" (str heads)))
 
-(defn- build-query [{:keys [project branch author mine]} user-id]
+
+(defn- build-query [{:keys [project branch author mine heads]} user-id]
   (let [base  "WITH page AS (
      SELECT DISTINCT
        c.id, c.subject, c.author_name, c.author_email, c.committer_name, c.committer_date, c.depth
      FROM commits c
-     JOIN branches b ON b.current_commit_id = c.id
+     %s
      JOIN repositories r ON r.id = b.repository_id
      %s
      ORDER BY c.committer_date DESC NULLS LAST
@@ -62,6 +69,10 @@
      ) AS jobs
    FROM page
    ORDER BY page.committer_date DESC NULLS LAST"
+        branches-join (if (heads-only? heads)
+                        "JOIN branches b ON b.current_commit_id = c.id"
+                        (str "JOIN branches_commits bc ON bc.commit_id = c.id "
+                             "JOIN branches b ON b.id = bc.branch_id"))
         clauses  (cond-> []
                    (not (str/blank? project)) (conj "r.id = ?")
                    (not (str/blank? branch))  (conj "b.name ~ ?")
@@ -78,7 +89,7 @@
                    (not (str/blank? branch))  (conj branch)
                    (not (str/blank? author))  (into [author author])
                    (and (mine? mine) user-id) (into [(str user-id) (str user-id)]))]
-    (into [(format base repo-where)] params)))
+    (into [(format base branches-join repo-where)] params)))
 
 
 (defn handler
@@ -95,6 +106,6 @@
                  commits (jdbc/execute! tx (build-query params (:id user)))]
              {:status 200
               :body   {:commits commits
-                       :filters (select-keys params [:project :branch :author :mine])}})
+                       :filters (select-keys params [:project :branch :author :mine :heads])}})
       {:status 405 :body "Method not allowed"})
     {:status 500 :body "Unresolved route"}))

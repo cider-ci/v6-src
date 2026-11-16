@@ -41,6 +41,21 @@ feature 'Commits Dashboard' do
 
     database[:jobs].insert(project_id: repo_a_id, commit_id: @commit_a1,
                             key: 'ci', name: 'CI', state: 'passed')
+
+    # A0 is the superseded predecessor of A1 on master: in branches_commits
+    # but no branch's current commit.
+    @commit_a0 = 'e' * 40
+    database[:commits].insert(
+      id: @commit_a0, tree_id: 'f' * 40, subject: 'Commit A0 superseded on master',
+      author_name: 'Ada Lovelace', author_email: 'ada@example.com',
+      committer_name: 'Committer', committer_email: 'committer@example.com',
+      committer_date: Time.now.utc - 60, depth: 0)
+    database[:commits].where(id: @commit_a1).update(depth: 1)
+    master_id = database[:branches].where(repository_id: repo_a_id, name: 'master').get(:id)
+    database[:branches_commits].insert(branch_id: master_id, commit_id: @commit_a0)
+    database[:branches_commits].insert(branch_id: master_id, commit_id: @commit_a1)
+    database[:jobs].insert(project_id: repo_a_id, commit_id: @commit_a0,
+                            key: 'ci', name: 'CI', state: 'failed')
   end
 
   scenario 'shows all branch-head commits by default' do
@@ -48,8 +63,30 @@ feature 'Commits Dashboard' do
     expect(page).to have_text 'Commit A1 on master'
     expect(page).to have_text 'Commit A2 on feature'
     expect(page).to have_text 'Commit B1 on main'
+    expect(page).not_to have_text 'Commit A0 superseded'
+    expect(page).to have_checked_field 'Heads only'
     # one passed job -> a green count badge in the CI column, linking to the jobs page
     expect(page).to have_css 'td.jobs-summary a.badge.bg-success', text: '1'
+  end
+
+  scenario 'unchecking heads only shows superseded commits with their results' do
+    visit '/commits/'
+    uncheck 'Heads only'
+    find('button', text: 'Filter').click
+
+    expect(page).to have_text 'Commit A0 superseded on master'
+    expect(page).to have_text 'Commit A1 on master'
+    expect(page).to have_current_path(/heads=false/)
+    row = find('tr', text: 'Commit A0 superseded')
+    # its failed job, and the project and branch it is an ancestor of
+    expect(row).to have_css 'td.jobs-summary a.badge.bg-danger', text: '1'
+    expect(row).to have_link 'Repo A', href: "/projects/#{repo_a_id}"
+    expect(row).to have_link 'master'
+    expect(row).to have_text '1'   # one commit behind the head
+
+    find('button', text: 'Clear').click
+    expect(page).not_to have_text 'Commit A0 superseded'
+    expect(page).to have_checked_field 'Heads only'
   end
 
   scenario 'filter by project shows only commits from that project' do

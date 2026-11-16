@@ -21,7 +21,7 @@
   (http-client/route-cached-fetch _data* :reload true :reload-delay 15000))
 
 
-(def ^:private filter-keys [:project :branch :author :mine])
+(def ^:private filter-keys [:project :branch :author :mine :heads])
 
 
 (defn- current-filters []
@@ -30,12 +30,16 @@
 
 
 (defn- apply-filters
-  "Navigates to the commits page with the given filters; blank values (and
-   :mine other than \"true\") are dropped from the query string."
+  "Navigates to the commits page with the given filters; blank values, :mine
+   other than \"true\" and :heads other than \"false\" (the defaults) are
+   dropped from the query string."
   [filters]
   (let [qp (into {} (for [[k v] filters
                           :let [v (str v)]
-                          :when (if (= k :mine) (= v "true") (not (str/blank? v)))]
+                          :when (case k
+                                  :mine  (= v "true")
+                                  :heads (= v "false")
+                                  (not (str/blank? v)))]
                       [k v]))]
     (navigate! (path :commits {} qp))))
 
@@ -145,7 +149,9 @@
 
 (defn- commit-row [c]
   (let [short-id   (subs (:id c) 0 7)
-        project-id (-> c :branches first :repository_id)
+        ;; a superseded commit (heads=false) is no branch head: its project
+        ;; comes from the branches it is an ancestor of
+        project-id (-> (concat (:branches c) (:ancestor_branches c)) first :repository_id)
         date-str   (when (:committer_date c)
                      (try
                        (date-fns/formatDistanceToNow
@@ -163,7 +169,7 @@
       [:span {:title (:subject c)}
        (let [s (:subject c)]
          (if (> (count s) 72) (str (subs s 0 72) "…") s))]]
-     [project-cell (:branches c)]
+     [project-cell (concat (:branches c) (:ancestor_branches c))]
      [author-cell c]
      [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
      [:td
@@ -187,19 +193,23 @@
      branch*  (reagent/atom "")
      author*  (reagent/atom "")
      mine*    (reagent/atom false)
+     heads*   (reagent/atom true)
      _sync    (reagent/track!
-                #(let [{:keys [project branch author mine]} (current-filters)]
+                #(let [{:keys [project branch author mine heads]} (current-filters)]
                    (reset! project* project)
                    (reset! branch*  branch)
                    (reset! author*  author)
-                   (reset! mine*    (= mine "true"))))]
+                   (reset! mine*    (= mine "true"))
+                   (reset! heads*   (not= heads "false"))))]
     (let [active? (or (some (comp not str/blank?) [@project* @branch* @author*])
-                      @mine*)]
+                      @mine*
+                      (not @heads*))]
       [:form.row.g-2.mb-3.align-items-end
        {:on-submit (fn [e]
                      (.preventDefault e)
                      (apply-filters {:project @project* :branch @branch*
-                                     :author @author* :mine (str @mine*)}))}
+                                     :author @author* :mine (str @mine*)
+                                     :heads (str @heads*)}))}
        [text-filter "Project" "project-id" project*]
        [text-filter "Branch (regex)" "^master$" branch*]
        [text-filter "Author (regex)" "name or email" author*]
@@ -212,6 +222,15 @@
            :checked   @mine*
            :on-change #(reset! mine* (.. % -target -checked))}]
          [:label.form-check-label.small {:for "commits-filter-mine"} "My commits"]]]
+       [:div.col-auto
+        [:div.form-check.mb-1
+         {:title "Only the current heads of the branches; uncheck to see superseded commits too"}
+         [:input.form-check-input
+          {:type      "checkbox"
+           :id        "commits-filter-heads"
+           :checked   @heads*
+           :on-change #(reset! heads* (.. % -target -checked))}]
+         [:label.form-check-label.small {:for "commits-filter-heads"} "Heads only"]]]
        [:div.col-auto
         [:button.btn.btn-sm.btn-outline-primary {:type "submit"} "Filter"]]
        (when active?
@@ -226,7 +245,7 @@
 
 (defn- commits-table [commits]
   (if (empty? commits)
-    [:p.text-muted.mt-3 "No branch-head commits found."]
+    [:p.text-muted.mt-3 "No commits found."]
     [:table.table.table-sm.table-hover
      [:thead
       [:tr

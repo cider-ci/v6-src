@@ -107,6 +107,35 @@ feature 'GitHub status pushes' do
     wait_until(15) { github_requests.count { |r| r.body['state'] == 'success' } >= 2 }
   end
 
+  scenario 'the commit page links to the origin and lists the pushes, failed ones too' do
+    configure_pushes!
+    @fake_github.respond_next(500, message: 'Something broke')
+    create_job!(state: 'pending')
+    wait_until(15) { github_requests.size >= 1 }
+    set_job_state!('passed')
+    wait_for_github_request('success')
+
+    visit "/projects/#{project_id}/commits/#{commit_id}"
+    expect(page).to have_css "a.origin-link[href='https://github.com/cider-ci/status-test/commit/#{commit_id}']"
+    within('.status-pushes') do
+      expect(page).to have_content 'pushed to cider-ci/status-test'
+      expect(page).to have_css 'tr.attempt-success', text: /Status Job.*success.*\(passed\).*posted/
+      expect(page).to have_css 'tr.attempt-failure', text: /Status Job.*pending.*failed: GitHub responded 500: Something broke/
+      expect(all('tr.status-push-attempt').first[:class]).to include 'attempt-success'   # newest first
+      expect(all('tr.status-push-attempt').count).to be >= 2
+    end
+    expect(find('tr.attempt-success a')[:href]).to end_with job_path
+
+    # a project without a token says so, with pushes switched off nothing is shown
+    database[:repositories].where(id: project_id).update(remote_api_token: nil)
+    visit "/projects/#{project_id}/commits/#{commit_id}"
+    expect(page).to have_css '.status-pushes', text: 'No GitHub token'
+    database[:repositories].where(id: project_id).update(send_status_notifications: false)
+    visit "/projects/#{project_id}/commits/#{commit_id}"
+    expect(page).to have_css 'h2', text: 'Status'
+    expect(page).not_to have_css '.status-pushes'
+  end
+
   scenario 'the settings are edited in the project form; the token is write-only' do
     visit "/projects/#{project_id}/edit"
     expect(page).to have_field 'send_status_notifications', checked: true

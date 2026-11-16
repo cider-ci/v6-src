@@ -76,6 +76,8 @@
         :down (partial exec-resource-sql! "migrations/00036_jobs_finished_at_down.sql")}
     37 {:up (partial exec-resource-sql! "migrations/00037_commit_depths_up.sql")
         :down (partial exec-resource-sql! "migrations/00037_commit_depths_down.sql")}
+    38 {:up (partial exec-resource-sql! "migrations/00038_status_push_attempts_up.sql")
+        :down (partial exec-resource-sql! "migrations/00038_status_push_attempts_down.sql")}
     ))
 
 (defn available []

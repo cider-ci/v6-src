@@ -34,6 +34,16 @@
          :owner (nth segments (- (count segments) 2))
          :name  (last segments)}))))
 
+(defn commit-url
+  "The commit on the origin's web UI (GitHub, GitLab, Gitea and the like all
+   use /<owner>/<name>/commit/<sha>), for remote urls only: a local path
+   or a bare name has no web UI."
+  [git-url commit-id]
+  (let [url (str/trim (or git-url ""))]
+    (when (re-find #"^(https?|ssh|git)://|^[^/\s]+@[^/:\s]+:" url)
+      (when-let [{:keys [host owner name]} (parse-git-url url)]
+        (str "https://" host "/" owner "/" name "/commit/" commit-id)))))
+
 (defn remote
   "Where and how the statuses of repo are posted: {:endpoint :owner :name
    :token}, or {:error reason} when the project cannot push. The endpoint is

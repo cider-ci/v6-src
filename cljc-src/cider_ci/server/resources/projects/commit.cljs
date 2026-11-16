@@ -3,6 +3,7 @@
    ["date-fns" :as date-fns]
    [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
+   [cider-ci.server.html.utils.times :as times]
    [cider-ci.server.http.anti-csrf.main :as anti-csrf]
    [cider-ci.server.http.client.main :as http-client]
    [cider-ci.server.routes :refer [path]]
@@ -192,6 +193,42 @@
            [:tbody (submodule-rows submodules 0)]]])])))
 
 
+;;; status pushes ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- attempt-row [{:keys [id job_id job_key job_name job_state github_state
+                            context success error created_at]}]
+  ^{:key id}
+  [:tr.status-push-attempt {:class (if success "attempt-success" "attempt-failure")}
+   [:td.text-nowrap [times/stamp created_at]]
+   [:td
+    [:a {:href (path :project-job {:project-id (project-id) :commit-id (commit-id) :job-id job_id})
+         :title context}
+     (or job_name job_key)]]
+   [:td [:code github_state] [:span.text-muted.small " (" job_state ")"]]
+   [:td
+    (if success
+      [:span [icons/success] " posted"]
+      [:span.text-danger [icons/failure] " failed" (when error (str ": " error))])]])
+
+(defn- status-pushes-panel
+  "Where the job states of this commit are posted and the last attempts;
+   nothing for a project that has pushes switched off."
+  []
+  (let [{:keys [enabled disabled error repository attempts]} (:status_pushes @data*)]
+    (when-not disabled
+      [:div.status-pushes.mt-4
+       [:h4 [icons/github] " GitHub Statuses"]
+       (cond
+         error   [:p.text-danger.small error]
+         enabled [:p.text-muted.small "Job states are pushed to " [:code repository]
+                  " as commit statuses of this commit."])
+       (if (seq attempts)
+         [:table.table.table-sm.status-push-attempts
+          [:thead [:tr [:th "When"] [:th "Job"] [:th "Status"] [:th "Result"]]]
+          [:tbody (for [a attempts] [attempt-row a])]]
+         [:p.text-muted.small "Nothing has been pushed for this commit yet."])])))
+
+
 ;;; page ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn page []
@@ -205,7 +242,10 @@
          [:a {:href (path :project {:project-id (project-id)})}
           [icons/projects] " " (project-id)]]
         [:h2 (:subject c)]
-        [:p [:code (:id c)]]
+        [:p [:code (:id c)]
+         (when-let [url (:origin_url c)]
+           [:a.ms-3.origin-link {:href url :target "_blank" :rel "noopener noreferrer"}
+            [icons/external-link] " View on origin"])]
         [signature-panel]
         [metadata-panel]
         (when-let [body (presence (:body c))]
@@ -223,6 +263,7 @@
          [:a {:href (path :project-jobs {:project-id (project-id)
                                          :commit-id  (:id c)})}
           [icons/play-circle] " Jobs"]]
+        [status-pushes-panel]
         [submodules-panel]
         [tree-attachments-panel (:tree_id c) (:tree_attachments c)]
         (when @state/debug?*

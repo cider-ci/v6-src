@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.commit
   (:require
     [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
+    [cider-ci.server.status-pushes.github :as github]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
     [next.jdbc :as jdbc]))
@@ -56,15 +57,46 @@
     :post {:body (submodule-resolutions/check! tx project-id commit-id)}
     {:status 405 :body "Method not allowed"}))
 
-(defn- commit-handler [tx commit-id]
+(defn- repository [tx project-id]
+  (jdbc/execute-one! tx
+    ["SELECT id, git_url, send_status_notifications, remote_api_endpoint,
+             remote_api_namespace, remote_api_name, remote_api_type,
+             remote_api_token IS NOT NULL AS remote_api_token_set
+      FROM repositories WHERE id = ?" project-id]))
+
+(def ^:private attempts-limit 20)
+
+(defn- status-pushes
+  "Where this project's job states go (or why nowhere) and the last attempts
+   for this commit, failed ones included."
+  [tx {:keys [send_status_notifications remote_api_token_set] :as repo} commit-id]
+  (let [remote   (github/remote (assoc repo :remote_api_token (when remote_api_token_set "set")))
+        attempts (jdbc/execute! tx
+                   ["SELECT a.id, a.job_id, a.job_state, a.github_state, a.context, a.target,
+                            a.success, a.error, a.created_at, j.key AS job_key, j.name AS job_name
+                     FROM status_push_attempts a JOIN jobs j ON j.id = a.job_id
+                     WHERE a.project_id = ? AND a.commit_id = ?
+                     ORDER BY a.created_at DESC LIMIT ?"
+                    (:id repo) commit-id attempts-limit])]
+    (merge {:enabled  (boolean (and send_status_notifications remote_api_token_set))
+            :disabled (not send_status_notifications)
+            :error    (:error remote)
+            :attempts attempts}
+           (when-not (:error remote)
+             {:repository (str (:owner remote) "/" (:name remote))}))))
+
+(defn- commit-handler [tx project-id commit-id]
   (if-let [commit (jdbc/execute-one! tx (sql-format (commit-sql commit-id)))]
-    (let [parents          (->> (sql-format (parents-sql commit-id))
+    (let [repo             (repository tx project-id)
+          parents          (->> (sql-format (parents-sql commit-id))
                                 (jdbc/execute! tx)
                                 (map :parent_id))
           tree-attachments (jdbc/execute! tx (sql-format (tree-attachments-sql (:tree_id commit))))]
       {:body (-> commit
                  (assoc :parents parents)
-                 (assoc :tree_attachments tree-attachments))})
+                 (assoc :tree_attachments tree-attachments)
+                 (assoc :origin_url (github/commit-url (:git_url repo) commit-id))
+                 (assoc :status_pushes (when repo (status-pushes tx repo commit-id))))})
     {:status 404 :body "Commit not found"}))
 
 
@@ -74,4 +106,4 @@
                 tx             :tx}]
   (if (= route-name :project-commit-submodules)
     (submodules-handler tx project-id commit-id request-method)
-    (commit-handler tx commit-id)))
+    (commit-handler tx project-id commit-id)))

@@ -69,6 +69,23 @@
           updated_at = now()"
      job-id error]))
 
+(defn- record-attempt!
+  "The history of posts for the commit page; skipped pushes (the project
+   cannot push at all) are not attempts."
+  [ds job remote payload success? error]
+  (jdbc/execute-one! ds
+    ["INSERT INTO status_push_attempts
+      (job_id, project_id, commit_id, job_state, github_state, context, target, success, error)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+     (:id job) (:project_id job) (:commit_id job) (:state job) (:state payload)
+     (:context payload) (str (:owner remote) "/" (:name remote)) success? error]))
+
+(defn- prune-attempts!
+  "Attempts older than 30 days are of no interest any more."
+  [ds]
+  (jdbc/execute-one! ds
+    ["DELETE FROM status_push_attempts WHERE created_at < now() - interval '30 days'"]))
+
 (defn- error-message
   "Status and GitHub's message; never includes the token."
   [{:keys [status body error]}]
@@ -96,20 +113,24 @@
         (if (= 201 (:status response))
           (do (info "Status push" (:state payload) (:context payload) "to"
                     (str (:owner remote) "/" (:name remote) "@" (:commit_id job)))
+              (record-attempt! ds job remote payload true nil)
               (record-posted! ds (:id job) (:state job) (:state payload)))
           (let [error (error-message response)]
             (warn "Status push failed for job" (:id job) ":" error)
+            (record-attempt! ds job remote payload false error)
             (record-failed! ds (:id job) error)))))))
 
 (defn push-pending! []
   (let [ds (get-ds)
-        base-url (settings/get-setting! :external_base_url)]
-    (doseq [job (jobs-to-push ds)]
+        base-url (settings/get-setting! :external_base_url)
+        jobs (jobs-to-push ds)]
+    (doseq [job jobs]
       (try
         (push-job! ds job base-url)
         (catch Exception e
           (warn "Status push failed for job" (:id job) ":" (.getMessage e))
-          (record-failed! ds (:id job) (str "Push failed: " (.getMessage e))))))))
+          (record-failed! ds (:id job) (str "Push failed: " (.getMessage e))))))
+    (when (seq jobs) (prune-attempts! ds))))
 
 (defdaemon "status-pushes" 2
   (try (push-pending!)

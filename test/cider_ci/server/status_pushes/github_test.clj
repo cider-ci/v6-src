@@ -65,3 +65,18 @@
                                           "https://ci.example.org"))]
       (is (= 140 (count d)))
       (is (str/ends-with? d "…")))))
+
+(deftest commit-url-test
+  (let [sha (apply str (repeat 40 "a"))]
+    (is (= (str "https://github.com/leihs/leihs/commit/" sha)
+           (github/commit-url "https://github.com/leihs/leihs.git" sha)))
+    (is (= (str "https://github.com/leihs/leihs/commit/" sha)
+           (github/commit-url "git@github.com:leihs/leihs.git" sha)))
+    (is (= (str "https://gitlab.example.org/group/repo/commit/" sha)
+           (github/commit-url "ssh://git@gitlab.example.org:2222/group/repo.git" sha)))
+    (testing "no web UI for local paths and bare names"
+      (is (nil? (github/commit-url "local" sha)))
+      (is (nil? (github/commit-url "/srv/git/leihs/leihs.git" sha)))
+      (is (nil? (github/commit-url "file:///srv/git/leihs/leihs.git" sha)))
+      (is (nil? (github/commit-url "repos/leihs/leihs" sha)))
+      (is (nil? (github/commit-url nil sha))))))

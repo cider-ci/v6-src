@@ -26,7 +26,11 @@ Edit the project (admins), section "GitHub commit statuses":
   and `ssh://` URLs); set them only if they differ.
 
 The project page shows where the statuses go (or why nothing is pushed), the
-number of posts and failures of the last 24 hours and the last error.
+number of posts and failures of the last 24 hours and the last error. The
+commit page lists the last 20 push attempts for the commit, succeeded or
+failed, with the job and the GitHub state posted (`status_push_attempts`,
+kept for 30 days), and links the commit on its origin ("View on origin").
+The job page shows the current GitHub state of the job and any pending retry.
 
 ## What is posted
 

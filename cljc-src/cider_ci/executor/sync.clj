@@ -39,14 +39,19 @@
                                                              :accepted_repositories  (accepted-repositories/current)
                                                              :accepted_gpg_keys      (accepted-gpg-keys/entries)
                                                              :trials_being_processed active-ids})
-                             :timeout 10000})]
+                             ;; A full batch takes the server a few seconds
+                             ;; (one dispatch query, plus the busy ones
+                             ;; ahead); giving up early loses the batch.
+                             :timeout 30000})]
       (if (= 200 (:status resp))
         (let [body (json/parse-string (:body resp) true)]
           (doseq [trial-id (:trials_to_abort body)]
             (trials/abort-executing-trial! trial-id))
           (doseq [trial (:trials_to_execute body)]
             (future (trials/execute! trial opts))))
-        (warn "Sync returned HTTP status" (:status resp) (:body resp))))
+        (warn "Sync failed:" (if-let [e (:error resp)]
+                               (.getMessage ^Throwable e)
+                               (str "HTTP status " (:status resp) " " (:body resp))))))
     (catch Exception e
       (warn "Sync error:" (.getMessage e)))))
 

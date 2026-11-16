@@ -139,6 +139,10 @@
          :bypass-spa       true
          :auth-http-safe   #{:public}
          :auth-http-unsafe #{:public}}]
+    ["/git-proxies" {:name             :executor-trial-git-proxies
+                     :bypass-spa       true
+                     :auth-http-safe   #{:public}
+                     :auth-http-unsafe #{:public}}]
     ["/attachments/*attachment-path" {:name             :executor-trial-attachment
                                       :bypass-spa       true
                                       :auth-http-safe   #{:public}

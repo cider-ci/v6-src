@@ -189,6 +189,24 @@
   (into {} (for [[k v] script-results] [k (dissoc v :log-file)])))
 
 
+(defn- fetch-git-proxies!
+  "{submodule-commit git-url-on-the-server} for the trial's commit, from the
+   server (git_proxies_path); the dispatch payload carried it in-line
+   before. Without it (old server, error) submodules come from their
+   .gitmodules host."
+  [{:keys [id git_proxies_path]} {:keys [server-url token]}]
+  (if-not git_proxies_path
+    {}
+    (let [resp @(http-client/get (str server-url git_proxies_path)
+                                 {:headers {"Authorization" (str "Bearer " token)
+                                            "Accept"        "application/json"}
+                                  :timeout 60000})]
+      (if (= 200 (:status resp))
+        (json/parse-string (:body resp))
+        (do (warn "Trial" id ": git proxies not available:"
+                  (if-let [e (:error resp)] (.getMessage ^Throwable e) (:status resp)))
+            {})))))
+
 (defn execute! [{:keys [id git_url repository_git_url git_proxies commit_id
                         job_id job_key task_id tree_id task_spec] :as trial} opts]
   (info "Executing trial" id)
@@ -223,7 +241,7 @@
         (accepted-repositories/assert-accepted! accepted repository_git_url job_key)
         (.mkdirs (working-dirs-root))
         (git/prepare-working-dir! git_url commit_id work-dir (:git_options task_spec) (:token opts)
-                                  repository_git_url git_proxies
+                                  repository_git_url (or git_proxies (fetch-git-proxies! trial opts))
                                   (accepted-repositories/origin-policy accepted repository_git_url job_key)))
       ;; the server only dispatches commits it verified against the accepted
       ;; GPG keys; verified again here with the executor's own keys, so a

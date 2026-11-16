@@ -44,6 +44,7 @@
    :user-avatar               #'avatars/handler
    :executor-sync                  #'executors/handler
    :executor-trial                 #'executors/handler
+   :executor-trial-git-proxies     #'executors/handler
    :executor-trial-attachment      #'executors/handler
    :executor-trial-tree-attachment #'executors/handler
    :trial                          #'trials/handler

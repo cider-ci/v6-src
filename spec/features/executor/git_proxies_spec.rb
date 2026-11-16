@@ -4,11 +4,13 @@ require 'json'
 require 'digest'
 require 'securerandom'
 
-# The dispatch payload carries git_proxies: {submodule commit => git URL on
-# this server} for every submodule a configured repository holds, so
-# executors fetch them here rather than from GitHub (which may throttle, or
-# not have the repository at all). The demo project's submodule is the demo
-# project itself at an older commit.
+# The dispatch payload names git_proxies_path; a GET there gives {submodule
+# commit => git URL on this server} for every submodule a configured
+# repository holds, so executors fetch them here rather than from GitHub
+# (which may throttle, or not have the repository at all). Fetched by the
+# executor before the clone, not computed in the sync: walking the submodule
+# tree is slow when the cache is cold. The demo project's submodule is the
+# demo project itself at an older commit.
 feature 'Executor dispatch git_proxies' do
 
   PROXIES_PROJECT_ID  = 'cider-ci-demo-project'
@@ -37,6 +39,15 @@ feature 'Executor dispatch git_proxies' do
     JSON.parse(Net::HTTP.start(uri.host, uri.port) { |h| h.request(req) }.body)
   end
 
+  def get!(path)
+    uri = URI("#{http_base_url}#{path}")
+    req = Net::HTTP::Get.new(uri)
+    req['Authorization'] = "Bearer #{@token}"
+    req['Accept'] = 'application/json'
+    res = Net::HTTP.start(uri.host, uri.port) { |h| h.request(req) }
+    [res.code.to_i, JSON.parse(res.body)]
+  end
+
   scenario 'maps the submodule commit to this server when a configured repository holds it' do
     visit "/projects/#{PROXIES_PROJECT_ID}/commits/#{PROXIES_HEAD_COMMIT}/jobs"
     find('tr', text: 'Submodule Demo').find('button', text: 'Run').click
@@ -45,7 +56,10 @@ feature 'Executor dispatch git_proxies' do
     trial = sync!['trials_to_execute'].first
     expect(trial).not_to be_nil
     expect(trial['git_url']).to eq "#{http_base_url}/projects/#{PROXIES_PROJECT_ID}/git"
-    proxies = trial['git_proxies']
+    expect(trial).not_to have_key 'git_proxies'
+    expect(trial['git_proxies_path']).to eq "/executor/trials/#{trial['id']}/git-proxies"
+    code, proxies = get!(trial['git_proxies_path'])
+    expect(code).to eq 200
     expect(proxies).to include(PROXIES_SUB_COMMIT => "#{http_base_url}/projects/#{PROXIES_PROJECT_ID}/git")
     # the walk is recursive: the submodule commit (the demo project itself at an
     # older revision) has submodules of its own, all held by this repository

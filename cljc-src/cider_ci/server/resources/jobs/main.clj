@@ -33,11 +33,16 @@
     {:list-query  (into [(format "SELECT j.id::text, j.key, j.name, j.state,
                                          j.created_at, j.finished_at, j.project_id, j.commit_id,
                                          r.name AS project_name,
+                                         c.subject, c.author_name, c.author_email,
+                                         md5(lower(c.author_email)) AS author_email_hash,
+                                         c.committer_name, c.committer_email,
+                                         md5(lower(c.committer_email)) AS committer_email_hash,
                                          (SELECT MAX(t.created_at) FROM trials t
                                           JOIN tasks tk ON t.task_id = tk.id
                                           WHERE tk.job_id = j.id) AS last_trial_at
                                   FROM jobs j
                                   JOIN repositories r ON r.id = j.project_id
+                                  LEFT JOIN commits c ON c.id = j.commit_id
                                   %s
                                   ORDER BY %s
                                   LIMIT %d OFFSET %d"

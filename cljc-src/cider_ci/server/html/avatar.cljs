@@ -65,5 +65,5 @@
 (defn email-avatar
   "The avatar for an email address with its md5 hash (commit author or
    committer): the account's image when the address belongs to one."
-  [{:keys [email-hash name email]} & {:keys [size]}]
-  [avatar {:email-hash email-hash :name name :email email :alt name :size size}])
+  [{:keys [email-hash name email]} & {:keys [size note]}]
+  [avatar {:email-hash email-hash :name name :email email :alt name :size size :note note}])

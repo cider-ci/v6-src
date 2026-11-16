@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.jobs.main
   (:require
+    [cider-ci.server.html.avatar :as avatar]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.html.utils.times :as times]
     [cider-ci.server.http.client.main :as http-client]
@@ -67,10 +68,26 @@
         :title    "Filter by this project"
         :type     "button"}
        [icons/filter-icon]]]
-     [:td
-      [:a {:href (path :project-commit {:project-id (:project_id j)
-                                        :commit-id  (:commit_id j)})}
-       [:code short-commit]]]
+     [:td.text-nowrap
+      [:a {:href  (path :project-commit {:project-id (:project_id j)
+                                         :commit-id  (:commit_id j)})
+           :title (:subject j)}
+       [:code short-commit]]
+      ;; who: the author, and the committer when that is someone else
+      ;; (space is tight: avatars, the names in the tooltip)
+      (when (:author_email_hash j)
+        [:span.ms-2
+         [avatar/email-avatar {:email-hash (:author_email_hash j)
+                               :name       (:author_name j)
+                               :email      (:author_email j)}
+          :size 20 :note "author"]])
+      (when (and (:committer_email_hash j)
+                 (not= (:committer_email_hash j) (:author_email_hash j)))
+        [:span.ms-1
+         [avatar/email-avatar {:email-hash (:committer_email_hash j)
+                               :name       (:committer_name j)
+                               :email      (:committer_email j)}
+          :size 20 :note "committer"]])]
      [:td.text-muted [times/stamp (:created_at j)]]
      ;; when the final state was reached (what matters for a deploy job)
      [:td.text-muted [times/stamp (:finished_at j)]]]))

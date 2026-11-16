@@ -16,10 +16,12 @@ feature 'Jobs Dashboard' do
     @commit_a = 'a' * 40
     @commit_b = 'b' * 40
 
-    [{id: @commit_a}, {id: @commit_b}].each do |c|
+    [{id: @commit_a, committer_name: 'Ada Lovelace', committer_email: 'ada@example.com'},
+     {id: @commit_b, committer_name: 'Grace Hopper', committer_email: 'grace@example.com'}].each do |c|
       database[:commits].insert(
-        id: c[:id], tree_id: c[:id].tr('a-z', 'b-z0'),
-        subject: 'test', author_name: 'A', committer_name: 'A'
+        id: c[:id], tree_id: c[:id].tr('a-z', 'b-z0'), subject: "subject of #{c[:id][0, 4]}",
+        author_name: 'Ada Lovelace', author_email: 'ada@example.com',
+        committer_name: c[:committer_name], committer_email: c[:committer_email]
       )
     end
 
@@ -39,6 +41,17 @@ feature 'Jobs Dashboard' do
     expect(page).to have_css '.badge', text: 'failed'
     expect(page).to have_content 'Repo A'
     expect(page).to have_content 'Repo B'
+
+    # who: the author's avatar, plus the committer's when that is someone
+    # else; the commit link carries the subject
+    row_a = find('tr', text: 'Build')
+    expect(row_a).to have_css 'img.avatar[alt="Ada Lovelace"]', count: 1
+    expect(row_a).to have_css "a[title='subject of aaaa']", text: @commit_a[0, 7]
+    row_b = find('tr', text: 'Test')
+    expect(row_b).to have_css 'img.avatar[alt="Ada Lovelace"]'
+    expect(row_b).to have_css 'img.avatar[alt="Grace Hopper"]'
+    row_b.find('img.avatar[alt="Grace Hopper"]').hover
+    expect(page).to have_css '.tooltip', text: /Grace Hopper.*grace@example.com.*committer/m
   end
 
   scenario 'filter by state shows only matching jobs' do

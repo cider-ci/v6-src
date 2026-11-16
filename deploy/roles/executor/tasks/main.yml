@@ -325,6 +325,7 @@
       - libgtk-3-0
       - libdbus-glib-1-2
       - libasound2t64
+      - libxtst6    # older Firefox versions (via mise) load libXtst
       - build-essential
       - libssl-dev
       - libreadline-dev

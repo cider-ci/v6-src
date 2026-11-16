@@ -459,8 +459,8 @@
   (jdag-ensure-layout! available)
   (when (jdag-layout-ready? @jdag-layout*)
     [:<>
-     [:div.d-flex.align-items-baseline.mt-3
-      [:h5.mb-0 "Job Dependencies"]
+     [:div.d-flex.align-items-baseline.mt-4
+      [:h4.mb-0 "Job Dependencies"]
       [:button.btn.btn-link.btn-sm {:type "button" :on-click jdag-open-overlay!} "zoom"]
       [:a.btn.btn-link.btn-sm {:href   (path :project-jobs-graph {:project-id (project-id) :commit-id (commit-id)})
                                :target "_blank" :rel "noopener noreferrer"}
@@ -554,7 +554,7 @@
     [:<>
      [:h4.mt-3 "Available Jobs"]
      (if (seq jobs)
-       [:table.table.table-sm
+       [:table.table.table-sm.available-jobs
         [:thead
          [:tr [:th "Key"] [:th "Name"] [:th ""]]]
         [:tbody
@@ -598,9 +598,10 @@
        [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
         [:code (subs (commit-id) 0 8)]]
        " / Jobs"]
-      [jobs-dag (:available @data*) (:created @data*)]
       [available-jobs-panel (:available @data*) (:created @data*)]
       [created-jobs-panel (:created @data*)]
+      ;; last: the graph gets big, the two tables are what one comes for
+      [jobs-dag (:available @data*) (:created @data*)]
       (when @state/debug?*
         [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])])])
 

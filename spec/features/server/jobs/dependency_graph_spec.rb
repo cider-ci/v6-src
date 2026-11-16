@@ -20,6 +20,16 @@ feature 'Job dependency graph' do
     page.evaluate_script("document.querySelector(#{selector.to_json}).getAttribute('viewBox').split(' ')[2]").to_f
   end
 
+  scenario 'the tables come first and the available jobs are sorted by key' do
+    find('svg.jobs-dag', wait: 20)
+    # the graph gets big: the available jobs table is what one comes for
+    expect(all('h4').map(&:text).map { |t| t.split(' ').first(2).join(' ') })
+      .to eq ['Available Jobs', 'Job Dependencies']
+    keys = all('table.available-jobs tbody code').map(&:text)
+    expect(keys.size).to be > 1
+    expect(keys).to eq keys.sort
+  end
+
   scenario 'renders nodes, dependency edge labels and wraps long job names' do
     expect(page).to have_content 'Job Dependencies'
     svg = find('svg.jobs-dag', wait: 20)

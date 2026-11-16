@@ -82,9 +82,13 @@
      :depends_on   (entries depends-on "dependency")
      :run_when     (entries (:run_when (:full-spec job-entry)) "trigger")}))
 
-(defn- available-jobs [repo commit-id created]
+(defn- available-jobs
+  "The jobs of the commit's configuration, by key: the configuration is a map,
+   its order says nothing."
+  [repo commit-id created]
   (let [created-by-key (into {} (map (fn [j] [(:key j) j]) created))]
     (->> (full-job-configs repo commit-id)
+         (sort-by :key)
          (map #(annotate-job % created-by-key repo commit-id)))))
 
 (defn- created-jobs [project-id commit-id]

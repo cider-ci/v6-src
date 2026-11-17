@@ -59,3 +59,11 @@ ci_executor_verify_origin: true
 # state, working directories). Keys listed in the removed list are revoked.
 ci_executor_ssh_authorized_keys: []
 ci_executor_ssh_removed_keys: []
+
+# Video codecs for browser tests: Firefox on Linux decodes H.264 and AAC
+# (madek's mp4 previews) through the system libavcodec only; VP8/VP9/Opus/
+# Vorbis are built in. The package names carry the soname, which differs per
+# Debian release (Firefox probes libavcodec.so.53 to .62).
+ci_executor_media_codec_packages:
+  trixie: [libavcodec61, libavutil59]
+  bookworm: [libavcodec59, libavutil57]

@@ -333,6 +333,16 @@
     state: present
     update_cache: yes
 
+- name: Check the media codec packages are known for this Debian release
+  ansible.builtin.assert:
+    that: ansible_distribution_release in ci_executor_media_codec_packages
+    fail_msg: "add {{ ansible_distribution_release }} to ci_executor_media_codec_packages (roles/executor/defaults)"
+
+- name: Install media codecs for browser tests (H.264/AAC via libavcodec)
+  ansible.builtin.apt:
+    name: "{{ ci_executor_media_codec_packages[ansible_distribution_release] }}"
+    state: present
+
 - name: Generate locales required by projects (leihs createdb uses de_CH.UTF-8)
   community.general.locale_gen:
     name: "{{ item }}"

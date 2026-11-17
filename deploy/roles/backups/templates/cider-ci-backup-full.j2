@@ -1,0 +1,13 @@
+#!/bin/bash
+# Managed by Ansible (roles/backups). Full database backup: pg_dump custom
+# format, restore with pg_restore (docs/backups.md). Rotation by age.
+set -euo pipefail
+
+DIR="${CI_BACKUPS_DIR}/full"
+NAME="full_$(hostname -s)_$(date -u +%Y-%m-%dT%H%M%SZ).pgbin"
+mkdir -p "$DIR"
+pg_dump --format=custom --no-owner --no-privileges --file="$DIR/$NAME.tmp"
+mv "$DIR/$NAME.tmp" "$DIR/$NAME"
+ln -sfn "$NAME" "$DIR/latest.pgbin"
+find "$DIR" -name 'full_*.pgbin' -type f -mtime +"${CI_BACKUPS_KEEP_DAYS}" -delete
+echo "wrote $DIR/$NAME ($(du -h "$DIR/$NAME" | cut -f1))"

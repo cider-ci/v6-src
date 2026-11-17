@@ -15,3 +15,7 @@
 /tmp
 resources/built-info.yml
 .claude/settings.local.json
+# fetched database backups (roles/backups); only encrypted copies are kept
+/deploy/inventories/*/backups/*
+!/deploy/inventories/*/backups/.gitkeep
+!/deploy/inventories/*/backups/*.gpg

@@ -1,0 +1,84 @@
+---
+# Two independent backups (docs/backups.md): full (pg_dump custom format)
+# and config (plain SQL of the configuration tables), each a oneshot
+# service with a daily timer and rotation by age.
+
+- name: Create the backups directories
+  ansible.builtin.file:
+    path: "{{ ci_backups_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ cider_ci_user }}"
+    group: "{{ cider_ci_group }}"
+    mode: "0750"
+  loop: [full, config]
+
+- name: Create the bin directory
+  ansible.builtin.file:
+    path: "{{ cider_ci_base_dir }}/bin"
+    state: directory
+    mode: "0755"
+
+- name: Install the backup scripts
+  ansible.builtin.template:
+    src: "cider-ci-backup-{{ item }}.j2"
+    dest: "{{ cider_ci_base_dir }}/bin/cider-ci-backup-{{ item }}"
+    mode: "0755"
+  loop: [full, config]
+
+- name: Install the backup services
+  ansible.builtin.template:
+    src: backup.service.j2
+    dest: "/etc/systemd/system/cider-ci-backup-{{ item.kind }}.service"
+    mode: "0644"
+  loop:
+    - {kind: full, on_calendar: "{{ ci_backups_full_on_calendar }}"}
+    - {kind: config, on_calendar: "{{ ci_backups_config_on_calendar }}"}
+  loop_control:
+    label: "{{ item.kind }}"
+  register: backup_units
+
+- name: Install the backup timers
+  ansible.builtin.template:
+    src: backup.timer.j2
+    dest: "/etc/systemd/system/cider-ci-backup-{{ item.kind }}.timer"
+    mode: "0644"
+  loop:
+    - {kind: full, on_calendar: "{{ ci_backups_full_on_calendar }}"}
+    - {kind: config, on_calendar: "{{ ci_backups_config_on_calendar }}"}
+  loop_control:
+    label: "{{ item.kind }}"
+  register: backup_timers
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: backup_units.changed or backup_timers.changed
+
+- name: Enable the backup timers
+  ansible.builtin.systemd:
+    name: "cider-ci-backup-{{ item }}.timer"
+    enabled: "{{ ci_backups_enabled }}"
+    state: "{{ 'started' if ci_backups_enabled else 'stopped' }}"
+  loop: [full, config]
+
+# The current configuration, into the inventory: backups/ is gitignored
+# except for encrypted copies (bin/backup-keep).
+- name: Run the config backup now
+  ansible.builtin.command:
+    cmd: systemctl start cider-ci-backup-config.service
+  changed_when: true
+  when: ci_backups_fetch_config_on_deploy
+
+- name: Resolve the config backup just written
+  ansible.builtin.command:
+    cmd: readlink -f {{ ci_backups_dir }}/config/latest.sql.gz
+  register: latest_config_backup
+  changed_when: false
+  when: ci_backups_fetch_config_on_deploy
+
+- name: Fetch it into the inventory (backups/latest-config_<host>.sql.gz)
+  ansible.builtin.fetch:
+    src: "{{ latest_config_backup.stdout }}"
+    dest: "{{ inventory_dir }}/backups/latest-config_{{ inventory_hostname }}.sql.gz"
+    flat: yes
+  when: ci_backups_fetch_config_on_deploy

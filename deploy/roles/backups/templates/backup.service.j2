@@ -1,0 +1,14 @@
+[Unit]
+Description=CIDER-CI {{ item.kind }} database backup
+After=postgresql.service
+
+[Service]
+Type=oneshot
+SyslogIdentifier=cider-ci-backup-{{ item.kind }}
+User={{ cider_ci_user }}
+Group={{ cider_ci_group }}
+EnvironmentFile=/etc/cider-ci/server.env
+Environment=CI_BACKUPS_DIR={{ ci_backups_dir }}
+Environment=CI_BACKUPS_KEEP_DAYS={{ ci_backups_keep_days }}
+Environment="CI_BACKUPS_CONFIG_TABLES={{ ci_backups_config_tables | join(' ') }}"
+ExecStart={{ cider_ci_base_dir }}/bin/cider-ci-backup-{{ item.kind }}

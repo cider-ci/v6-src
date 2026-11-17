@@ -1,0 +1,30 @@
+---
+# Database backups on the server (docs/backups.md): two independent
+# systemd services with daily timers, each keeping ci_backups_keep_days.
+#
+# full:   pg_dump of the whole database (custom format, pg_restore).
+# config: the configuration only, as plain SQL inserts: settings, projects
+#         (repositories), users with their passwords, email addresses,
+#         GPG keys and images, executors, and the migrations table so the
+#         schema version the data belongs to is known. Small, readable, and
+#         what one needs to rebuild a server from scratch. Run on every
+#         deploy and fetched into the inventory (gitignored; encrypt one
+#         with bin/backup-keep to keep it in git).
+ci_backups_enabled: true
+ci_backups_dir: /var/local/cider-ci/backups
+ci_backups_keep_days: 10
+ci_backups_full_on_calendar: "*-*-* 03:15:00"
+ci_backups_config_on_calendar: "*-*-* 03:05:00"
+ci_backups_config_tables:
+  - migrations
+  - settings
+  - repositories
+  - users
+  - passwords
+  - email_addresses
+  - gpg_keys
+  - user_images
+  - executors
+# On deploy: run the config backup and fetch it into the inventory as
+# backups/latest-config_<host>.sql.gz.
+ci_backups_fetch_config_on_deploy: true

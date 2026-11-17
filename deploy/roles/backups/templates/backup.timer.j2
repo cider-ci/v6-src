@@ -1,0 +1,10 @@
+[Unit]
+Description=CIDER-CI {{ item.kind }} database backup, daily
+
+[Timer]
+OnCalendar={{ item.on_calendar }}
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

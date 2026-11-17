@@ -1,0 +1,24 @@
+#!/bin/bash
+# Managed by Ansible (roles/backups). Configuration backup: the data of the
+# configuration tables as plain SQL inserts, gzipped; restored with psql into
+# an empty, migrated database (docs/backups.md). Rotation by age.
+set -euo pipefail
+
+DIR="${CI_BACKUPS_DIR}/config"
+NAME="config_$(hostname -s)_$(date -u +%Y-%m-%dT%H%M%SZ).sql.gz"
+mkdir -p "$DIR"
+TABLE_ARGS=()
+for t in ${CI_BACKUPS_CONFIG_TABLES}; do TABLE_ARGS+=(--table="$t"); done
+{
+  echo "-- CIDER-CI configuration backup ${NAME}"
+  echo "-- host $(hostname) database ${PGDATABASE} tables: ${CI_BACKUPS_CONFIG_TABLES}"
+  echo "-- Restore into an empty, migrated database (docs/backups.md):"
+  echo "--   TRUNCATE ${CI_BACKUPS_CONFIG_TABLES// /, } CASCADE; then psql -v ON_ERROR_STOP=1 -1 -f this-file"
+  echo "SET session_replication_role = replica;"
+  pg_dump --data-only --column-inserts --no-owner --no-privileges "${TABLE_ARGS[@]}"
+  echo "SET session_replication_role = DEFAULT;"
+} | gzip > "$DIR/$NAME.tmp"
+mv "$DIR/$NAME.tmp" "$DIR/$NAME"
+ln -sfn "$NAME" "$DIR/latest.sql.gz"
+find "$DIR" -name 'config_*.sql.gz' -type f -mtime +"${CI_BACKUPS_KEEP_DAYS}" -delete
+echo "wrote $DIR/$NAME ($(du -h "$DIR/$NAME" | cut -f1))"

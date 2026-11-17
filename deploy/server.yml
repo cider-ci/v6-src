@@ -25,3 +25,6 @@
 
     - role: reverse-proxy
       tags: [reverse-proxy]
+
+    - role: backups
+      tags: [backups]

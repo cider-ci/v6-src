@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Keep the config backup fetched by the last server deploy in git: encrypt it
+# to the team's GPG keys (files/gpg/*.asc, all have encryption subkeys) as
+# backups/<original name>.gpg. backups/ is gitignored except *.gpg.
+#
+#   bin/backup-keep [host]        default host: ci.zhdk.cider-ci.com
+#   gpg -d backups/<name>.gpg | gunzip | less        to read one
+set -euo pipefail
+INV="$(cd -- "$(dirname "${BASH_SOURCE}")/.." && pwd -P)"
+HOST="${1:-ci.zhdk.cider-ci.com}"
+SRC="$INV/backups/latest-config_${HOST}.sql.gz"
+[ -f "$SRC" ] || { echo "$SRC not found: deploy the server first (bin/server)" >&2; exit 1; }
+NAME="$(gzip -dc "$SRC" | head -1 | sed -n 's/^-- CIDER-CI configuration backup //p')"
+[ -n "$NAME" ] || { echo "$SRC has no backup header" >&2; exit 1; }
+OUT="$INV/backups/${NAME}.gpg"
+RECIPIENTS=()
+for key in "$INV"/files/gpg/*.asc; do RECIPIENTS+=(--recipient-file "$key"); done
+gpg --batch --yes --encrypt "${RECIPIENTS[@]}" --output "$OUT" "$SRC"
+echo "wrote ${OUT#$INV/} for:"
+for key in "$INV"/files/gpg/*.asc; do gpg --show-keys "$key" 2>/dev/null | sed -n 's/^uid *//p' | head -1 | sed 's/^/  /'; done
+echo "git add ${OUT#$INV/}"

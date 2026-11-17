@@ -13,3 +13,20 @@
       - gnupg
       - sudo
     state: present
+
+- name: Authorize root SSH keys
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ item }}"
+  loop: "{{ ci_root_ssh_authorized_keys }}"
+  loop_control:
+    label: "{{ item.split(' ')[2] | default(item.split(' ')[1][:24]) }}"
+
+- name: Revoke removed root SSH keys
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ item }}"
+    state: absent
+  loop: "{{ ci_root_ssh_removed_keys }}"
+  loop_control:
+    label: "{{ item.split(' ')[2] | default(item.split(' ')[1][:24]) }}"

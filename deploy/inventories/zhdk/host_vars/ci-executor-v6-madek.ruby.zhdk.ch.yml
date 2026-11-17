@@ -45,3 +45,7 @@ ci_executor_extra_traits:
 # the role must not mask the fstab-generated tmp.mount (emergency mode at
 # boot, 2026-11-10).
 ci_executor_tmp_on_disk: false
+
+# ITZ-managed VM: no developer root keys (group_vars/all grants them on the
+# Hetzner hosts); root stays as initialised, developers use the service user.
+ci_root_ssh_authorized_keys: []

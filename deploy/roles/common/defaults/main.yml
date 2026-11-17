@@ -1,0 +1,8 @@
+---
+# SSH public keys (one authorized_keys line each) that may log in as root on
+# every host the common role runs on (server and executors), as in the
+# legacy CI where one list served root and the executor user alike. Keys in
+# the removed list are revoked. The root key given to init.yml
+# (ci_authorized_keys) stays; this list is added to it, not exclusive.
+ci_root_ssh_authorized_keys: []
+ci_root_ssh_removed_keys: []

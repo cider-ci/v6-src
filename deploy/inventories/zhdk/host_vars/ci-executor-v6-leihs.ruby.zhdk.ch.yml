@@ -52,3 +52,7 @@ ci_executor_extra_traits:
   # The leihs deploy jobs (zhdk-inventory cider-ci/job-components/deploy.yml)
   # require this custom trait; the test executors do not offer it.
   - zhdk-leihs-deploy
+
+# ITZ-managed VM: no developer root keys (group_vars/all grants them on the
+# Hetzner hosts); root stays as initialised, developers use the service user.
+ci_root_ssh_authorized_keys: []

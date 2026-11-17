@@ -52,6 +52,19 @@ ci_ssh_port: 22
 ci_authorized_keys:
   - "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAxjIL2YhVqNXwDzzubbUuf839VUxo3gbelVqcifJw8EWfmzihDa80VXY6snamHdt3LmSOKc0BXbEVFD3GuehqUi+gjvRl7RE/YgQt9LjOyJAFzZRh+5XbQ+QCYrfdF8NdrlYv6qmGnTK2U0/SiHObc5qWLNVqdCUPY2AVg9/19PjtiaLxd74so1ApzgxzIubzw5WEdxd16pFvlcO6jmewwgjfTNa9hA9U6C9zCtX/KLiESmTpQIYAX9KB8hRbWM9vMmjR8mUymJeJYaEWRSEFlQz0kqYo3PRkLAs8vsuFhZUs5IVFx0Saig9MOgL1x5h/4UAtvGj3M20mG7/3wimtbw== DrTom@schank.ch"
 
+# Developers who may ssh in as root on the server and the Hetzner executors
+# (roles/common; legacy parity: the old CI gave its ci_ssh_keys list root and
+# the executor user alike). The same people ssh in as the service user through
+# ci_executor_ssh_authorized_keys (group_vars/cider_ci_executors.yml). The
+# ZHdK VMs (ITZ-managed) keep their init-time root key only, see host_vars.
+# Keys in files/ssh/; jan's legacy key was never deployed here.
+ci_root_ssh_authorized_keys:
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/drtom.pub') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/manuel.pub') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/nimaai.pub') }}"
+  - "{{ lookup('file', inventory_dir ~ '/files/ssh/uvb.pub') }}"
+ci_root_ssh_removed_keys: []
+
 # --- Reverse proxy / SSL -----------------------------------------------------
 ci_hostname: ci.zhdk.cider-ci.com
 ci_ssl_certificate_file: /etc/letsencrypt/live/ci.zhdk.cider-ci.com/fullchain.pem

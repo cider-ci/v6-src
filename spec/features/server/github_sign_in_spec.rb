@@ -98,6 +98,8 @@ feature 'GitHub sign-in' do
 
     visit "/users/#{user[:id]}"
     expect(page).to have_css '.github-login', text: 'octo-cat'
+    # linked to the profile on the configured GitHub (here the fake one)
+    expect(find('.github-login a')[:href]).to eq "#{@fake_github.url}/octo-cat"
     expect(page).to have_css '.gpg-keys', text: key[:fingerprint]
     visit "/users/#{user[:id]}/email-addresses/"
     expect(page).to have_css '.source-github'

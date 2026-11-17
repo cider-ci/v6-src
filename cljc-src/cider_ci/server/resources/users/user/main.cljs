@@ -38,7 +38,10 @@
        [:<>
         [:dt.col-sm-3 "GitHub"]
         [:dd.col-sm-9.github-login
-         [icons/github] " " github-login
+         [icons/github] " "
+         (if-let [url (:github_profile_url u)]
+           [:a {:href url :target "_blank" :rel "noopener noreferrer"} github-login]
+           github-login)
          [:small.text-muted " (updated at each sign-in with GitHub)"]]])
      [:dt.col-sm-3 "Name"]     [:dd.col-sm-9 (or (:name u) [:span.text-muted "—"])]
      [:dt.col-sm-3 "Admin"]

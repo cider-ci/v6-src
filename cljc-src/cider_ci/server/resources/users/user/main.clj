@@ -2,6 +2,8 @@
   (:require
     [cider-ci.utils.core :refer [presence]]
     [cider_ci.server.entities.users :as users]
+    [cider-ci.server.github-sign-in.core :as github-core]
+    [cider-ci.server.github-sign-in.main :as github-sign-in]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
     [honey.sql.helpers :as sql]
@@ -20,7 +22,8 @@
                          (sql/select [gpg-keys-sub :gpg_keys])
                          (sql/where [:= :users.id [:cast user-id :uuid]])
                          (sql-format {:inline false})))]
-    {:body user}
+    {:body (assoc user :github_profile_url
+                  (github-core/profile-url (github-sign-in/config) (:github_login user)))}
     {:status 404 :body "user not found"}))
 
 (defn- patch-user [tx user-id {login :login uname :name is-admin :is_admin}]

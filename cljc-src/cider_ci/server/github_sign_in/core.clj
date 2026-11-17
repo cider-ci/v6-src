@@ -53,6 +53,16 @@
                                   (str/replace #"/+$" ""))
        :rules rules})))
 
+(defn profile-url
+  "The user's profile on the GitHub the sign-in is configured for: the
+   origin of the OAuth base url (github.com or the Enterprise host) plus
+   the login. Nil without a configuration or a login."
+  [config github-login]
+  (when-let [login (presence github-login)]
+    (when-let [[_ origin] (some->> (:oauth_base_url config)
+                                   (re-matches #"^(https?://[^/]+).*$"))]
+      (str origin "/" login))))
+
 (defn callback-url [config external-base-url]
   (str (or (:callback_base_url config)
            (str/replace (str external-base-url) #"/+$" ""))

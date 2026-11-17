@@ -90,3 +90,11 @@
                               "<https://api.github.com/user/teams?page=5>; rel=\"last\""))))
   (is (nil? (core/next-link "<https://api.github.com/user/teams?page=1>; rel=\"prev\"")))
   (is (nil? (core/next-link nil))))
+
+(deftest profile-url-test
+  (is (= "https://github.com/octo-cat"
+         (core/profile-url {:oauth_base_url "https://github.com/login/oauth"} "octo-cat")))
+  (is (= "https://ghe.example.org/octo-cat"
+         (core/profile-url {:oauth_base_url "https://ghe.example.org/login/oauth"} "octo-cat")))
+  (is (nil? (core/profile-url nil "octo-cat")))
+  (is (nil? (core/profile-url {:oauth_base_url "https://github.com/login/oauth"} " "))))

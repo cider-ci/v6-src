@@ -21,7 +21,8 @@
   (jdbc/execute! ds
     ["SELECT j.id, j.project_id, j.commit_id, j.key, j.name, j.state,
              r.git_url, r.remote_api_endpoint, r.remote_api_namespace,
-             r.remote_api_name, r.remote_api_type, r.remote_api_token
+             r.remote_api_name, r.remote_api_type, r.remote_api_token,
+             r.github_status_context
       FROM jobs j
       JOIN repositories r ON r.id = j.project_id
       LEFT JOIN job_status_pushes p ON p.job_id = j.id
@@ -104,11 +105,12 @@
                       :body    (json/generate-string payload)
                       :timeout 15000}))
 
-(defn push-job! [ds job external-base-url]
+(defn push-job! [ds job external-base-url & [setting-context]]
   (let [remote (github/remote job)]
     (if-let [error (:error remote)]
       (record-skipped! ds (:id job) (:state job) error)
-      (let [payload  (github/payload job external-base-url)
+      (let [prefix   (github/context-prefix (:github_status_context job) setting-context external-base-url)
+            payload  (github/payload job external-base-url prefix)
             response (post! remote job payload)]
         (if (= 201 (:status response))
           (do (info "Status push" (:state payload) (:context payload) "to"
@@ -123,10 +125,11 @@
 (defn push-pending! []
   (let [ds (get-ds)
         base-url (settings/get-setting! :external_base_url)
+        context  (settings/get-setting! :github_status_context)
         jobs (jobs-to-push ds)]
     (doseq [job jobs]
       (try
-        (push-job! ds job base-url)
+        (push-job! ds job base-url context)
         (catch Exception e
           (warn "Status push failed for job" (:id job) ":" (.getMessage e))
           (record-failed! ds (:id job) (str "Push failed: " (.getMessage e))))))

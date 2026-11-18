@@ -107,6 +107,33 @@ feature 'GitHub status pushes' do
     wait_until(15) { github_requests.count { |r| r.body['state'] == 'success' } >= 2 }
   end
 
+  # GitHub branch protection rules name the context: it must stay what the
+  # rules were written for (ZHdK: the legacy CI's Cider-CI@ci.zhdk.ch).
+  scenario 'the status context comes from the setting, a project can override it' do
+    configure_pushes!
+    visit '/admin/settings/edit'
+    fill_in 'github_status_context', with: 'Cider-CI@ci.zhdk.ch'
+    click_on 'Save'
+    expect(page).to have_css '.github-status-context', text: 'Cider-CI@ci.zhdk.ch'
+    visit "/projects/#{project_id}"
+    expect(page).to have_css '.status-pushes .status-context', text: 'Cider-CI@ci.zhdk.ch - <job name>'
+
+    create_job!(state: 'passed')
+    expect(wait_for_github_request('success').body['context']).to eq 'Cider-CI@ci.zhdk.ch - Status Job'
+
+    visit "/projects/#{project_id}/edit"
+    fill_in 'github_status_context', with: 'Other CI'
+    click_on 'Save'
+    expect(page).to have_css '.status-pushes .status-context', text: 'Other CI - <job name>'
+    set_job_state!('failed')
+    expect(wait_for_github_request('failure').body['context']).to eq 'Other CI - Status Job'
+
+    visit "/projects/#{project_id}/edit"
+    fill_in 'github_status_context', with: ''
+    click_on 'Save'
+    expect(database[:repositories].where(id: project_id).first[:github_status_context]).to be_nil
+  end
+
   scenario 'the commit page links to the origin and lists the pushes, failed ones too' do
     configure_pushes!
     @fake_github.respond_next(500, message: 'Something broke')

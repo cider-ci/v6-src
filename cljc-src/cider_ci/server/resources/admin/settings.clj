@@ -7,7 +7,7 @@
 
 (defn- fetch [tx]
   (jdbc/execute-one! tx
-    ["SELECT external_base_url,
+    ["SELECT external_base_url, github_status_context,
              trial_dispatch_timeout::text AS trial_dispatch_timeout,
              branch_trigger_max_commit_age_default::text AS branch_trigger_max_commit_age_default
       FROM settings WHERE id = 0"]))
@@ -27,6 +27,11 @@
                  (jdbc/execute-one! tx
                    ["UPDATE settings SET external_base_url = ? WHERE id = 0"
                     external_base_url]))
+               ;; blank: NULL, i.e. Cider-CI@<host of the external base url>
+               (when (contains? body :github_status_context)
+                 (jdbc/execute-one! tx
+                   ["UPDATE settings SET github_status_context = ? WHERE id = 0"
+                    (some-> body :github_status_context str clojure.string/trim not-empty)]))
                (when trial_dispatch_timeout
                  (try
                    (jdbc/execute-one! tx

@@ -3,6 +3,7 @@
    project pushes to and what is posted. The token is configured per project
    (repositories.remote_api_token); there is no server-wide default."
   (:require
+    [cider-ci.utils.core :refer [presence]]
     [clojure.string :as str]))
 
 
@@ -82,12 +83,26 @@
   (str (str/replace (or external-base-url "") #"/+$" "")
        "/projects/" project_id "/commits/" commit_id "/jobs/" id))
 
+(defn context-prefix
+  "What the statuses are posted under, before \" - <job name>\": the
+   project's github_status_context, else the setting, else
+   Cider-CI@<host of the external base url>. GitHub branch protection rules
+   name the context, so it must stay what the rules were written for (ZHdK:
+   the legacy CI's Cider-CI@ci.zhdk.ch)."
+  [project-context setting-context external-base-url]
+  (or (presence project-context)
+      (presence setting-context)
+      (str "Cider-CI@" (host-of external-base-url))))
+
 (defn payload
-  "Legacy format; the context names this server, so the statuses of several
-   CIDER-CI instances (e.g. the legacy one) can coexist on a commit."
-  [{job-name :name job-key :key job-state :state :as job} external-base-url]
+  "Legacy format; the context names this server (or what context-prefix
+   says), so the statuses of several CIDER-CI instances can coexist on a
+   commit."
+  [{job-name :name job-key :key job-state :state :as job} external-base-url
+   & [context-prefix]]
   (let [label (or (not-empty job-name) job-key)]
     {:state       (github-state job-state)
-     :context     (str "Cider-CI@" (host-of external-base-url) " - " label)
+     :context     (str (or (presence context-prefix) (str "Cider-CI@" (host-of external-base-url)))
+                       " - " label)
      :description (truncate (str job-state " - " label) max-description-length)
      :target_url  (job-url external-base-url job)}))

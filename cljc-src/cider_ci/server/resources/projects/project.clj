@@ -2,6 +2,7 @@
   (:require
     [cider-ci.server.projects.repositories.state.db :refer [db*] :rename {db* repo-state-db*}]
     [cider-ci.server.jobs.auto-trigger :as auto-trigger]
+    [cider-ci.server.db.settings :as settings]
     [cider-ci.server.status-pushes.github :as github]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -20,6 +21,7 @@
         :cron_trigger_enabled
         :send_status_notifications
         :remote_api_endpoint :remote_api_namespace :remote_api_name :remote_api_type
+        :github_status_context
         ;; the token itself is never returned
         [[:raw "remote_api_token IS NOT NULL"] :remote_api_token_set]
         :created_at :updated_at)
@@ -73,7 +75,10 @@
                        ORDER BY p.last_error_at DESC LIMIT 1"
                       (:id repo)])]
     (merge {:enabled (boolean (and send_status_notifications remote_api_token_set))
-            :error   (:error remote)}
+            :error   (:error remote)
+            :context (github/context-prefix (:github_status_context repo)
+                                            (settings/get-setting! :github_status_context)
+                                            (settings/get-setting! :external_base_url))}
            (when-not (:error remote)
              {:endpoint   (:endpoint remote)
               :repository (str (:owner remote) "/" (:name remote))})
@@ -103,7 +108,7 @@
 
 (def ^:private status-push-keys
   #{:send_status_notifications :remote_api_endpoint :remote_api_namespace
-    :remote_api_name :remote_api_token :remote_api_token_clear})
+    :remote_api_name :remote_api_token :remote_api_token_clear :github_status_context})
 
 (defn- status-push-updates
   "Blank values become NULL (the columns reject empty strings); the token is
@@ -116,6 +121,7 @@
       (contains? body :remote_api_endpoint)  (assoc :remote_api_endpoint (text :remote_api_endpoint))
       (contains? body :remote_api_namespace) (assoc :remote_api_namespace (text :remote_api_namespace))
       (contains? body :remote_api_name)      (assoc :remote_api_name (text :remote_api_name))
+      (contains? body :github_status_context) (assoc :github_status_context (text :github_status_context))
       (text :remote_api_token)               (assoc :remote_api_token (text :remote_api_token))
       (:remote_api_token_clear body)         (assoc :remote_api_token nil))))
 

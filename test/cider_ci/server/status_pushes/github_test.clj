@@ -52,6 +52,15 @@
   (is (= "https://api.github.com/repos/leihs/leihs/statuses/abc"
          (github/statuses-url {:endpoint "https://api.github.com" :owner "leihs" :name "leihs"} "abc"))))
 
+(deftest context-prefix-test
+  (is (= "Cider-CI@ci.example.org" (github/context-prefix nil nil "https://ci.example.org")))
+  (is (= "Cider-CI@ci.zhdk.ch" (github/context-prefix nil "Cider-CI@ci.zhdk.ch" "https://ci.example.org")))
+  (is (= "Legacy CI" (github/context-prefix "Legacy CI" "Cider-CI@ci.zhdk.ch" "https://ci.example.org")))
+  (is (= "Cider-CI@ci.example.org" (github/context-prefix " " "" "https://ci.example.org")))
+  (is (= "Cider-CI@ci.zhdk.ch - Test"
+         (:context (github/payload {:name "Test" :key "test" :state "passed"}
+                                   "https://ci.example.org" "Cider-CI@ci.zhdk.ch")))))
+
 (deftest payload-test
   (let [job {:id "j1" :project_id "leihs" :commit_id "c1" :key "test" :name "Test" :state "passed"}]
     (is (= {:state       "success"

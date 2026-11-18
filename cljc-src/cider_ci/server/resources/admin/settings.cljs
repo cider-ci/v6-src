@@ -45,6 +45,11 @@
             (if-let [u (:external_base_url s)]
               [:code u]
               [:span.text-muted "—"])]
+           [:dt.col-sm-4 "GitHub status context"]
+           [:dd.col-sm-8.github-status-context
+            (if-let [c (:github_status_context s)]
+              [:code c]
+              [:span.text-muted "Cider-CI@<host of the external base URL>"])]
            [:dt.col-sm-4 "Trial dispatch timeout"]
            [:dd.col-sm-8
             (if-let [t (:trial_dispatch_timeout s)]
@@ -77,6 +82,7 @@
          (let [s @_data*]
            (when (nil? @form*)
              (reset! form* {:external_base_url                   (or (:external_base_url s) "")
+                            :github_status_context                (or (:github_status_context s) "")
                             :trial_dispatch_timeout               (or (:trial_dispatch_timeout s) "")
                             :branch_trigger_max_commit_age_default (or (:branch_trigger_max_commit_age_default s) "")}))
            [:div.col-md-6
@@ -89,6 +95,19 @@
                 :on-change #(swap! form* assoc :external_base_url (.. % -target -value))}]
               [:div.form-text
                "Base URL used in links sent externally (e.g. status badges, notifications)."]]
+             [:div.mb-3
+              [:label.form-label {:for "github_status_context"} "GitHub status context"]
+              [:input.form-control
+               {:id        "github_status_context"
+                :type      "text"
+                :placeholder "Cider-CI@<host of the external base URL>"
+                :value     (or (:github_status_context @form*) "")
+                :on-change #(swap! form* assoc :github_status_context (.. % -target -value))}]
+              [:div.form-text
+               "Job states are posted to GitHub as commit statuses named "
+               [:code "<this> - <job name>"] ". Branch protection rules on GitHub name that "
+               "context, so keep what the rules were written for (e.g. the name of a "
+               "previous CI). Blank: " [:code "Cider-CI@<host>"] ". A project can override it."]]
              [:div.mb-3
               [:label.form-label "Trial dispatch timeout"]
               [:input.form-control

@@ -164,7 +164,7 @@
   "Whether and where job states are posted as GitHub commit statuses."
   []
   (let [p @_data*
-        {:keys [error repository endpoint posted errors last_posted_at last_error]} (:status_pushes p)]
+        {:keys [error repository endpoint context posted errors last_posted_at last_error]} (:status_pushes p)]
     [:<>
      [:dt.col-sm-3 "GitHub statuses"]
      [:dd.col-sm-9.status-pushes
@@ -176,6 +176,7 @@
                "pushed to " [:code repository]
                (when (not= endpoint "https://api.github.com")
                  [:span.text-muted " via " [:code endpoint]])
+               " as " [:code.status-context (str context " - <job name>")]
                [:span.ms-2.text-muted
                 (str posted " posted, " errors " failing in the last 24 hours")
                 (when-let [t (relative-time last_posted_at)] (str ", last " t))]])
@@ -358,6 +359,12 @@
        "A GitHub token with write access to commit statuses of this repository. "
        "Nothing is pushed without a token."]]
      [:div.mb-3
+      [:label.form-label {:html-for "github_status_context"} "Status context"]
+      [text-input :github_status_context "the server setting"]
+      [:div.form-text "Statuses are posted as " [:code "<context> - <job name>"]
+       "; blank uses the server setting. Set it when this repository's branch "
+       "protection rules name a different context."]]
+     [:div.mb-3
       [:label.form-label {:html-for "remote_api_endpoint"} "API endpoint"]
       [text-input :remote_api_endpoint "https://api.github.com for github.com URLs"]
       [:div.form-text "Only needed for GitHub Enterprise, e.g. "
@@ -394,6 +401,7 @@
                             :cron_trigger_enabled          (boolean (:cron_trigger_enabled p))
                             :send_status_notifications     (boolean (:send_status_notifications p))
                             :remote_api_endpoint           (or (:remote_api_endpoint p) "")
+                            :github_status_context         (or (:github_status_context p) "")
                             :remote_api_namespace          (or (:remote_api_namespace p) "")
                             :remote_api_name               (or (:remote_api_name p) "")
                             :remote_api_token              ""

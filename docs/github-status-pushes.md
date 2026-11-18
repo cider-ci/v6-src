@@ -43,10 +43,14 @@ For each job and state change (pending included), to the job's commit:
 | failed                            | `failure`    |
 | aborting, aborted, defective      | `error`      |
 
-- **context**: `Cider-CI@<host> - <job name>`; `<host>` is the host of the
-  "External base URL" in the admin settings. Because the context names the
-  server, the statuses of several CIDER-CI instances (e.g. the legacy CI) can
-  be posted to the same commit side by side.
+- **context**: `<prefix> - <job name>`. The prefix is the project's
+  "Status context", else the admin setting "GitHub status context", else
+  `Cider-CI@<host>` with the host of the "External base URL". GitHub branch
+  protection rules ("required status checks") name the context, so it must
+  stay what the rules were written for: ZHdK uses the legacy CI's
+  `Cider-CI@ci.zhdk.ch`. With distinct prefixes the statuses of several
+  CIDER-CI instances coexist on a commit; with the same prefix the latest
+  post wins per context.
 - **description**: `<job state> - <job name>` (at most 140 characters).
 - **target_url**: the job page,
   `<external base URL>/projects/<project>/commits/<commit>/jobs/<job>`; the

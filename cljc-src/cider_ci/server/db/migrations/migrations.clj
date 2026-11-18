@@ -78,6 +78,8 @@
         :down (partial exec-resource-sql! "migrations/00037_commit_depths_down.sql")}
     38 {:up (partial exec-resource-sql! "migrations/00038_status_push_attempts_up.sql")
         :down (partial exec-resource-sql! "migrations/00038_status_push_attempts_down.sql")}
+    39 {:up (partial exec-resource-sql! "migrations/00039_branch_trigger_defaults_up.sql")
+        :down (partial exec-resource-sql! "migrations/00039_branch_trigger_defaults_down.sql")}
     ))
 
 (defn available []

@@ -52,3 +52,21 @@
       (is (= "passed" (initial-job-state nil))))
     (testing "a job with tasks starts pending"
       (is (= "pending" (initial-job-state [{:name "t"}]))))))
+
+(deftest repo-allows-branch-test
+  (let [allows? cider-ci.server.jobs.auto-trigger/repo-allows-branch?]
+    (testing "defaults: every branch except those named NO_CI"
+      (is (true?  (allows? "^.+$" "NO_CI" "master")))
+      (is (true?  (allows? "^.+$" "NO_CI" "tom/wip")))
+      (is (false? (allows? "^.+$" "NO_CI" "tom/wip-NO_CI")))
+      (is (false? (allows? "^.+$" "NO_CI" "NO_CI-experiment"))))
+    (testing "blank or NULL include is every branch; blank or NULL exclude disables the check"
+      (is (true?  (allows? nil nil "tom/wip-NO_CI")))
+      (is (true?  (allows? "" "" "tom/wip-NO_CI")))
+      (is (true?  (allows? "^.+$" nil "tom/wip-NO_CI"))))
+    (testing "the exclude overrides the include"
+      (is (false? (allows? "^feature" "NO_CI" "feature-NO_CI")))
+      (is (true?  (allows? "^feature" "NO_CI" "feature-x")))
+      (is (false? (allows? "^feature" "NO_CI" "master"))))
+    (testing "the all matcher as exclude auto-triggers nothing"
+      (is (false? (allows? "^.+$" "^.*$" "master"))))))

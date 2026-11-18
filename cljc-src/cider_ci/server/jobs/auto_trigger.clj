@@ -13,7 +13,18 @@
   (when-not (str/blank? pattern)
     (some? (re-find (re-pattern pattern) branch-name))))
 
-(defn repo-allows-branch? [repo-include repo-exclude branch-name]
+(def default-branch-include "^.+$")
+(def default-branch-exclude "NO_CI")
+
+(defn repo-allows-branch?
+  "The repository's branch trigger filter (legacy semantics), applied to
+   every automatic trigger (push, cron, dependency), never to a job started
+   by hand: the branch name must match branch_trigger_include_match (blank
+   or NULL: ^.+$, every branch) and must not match
+   branch_trigger_exclude_match, which overrides the include. A blank or
+   NULL exclude disables that check; the default NO_CI keeps branches named
+   like tom/wip-NO_CI from being tested; ^.*$ auto-triggers no branch."
+  [repo-include repo-exclude branch-name]
   (and (or (str/blank? repo-include)
            (matches-pattern? repo-include branch-name))
        (or (str/blank? repo-exclude)
@@ -184,7 +195,7 @@
    recorded in pending_branch_triggers for the retry daemon."
   [ds project-id commit-id branch-name
    & {:keys [repo-include repo-exclude repo-max-age]
-      :or   {repo-include "^.*$" repo-exclude "" repo-max-age nil}}]
+      :or   {repo-include default-branch-include repo-exclude nil repo-max-age nil}}]
   (if-not (and (repo-allows-branch? repo-include repo-exclude branch-name)
                (commit-within-age? ds commit-id repo-max-age))
     :skipped
@@ -238,8 +249,8 @@
                     "- commit older than" max-age)
               (clear-pending! ds repository_id commit_id branch_name))
           (let [result (trigger-for-commit! ds repository_id commit_id branch_name
-                                            :repo-include (or branch_trigger_include_match "^.*$")
-                                            :repo-exclude (or branch_trigger_exclude_match "")
+                                            :repo-include branch_trigger_include_match
+                                            :repo-exclude branch_trigger_exclude_match
                                             :repo-max-age max-age)]
             (when (= :skipped result)
               ;; branch filter changed meanwhile: nothing to retry

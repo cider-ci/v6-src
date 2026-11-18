@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.project
   (:require
     [cider-ci.server.projects.repositories.state.db :refer [db*] :rename {db* repo-state-db*}]
+    [cider-ci.server.jobs.auto-trigger :as auto-trigger]
     [cider-ci.server.status-pushes.github :as github]
     [clojure.string :as str]
     [honey.sql :refer [format] :rename {format sql-format}]
@@ -129,8 +130,12 @@
 (defn- patch-handler [tx project-id body]
   (let [name     (some-> body :name str/trim)
         git-url  (some-> body :git_url str/trim)
-        include  (get body :branch_trigger_include_match)
-        exclude  (get body :branch_trigger_exclude_match)
+        ;; blank include: the default (every branch); blank exclude: NULL,
+        ;; the check is off (see auto-trigger/repo-allows-branch?)
+        include  (when (contains? body :branch_trigger_include_match)
+                   (or (some-> body :branch_trigger_include_match str/trim not-empty)
+                       auto-trigger/default-branch-include))
+        exclude  (some-> body :branch_trigger_exclude_match str/trim not-empty)
         max-age  (some-> body :branch_trigger_max_commit_age str/trim not-empty)
         interval (some-> body :remote_fetch_interval str/trim not-empty)]
     (when (str/blank? name)
@@ -140,7 +145,8 @@
     (try
       (let [updates (cond-> {:name name :git_url git-url}
                       (some? include)  (assoc :branch_trigger_include_match include)
-                      (some? exclude)  (assoc :branch_trigger_exclude_match exclude)
+                      (contains? body :branch_trigger_exclude_match)
+                      (assoc :branch_trigger_exclude_match exclude)
                       (some? max-age)  (assoc :branch_trigger_max_commit_age max-age)
                       (some? interval) (assoc :remote_fetch_interval interval)
                       (contains? body :cron_trigger_enabled)

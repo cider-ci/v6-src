@@ -174,9 +174,7 @@
             ORDER BY b.repository_id, b.name"])
        (filter (fn [{:keys [branch_name branch_trigger_include_match branch_trigger_exclude_match]}]
                  (auto-trigger/repo-allows-branch?
-                   (or branch_trigger_include_match "^.*$")
-                   (or branch_trigger_exclude_match "")
-                   branch_name)))))
+                   branch_trigger_include_match branch_trigger_exclude_match branch_name)))))
 
 (defn run-cycle!
   "One pass over all heads; errors are logged per head or job and never

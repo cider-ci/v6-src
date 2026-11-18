@@ -46,9 +46,7 @@
          {:builder-fn next.jdbc.result-set/as-unqualified-lower-maps})
        (filter (fn [{:keys [name branch_trigger_include_match branch_trigger_exclude_match]}]
                  (auto-trigger/repo-allows-branch?
-                   (or branch_trigger_include_match "^.*$")
-                   (or branch_trigger_exclude_match "")
-                   name)))
+                   branch_trigger_include_match branch_trigger_exclude_match name)))
        (map :name)))
 
 

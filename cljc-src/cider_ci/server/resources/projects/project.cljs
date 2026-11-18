@@ -199,12 +199,12 @@
       [fetch-status-badge (:fetch-and-update p)]
       (when-let [t (relative-time (:last_fetched_at (:fetch-and-update p)))]
         [:span.ms-2.text-muted "last fetched " t])]
-     (when (:branch_trigger_include_match p)
-       [:<>
-        [:dt.col-sm-3 "Include branches"] [:dd.col-sm-9 [:code (:branch_trigger_include_match p)]]])
-     (when (:branch_trigger_exclude_match p)
-       [:<>
-        [:dt.col-sm-3 "Exclude branches"] [:dd.col-sm-9 [:code (:branch_trigger_exclude_match p)]]])
+     [:dt.col-sm-3 "Auto-trigger branches"]
+     [:dd.col-sm-9.branch-trigger-filter
+      "matching " [:code.include-match (or (:branch_trigger_include_match p) "^.+$")]
+      (if-let [exclude (:branch_trigger_exclude_match p)]
+        [:<> ", except " [:code.exclude-match exclude]]
+        [:span.text-muted.exclude-match " (no exclusion)"])]
      (when (:branch_trigger_max_commit_age p)
        [:<>
         [:dt.col-sm-3 "Max commit age"] [:dd.col-sm-9 [:code (:branch_trigger_max_commit_age p)]]])
@@ -418,21 +418,30 @@
                 :value     (:git_url @form*)
                 :on-change #(swap! form* assoc :git_url (.. % -target -value))}]]
              [:div.mb-3
-              [:label.form-label "Include branches matching"]
+              [:label.form-label {:for "branch_trigger_include_match"} "Auto-trigger branches matching"]
               [:input.form-control
-               {:type        "text"
-                :placeholder "all branches"
+               {:id          "branch_trigger_include_match"
+                :type        "text"
+                :placeholder "^.+$ (every branch)"
                 :value       (:branch_trigger_include_match @form*)
                 :on-change   #(swap! form* assoc :branch_trigger_include_match (.. % -target -value))}]
-              [:div.form-text "Regular expression. Leave blank to include all branches."]]
+              [:div.form-text
+               "Regular expression. Only branches whose name matches are triggered automatically "
+               "(pushes, cron, dependencies); jobs can still be started by hand on any branch. "
+               "Blank: " [:code "^.+$"] ", every branch."]]
              [:div.mb-3
-              [:label.form-label "Exclude branches matching"]
+              [:label.form-label {:for "branch_trigger_exclude_match"} "Except branches matching"]
               [:input.form-control
-               {:type        "text"
-                :placeholder "none excluded"
+               {:id          "branch_trigger_exclude_match"
+                :type        "text"
+                :placeholder "no exclusion"
                 :value       (:branch_trigger_exclude_match @form*)
                 :on-change   #(swap! form* assoc :branch_trigger_exclude_match (.. % -target -value))}]
-              [:div.form-text "Regular expression. Leave blank to exclude none."]]
+              [:div.form-text
+               "Regular expression, overrides the include. The default " [:code "NO_CI"]
+               " lets you push a branch named like " [:code "wip-NO_CI"]
+               " without spending CI time on it. Blank disables this check; "
+               [:code "^.*$"] " auto-triggers no branch at all."]]
              [:div.mb-3
               [:label.form-label "Max commit age for auto-trigger"]
               [:input.form-control

@@ -10,6 +10,16 @@
 
 
 (defonce _data* (reagent/atom nil))
+(defonce ^:private repost-result* (reagent/atom nil))
+
+(defn- repost-all!
+  "Every project's branch heads are posted to GitHub again (after changing
+   the status context)."
+  []
+  (go (when-let [res (-> {:method :post
+                           :url    (path :admin-settings-push-statuses)}
+                         http-client/request :chan <! http-client/filter-success :body)]
+        (reset! repost-result* res))))
 
 (defn- fetch! []
   (go (when-let [res (-> {:method :get
@@ -49,7 +59,17 @@
            [:dd.col-sm-8.github-status-context
             (if-let [c (:github_status_context s)]
               [:code c]
-              [:span.text-muted "Cider-CI@<host of the external base URL>"])]
+              [:span.text-muted "Cider-CI@<host of the external base URL>"])
+            (when (-> @state/user* :is_admin)
+              [:div.mt-1
+               [:button.btn.btn-sm.btn-outline-secondary.push-all-statuses
+                {:type "button"
+                 :title "Post the job states of every project's branch heads to GitHub again, e.g. after changing the context"
+                 :on-click #(repost-all!)}
+                "Re-post all statuses"]
+               (when-let [{:keys [jobs]} @repost-result*]
+                 [:span.ms-2.small.text-muted.repost-result
+                  (str "queued " jobs " job" (when (not= 1 jobs) "s") " for re-posting")])])]
            [:dt.col-sm-4 "Trial dispatch timeout"]
            [:dd.col-sm-8
             (if-let [t (:trial_dispatch_timeout s)]

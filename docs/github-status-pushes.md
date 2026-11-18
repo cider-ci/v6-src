@@ -68,7 +68,11 @@ Only the current state is posted: a job that passes quickly may go straight to
   hour, as long as the job was updated within the last 24 hours.
 - Changing the project's push settings retries failed posts immediately.
 - **Push statuses now** on the project page posts the states of the jobs of
-  the last 24 hours again (e.g. after the statuses were deleted on GitHub).
+  every current branch head again, whatever their age (e.g. after the
+  statuses were deleted on GitHub); the button in a branch's row does it for
+  that head only, "Re-post all statuses" on the admin settings page for every
+  project (after changing the status context). Jobs of superseded commits
+  are not re-posted.
 
 Differences to the legacy CI: statuses are posted to the job's commit only
 (no fan-out to other commits with the same tree), failed posts are retried,

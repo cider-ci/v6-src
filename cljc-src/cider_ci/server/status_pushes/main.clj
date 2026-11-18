@@ -28,7 +28,7 @@
       LEFT JOIN job_status_pushes p ON p.job_id = j.id
       WHERE r.send_status_notifications
         AND r.remote_api_token IS NOT NULL
-        AND j.updated_at > now() - interval '24 hours'
+        AND (j.updated_at > now() - interval '24 hours' OR p.repost_requested_at IS NOT NULL)
         AND (p.job_id IS NULL OR p.job_state IS DISTINCT FROM j.state)
         AND (p.next_attempt_at IS NULL OR p.next_attempt_at <= now())
       ORDER BY j.updated_at ASC
@@ -41,7 +41,7 @@
       ON CONFLICT (job_id) DO UPDATE
       SET job_state = EXCLUDED.job_state, github_state = EXCLUDED.github_state,
           posted_at = now(), last_error = NULL, last_error_at = NULL,
-          attempts = 0, next_attempt_at = NULL, updated_at = now()"
+          attempts = 0, next_attempt_at = NULL, repost_requested_at = NULL, updated_at = now()"
      job-id job-state github-state]))
 
 (defn- record-skipped!
@@ -53,7 +53,8 @@
       VALUES (?, ?, ?, now())
       ON CONFLICT (job_id) DO UPDATE
       SET job_state = EXCLUDED.job_state, last_error = EXCLUDED.last_error,
-          last_error_at = now(), attempts = 0, next_attempt_at = NULL, updated_at = now()"
+          last_error_at = now(), attempts = 0, next_attempt_at = NULL,
+          repost_requested_at = NULL, updated_at = now()"
      job-id job-state error]))
 
 (defn- record-failed!
@@ -69,6 +70,39 @@
           next_attempt_at = now() + make_interval(secs => least(10 * power(2, job_status_pushes.attempts), 3600)),
           updated_at = now()"
      job-id error]))
+
+;;; re-posting ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- request-repost!
+  "Marks the jobs of the current branch heads (filters: project, branch) of
+   the projects that push for re-posting, whatever their age; the daemon
+   posts their current state again within seconds. Returns how many jobs."
+  [ds & {:keys [project-id branch-name]}]
+  (let [sql (str "INSERT INTO job_status_pushes (job_id, repost_requested_at)
+                  SELECT DISTINCT j.id, now()
+                  FROM jobs j
+                  JOIN branches b ON b.repository_id = j.project_id AND b.current_commit_id = j.commit_id
+                  JOIN repositories r ON r.id = j.project_id
+                  WHERE r.send_status_notifications AND r.remote_api_token IS NOT NULL"
+                 (when project-id " AND j.project_id = ?")
+                 (when branch-name " AND b.name = ?")
+                 " ON CONFLICT (job_id) DO UPDATE
+                  SET job_state = NULL, attempts = 0, next_attempt_at = NULL,
+                      repost_requested_at = now(), updated_at = now()")
+        params (cond-> [] project-id (conj project-id) branch-name (conj branch-name))]
+    (-> (jdbc/execute-one! ds (into [sql] params))
+        :next.jdbc/update-count)))
+
+(defn repost-project! [ds project-id]
+  (request-repost! ds :project-id project-id))
+
+(defn repost-branch! [ds project-id branch-name]
+  (request-repost! ds :project-id project-id :branch-name branch-name))
+
+(defn repost-all!
+  "Every project that pushes; after changing the status context."
+  [ds]
+  (request-repost! ds))
 
 (defn- record-attempt!
   "The history of posts for the commit page; skipped pushes (the project

@@ -97,8 +97,28 @@
       "none"       [:span.text-muted {:title "no submodules"} "—"]
       [:a.text-muted {:href href :title "not checked yet"} [icons/unknown-signature]])))
 
+(defonce ^:private repost-result* (reagent/atom nil))
+
+(defn- repost!
+  "Push statuses now, for the project's heads or one branch: the response
+   says how many jobs were queued."
+  [url]
+  (-> (js/fetch url (clj->js {:method "POST" :credentials "same-origin"
+                              :headers {"accept" "application/json"
+                                        "x-csrf-token" (anti-csrf/token)}}))
+      (.then #(.json %))
+      (.then (fn [body]
+               (reset! repost-result* (js->clj body :keywordize-keys true))
+               (fetch-data! :quiet? true)))))
+
+(defn- repost-result []
+  (when-let [{:keys [jobs]} @repost-result*]
+    [:span.ms-2.small.text-muted.repost-result
+     (str "queued " jobs " job" (when (not= 1 jobs) "s") " for re-posting")]))
+
 (defn- branches-table []
-  (let [branches (:branches @_data*)]
+  (let [branches (:branches @_data*)
+        pushes?  (-> @_data* :status_pushes :enabled)]
     (if (empty? branches)
       [:p.text-muted "No branches yet."]
       [:table.table.table-sm.table-hover.branches
@@ -109,7 +129,8 @@
          [sort-th :commit_committer_date "Date"]
          [:th "Signed"]
          [:th {:title "submodule tree resolvable through the configured projects"} "Submodules"]
-         [:th "Subject"]]]
+         [:th "Subject"]
+         (when pushes? [:th ""])]]
        [:tbody
         (for [b (sorted-branches branches)]
           ^{:key (:id b)}
@@ -129,7 +150,15 @@
            [:td [signature-cell (:commit_signature_fingerprint b)]]
            [:td.submodules [submodules-cell b]]
            [:td.text-truncate {:style {:max-width "32em"}}
-            (:commit_subject b)]])]])))
+            (:commit_subject b)]
+           (when pushes?
+             [:td.text-end
+              [:button.btn.btn-sm.btn-outline-secondary.py-0.push-branch-statuses
+               {:type "button"
+                :title (str "Post the states of the jobs of this branch's head to GitHub again")
+                :on-click #(repost! (path :project-branch-push-statuses
+                                          {:project-id (project-id) :branch-name (:name b)}))}
+               [icons/fetch]]])])]])))
 
 
 ;;; View page (route :project) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -294,12 +323,10 @@
            (when (-> @_data* :status_pushes :enabled)
              [:button.btn.btn-sm.btn-secondary.push-statuses
               {:type     "button"
-               :title    "Post the states of the jobs of the last 24 hours to GitHub again"
-               :on-click (fn [_]
-                           (fetch-request "POST"
-                                          (path :project-push-statuses {:project-id (project-id)})
-                                          (fn [_] (fetch-data!))))}
+               :title    "Post the states of the jobs of every branch head to GitHub again, whatever their age"
+               :on-click #(repost! (path :project-push-statuses {:project-id (project-id)}))}
               [icons/fetch] " Push statuses now"])
+           [repost-result]
            [:button.btn.btn-sm.btn-danger
             {:on-click (fn [_]
                          (fetch-request "DELETE"

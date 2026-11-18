@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.admin.settings
   (:require
     [cider-ci.server.db.settings :refer [get-settings]]
+    [cider-ci.server.status-pushes.main :as status-pushes]
     [clojure.core.memoize :as memoize]
     [next.jdbc :as jdbc]))
 
@@ -18,6 +19,11 @@
                 method :request-method
                 tx     :tx}]
   (case route-name
+    :admin-settings-push-statuses
+    (case method
+      :post {:status 202 :body {:jobs (status-pushes/repost-all! tx)}}
+      {:status 405 :body "Method not allowed"})
+
     :admin-settings
     (case method
       :get  {:body (fetch tx)}

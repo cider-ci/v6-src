@@ -61,6 +61,8 @@
    :project-commit-configuration #'project-configuration/handler
    :project-fetch #'project-fetch/handler
    :project-push-statuses #'project-status-pushes/handler
+   :project-branch-push-statuses #'project-status-pushes/handler
+   :admin-settings-push-statuses #'admin-settings/handler
    :project-push-notification #'project-push-notification/handler
    :project-git   #'project-git/http-handler
    :project-jobs            #'project-jobs/handler

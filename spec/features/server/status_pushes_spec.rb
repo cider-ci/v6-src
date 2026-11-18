@@ -39,6 +39,10 @@ feature 'GitHub status pushes' do
     "/projects/#{project_id}/commits/#{commit_id}/jobs/#{@job_id}"
   end
 
+  def head!(branch, commit)
+    database[:branches].insert(repository_id: project_id, name: branch, current_commit_id: commit)
+  end
+
   scenario 'every job state is posted with context, description and a link to the job' do
     configure_pushes!
     create_job!
@@ -97,14 +101,52 @@ feature 'GitHub status pushes' do
     expect(github_requests).to be_empty
   end
 
-  scenario 'push now posts the recent jobs again' do
+  # Re-posting (legacy: "Push all job statuses for this project now"): the
+  # jobs of the current branch heads, whatever their age; per project, per
+  # branch, or for every project from the settings page (after changing the
+  # status context).
+  scenario 'push now posts the jobs of the branch heads again, old ones included' do
     configure_pushes!
     create_job!(state: 'passed')
+    head!('master', commit_id)
     wait_for_github_request('success')
+    # older than the daemon's 24 hour window: only a re-post reaches it
+    database[:jobs].where(id: @job_id).update(updated_at: Time.now.utc - 3 * 24 * 3600)
+    # a job of a superseded commit is not re-posted
+    database[:commits].insert(id: 'b' * 40, tree_id: 'b' * 40, subject: 'Old', author_name: 'A',
+                              committer_name: 'A', committer_date: Time.now.utc)
+    old_job = database[:jobs].insert(project_id: project_id, commit_id: 'b' * 40, key: 'old',
+                                     name: 'Old Job', state: 'passed', updated_at: Time.now.utc - 3 * 24 * 3600)
+    database[:job_status_pushes].insert(job_id: old_job, job_state: 'passed', github_state: 'success')
 
     visit "/projects/#{project_id}"
     click_on 'Push statuses now'
+    expect(page).to have_css '.repost-result', text: 'queued 1 job'
     wait_until(15) { github_requests.count { |r| r.body['state'] == 'success' } >= 2 }
+    sleep 3
+    expect(github_requests.map { |r| r.path }.uniq).to eq ["/repos/cider-ci/status-test/statuses/#{commit_id}"]
+  end
+
+  scenario 'a branch button re-posts that head only; the settings page every project' do
+    configure_pushes!
+    create_job!(state: 'passed')
+    head!('master', commit_id)
+    database[:commits].insert(id: 'c' * 40, tree_id: 'c' * 40, subject: 'Feature', author_name: 'A',
+                              committer_name: 'A', committer_date: Time.now.utc)
+    head!('feature', 'c' * 40)
+    wait_for_github_request('success')
+
+    visit "/projects/#{project_id}"
+    within(find('tr', text: 'feature')) { find('button.push-branch-statuses').click }
+    expect(page).to have_css '.repost-result', text: 'queued 0 jobs'
+    within(find('tr', text: 'master')) { find('button.push-branch-statuses').click }
+    expect(page).to have_css '.repost-result', text: 'queued 1 job'
+    wait_until(15) { github_requests.count { |r| r.body['state'] == 'success' } >= 2 }
+
+    visit '/admin/settings'
+    click_on 'Re-post all statuses'
+    expect(page).to have_css '.repost-result', text: 'queued 1 job'
+    wait_until(15) { github_requests.count { |r| r.body['state'] == 'success' } >= 3 }
   end
 
   # GitHub branch protection rules name the context: it must stay what the
@@ -132,6 +174,12 @@ feature 'GitHub status pushes' do
     fill_in 'github_status_context', with: ''
     click_on 'Save'
     expect(database[:repositories].where(id: project_id).first[:github_status_context]).to be_nil
+
+    # the settings row survives the database cleaning: back to the default
+    visit '/admin/settings/edit'
+    fill_in 'github_status_context', with: ''
+    click_on 'Save'
+    expect(page).to have_css '.github-status-context', text: 'Cider-CI@<host'
   end
 
   scenario 'the commit page links to the origin and lists the pushes, failed ones too' do

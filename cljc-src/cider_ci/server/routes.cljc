@@ -24,6 +24,8 @@
                :auth-http-unsafe #{:admin}}]
     ["/push-statuses" {:name :project-push-statuses
                        :auth-http-unsafe #{:admin}}]
+    ["/push-statuses/*branch-name" {:name :project-branch-push-statuses
+                                    :auth-http-unsafe #{:admin}}]
     ["/git/*repository-path" {:name             :project-git
                               :bypass-spa        true
                               :auth-http-safe    #{:public}
@@ -105,7 +107,9 @@
          :auth-http-safe   #{:admin}
          :auth-http-unsafe #{:admin}}]
     ["/edit" {:name :admin-settings-edit
-              :auth-http-safe #{:admin}}]]
+              :auth-http-safe #{:admin}}]
+    ["/push-statuses" {:name :admin-settings-push-statuses
+                       :auth-http-unsafe #{:admin}}]]
    ["/gpg-keys"
     ["/" {:name :admin-gpg-keys
           :auth-http-safe #{:admin}

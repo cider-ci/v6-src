@@ -12,9 +12,14 @@
   (let [{:keys [exit out]} (apply shell/sh "git" args)]
     (when (zero? exit) (str/trim out))))
 
+;; What goes into the jar: only modifications here make a build "dirty"
+;; (the inventory, e.g. the config backup fetched on every deploy, does not).
+(def build-input-paths
+  ["cljc-src" "resources" "scripts" "deps.edn" "shadow-cljs.edn" "package.json" "package-lock.json"])
+
 (defn- dirty-tree-id
-  "The tree of HEAD plus the modifications of tracked files (a temporary
-   index; untracked files are ignored, as in `git status -uno`)."
+  "The tree of HEAD plus the modifications of the tracked build inputs (a
+   temporary index; untracked files are ignored, as in `git status -uno`)."
   []
   (let [index (str (System/getProperty "java.io.tmpdir") "/cider-ci-build-index-" (System/nanoTime))
         env   (assoc (into {} (System/getenv)) "GIT_INDEX_FILE" index)
@@ -22,7 +27,7 @@
                              (when (zero? exit) (str/trim out))))]
     (try
       (sh "git" "read-tree" "HEAD")
-      (sh "git" "add" "-u")
+      (apply sh "git" "add" "-u" "--" build-input-paths)
       (sh "git" "write-tree")
       (finally (io/delete-file index true)))))
 
@@ -30,7 +35,7 @@
   "What is being built: the commit, and whether tracked files differ from it
    (then the tree hash of what is actually built). Shown in the footer."
   []
-  (let [dirty? (not (str/blank? (git "status" "--porcelain" "--untracked-files=no")))]
+  (let [dirty? (not (str/blank? (apply git "status" "--porcelain" "--untracked-files=no" "--" build-input-paths)))]
     {:commit_id  (git "rev-parse" "HEAD")
      :tree_id    (if dirty? (dirty-tree-id) (git "rev-parse" "HEAD^{tree}"))
      :dirty      dirty?

@@ -1,6 +1,7 @@
 (ns cider-ci.server.html.spa
   (:refer-clojure :exclude [keyword str])
   (:require
+    [cider-ci.server.html.build-info :as build-info]
     [cider-ci.utils.cli :refer [long-opt-for-key]]
     [cider-ci.utils.core :refer [keyword presence str]]
     [cider-ci.utils.json :as json]
@@ -33,7 +34,9 @@
        (map hiccup.page/include-js)))
 
 (defn server-state [{tx :tx :as request}]
-  (assoc (state/db-state tx) :github_sign_in (github-sign-in/enabled?)))
+  (assoc (state/db-state tx)
+         :github_sign_in (github-sign-in/enabled?)
+         :build @build-info/info))
 
 (defn html-handler [{user :user :as request}]
   {:status 200

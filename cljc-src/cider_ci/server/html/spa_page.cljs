@@ -136,8 +136,24 @@
     ]])
 
 
+(defn- build-info
+  "What is running: the commit, linked on GitHub when the tree is clean,
+   else the tree hash of the dirty build with the commit it was built on
+   in brackets."
+  []
+  (when-let [{:keys [commit_id commit_url tree_id dirty built_at]} (:build @state/server*)]
+    (let [short   #(subs (or % "") 0 (min 8 (count (or % ""))))
+          link    (fn [] (if commit_url
+                           [:a {:href commit_url :target "_blank" :rel "noopener noreferrer"} [:code (short commit_id)]]
+                           [:code (short commit_id)]))]
+      [:> bs/Navbar.Text {:class "px-3 small build-info" :title (clojure.core/str "built " built_at)}
+       (if dirty
+         [:<> [:code.dirty (clojure.core/str (short tree_id) "-dirty")] " (" [link] ")"]
+         [link])])))
+
 (defn footer []
   [:> bs/Navbar {:bg :light}
+   [build-info]
    [:> bs/Navbar.Collapse {:class_name "justify-content-end"}]
    [:> bs/Form {:inline "true" :class "px-2"}
     [:> bs/Form.Group {:control-id "debug"}

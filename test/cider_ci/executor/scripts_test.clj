@@ -81,3 +81,15 @@
     (let [r (run-body "#!/usr/bin/env python3\nimport sys; sys.exit(3)\n")]
       (is (= "failed" (:state r)))
       (is (= 3 (:exit_status r))))))
+
+(deftest effective-env-test
+  (let [env (cider-ci.executor.scripts/effective-env {} {"FOO" "bar"})]
+    (is (= "noninteractive" (get env "DEBIAN_FRONTEND")))
+    (is (= "false" (get env "ANSIBLE_SSH_USETTY")))
+    (is (= "bar" (get env "FOO"))))
+  (is (= "dialog" (get (cider-ci.executor.scripts/effective-env {:environment_variables {"DEBIAN_FRONTEND" "dialog"}} {})
+                       "DEBIAN_FRONTEND"))
+      "the script's own environment wins")
+  (is (nil? (get (cider-ci.executor.scripts/effective-env {:interactive true} {}) "DEBIAN_FRONTEND"))
+      "interactive: true keeps the defaults out")
+  (is (= "x" (get (cider-ci.executor.scripts/effective-env {:interactive true} {"X" "x"}) "X"))))

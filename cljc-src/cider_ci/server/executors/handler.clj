@@ -297,12 +297,17 @@
         to-execute     (if (:enabled executor)
                          (dispatch-trials tx executor available-load server-base-url)
                          [])
+        ;; abort: what the user aborted, and what the executor still runs
+        ;; although the server has ended it (e.g. the 60 minutes timeout):
+        ;; its processes must die, not keep deploying.
         to-abort       (mapv (comp str :id)
                              (jdbc/execute! tx
                                ["SELECT t.id FROM trials t
-                                 WHERE t.executor_id = ?::uuid
-                                   AND t.state = 'aborting'"
-                                (:id executor)]))]
+                                 WHERE (t.executor_id = ?::uuid AND t.state = 'aborting')
+                                    OR (t.id::text = ANY (?)
+                                        AND t.state IN ('passed', 'failed', 'defective', 'aborted'))"
+                                (:id executor)
+                                (into-array String (map str (or (:trials_being_processed body) [])))]))]
     {:status 200
      :body   {:trials_to_execute      to-execute
               :trials_to_abort        to-abort
@@ -330,16 +335,21 @@
                       (seq result-patch)            (assoc :result
                                                            [:|| [:coalesce :result [:lift {}]]
                                                                 [:lift result-patch]]))
+          ;; a terminal state is final: a late heartbeat or result of the
+          ;; executor must not revive a trial the server has ended
           result    (jdbc/execute-one! tx
                       (-> (sql/update :trials)
                           (sql/set set-map)
-                          (sql/where [:= :id trial-uuid])
+                          (sql/where [:= :id trial-uuid]
+                                     [:not-in :state ["passed" "failed" "defective" "aborted"]])
                           sql-format))]
-      (when (zero? (:next.jdbc/update-count result))
-        (throw (ex-info "Trial not found" {:status 404}))))
-    (propagation/propagate-from-trial tx trial-uuid)
-    {:status 200
-     :body   {:state new-state}}))
+      (if (zero? (:next.jdbc/update-count result))
+        (if-let [{:keys [state]} (jdbc/execute-one! tx ["SELECT state FROM trials WHERE id = ?" trial-uuid])]
+          {:status 409 :body {:state state :final true :message (str "Trial is " state " already")}}
+          (throw (ex-info "Trial not found" {:status 404})))
+        (do (propagation/propagate-from-trial tx trial-uuid)
+            {:status 200
+             :body   {:state new-state}})))))
 
 
 (defn handler [{tx             :tx

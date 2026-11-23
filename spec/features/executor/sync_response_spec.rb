@@ -108,6 +108,30 @@ feature 'Sync response shape and dispatch limits' do
     expect(body['trials_to_execute'].length).to eq 1
   end
 
+  # The server ended the trial (here: the 60 minutes timeout) while the
+  # executor still runs it: nothing the executor reports revives it, and the
+  # next sync tells the executor to kill its processes.
+  scenario 'a trial the server has ended stays ended and is told to abort' do
+    job_id = seed_job
+    trial  = seed_trial(seed_task(job_id, state: 'executing'), state: 'executing')
+    assign!(trial, state: 'executing', dispatched_seconds_ago: 60)
+    database[:trials].where(id: trial).update(state: 'defective', error: 'Execution timed out after 60 minutes',
+                                              finished_at: Time.now.utc)
+
+    code, body = executor_api(:patch, "/executor/trials/#{trial}", {state: 'executing', scripts_results: {}})
+    expect(code).to eq 409
+    expect(body['state']).to eq 'defective'
+    expect(database[:trials].where(id: trial).first[:state]).to eq 'defective'
+
+    _code, body = sync(available_load: 0.0, trials_being_processed: [trial.to_s])
+    expect(body['trials_to_abort']).to eq [trial.to_s]
+
+    # the executor's final report after killing: ignored, the state is final
+    code, _body = executor_api(:patch, "/executor/trials/#{trial}", {state: 'aborted'})
+    expect(code).to eq 409
+    expect(database[:trials].where(id: trial).first[:state]).to eq 'defective'
+  end
+
   scenario 'available_load caps the number of dispatched trials' do
     job_id = seed_job
     3.times do

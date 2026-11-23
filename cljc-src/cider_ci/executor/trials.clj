@@ -36,7 +36,7 @@
       (warn "PUT" url "returned HTTP" (:status resp) (:body resp)))))
 
 
-(defn- patch-trial! [{:keys [patch_path] :as _trial} {:keys [server-url token]} state extra]
+(defn- patch-trial! [{:keys [id patch_path] :as _trial} {:keys [server-url token]} state extra]
   (let [url  (str server-url patch_path)
         body (json/generate-string (merge {:state state} extra))
         resp @(http-client/patch url
@@ -45,8 +45,14 @@
                            "Accept"        "application/json"}
                  :body    body
                  :timeout 10000})]
-    (when-not (#{200 201 204} (:status resp))
-      (warn "PATCH" url "returned HTTP" (:status resp) (:body resp)))
+    (cond
+      (#{200 201 204} (:status resp)) nil
+      ;; the server has ended the trial (timeout, abort): nothing we report
+      ;; counts any more, and its processes must not keep running
+      (= 409 (:status resp))
+      (do (warn "Trial" id "has been ended by the server (" (:body resp) "): killing its processes")
+          (scripts/abort-trial! id))
+      :else (warn "PATCH" url "returned HTTP" (:status resp) (:body resp)))
     resp))
 
 

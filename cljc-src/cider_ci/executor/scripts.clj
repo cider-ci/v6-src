@@ -165,11 +165,34 @@
     ["bash" "-c" "exec \"$0\"" (.getAbsolutePath script-file)]
     ["bash" (.getAbsolutePath script-file)]))
 
+(def non-interactive-env
+  "Scripts run without a terminal (stdin is /dev/null, no pty), and this
+   tells the usual suspects so before they wait for an answer nobody can
+   give: apt/dpkg and debconf, needrestart, git credential prompts, and
+   Ansible, which otherwise allocates a tty on its ssh connections (-tt) so
+   that apt on the far side turns interactive (ZHdK 2026-11-23: a madek
+   deploy hung for an hour in a grub-pc debconf dialog). A script may set
+   `interactive: true` to keep these out, and its own environment_variables
+   win anyway."
+  {"DEBIAN_FRONTEND"     "noninteractive"
+   "NEEDRESTART_MODE"    "a"
+   "GIT_TERMINAL_PROMPT" "0"
+   "ANSIBLE_SSH_USETTY"  "false"
+   "CI"                  "true"})
+
+(defn effective-env
+  "The script's environment: the non-interactive defaults (unless the
+   script says interactive: true), the task's env, the script's own."
+  [spec env-vars]
+  (merge (when-not (true? (:interactive spec)) non-interactive-env)
+         env-vars
+         (:environment_variables spec)))
+
 (defn- run-one! [trial-id key-str spec env-vars work-dir]
   (try
     (let [timeout-sec (parse-timeout (:timeout spec))
-          ;; Merge script-level environment_variables on top of task-level env.
-          merged-env  (merge env-vars (:environment_variables spec))
+          ;; the non-interactive defaults, task-level env, script-level env
+          merged-env  (effective-env spec env-vars)
           ;; Normalise to {string->string}; apply {{KEY}} substitution.
           ;; Legacy semantics: template_environment_variables defaults to TRUE
           ;; when a script does not set it (the legacy server injected true in

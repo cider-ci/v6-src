@@ -35,6 +35,29 @@
       (sql/where [:= :c.id commit-id])))
 
 
+(defn- branches-query
+  "The branches whose history holds the commit, across projects: the heads
+   (distance 0) and the ancestors with their distance (generation numbers,
+   as on the commits page: exact for linear history, a lower bound across
+   merges)."
+  [tx commit-id]
+  (jdbc/execute! tx
+    ["SELECT b.name, b.repository_id, r.name AS repository_name,
+             b.current_commit_id, (b.current_commit_id = c.id) AS head,
+             COALESCE(hc.depth - c.depth, 0) AS distance
+      FROM branches_commits bc
+      JOIN branches b ON b.id = bc.branch_id
+      JOIN repositories r ON r.id = b.repository_id
+      JOIN commits c ON c.id = bc.commit_id
+      JOIN commits hc ON hc.id = b.current_commit_id
+      WHERE bc.commit_id = ?
+      UNION
+      SELECT b.name, b.repository_id, r.name, b.current_commit_id, true, 0
+      FROM branches b JOIN repositories r ON r.id = b.repository_id
+      WHERE b.current_commit_id = ?
+      ORDER BY distance ASC, repository_id ASC, name ASC"
+     commit-id commit-id]))
+
 (defn- parents-sql [commit-id]
   (-> (sql/select :parent_id)
       (sql/from :commit_arcs)
@@ -96,6 +119,7 @@
                  (assoc :parents parents)
                  (assoc :tree_attachments tree-attachments)
                  (assoc :origin_url (github/commit-url (:git_url repo) commit-id))
+                 (assoc :branches (branches-query tx commit-id))
                  (assoc :status_pushes (when repo (status-pushes tx repo commit-id))))})
     {:status 404 :body "Commit not found"}))
 

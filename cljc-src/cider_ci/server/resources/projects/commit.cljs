@@ -193,6 +193,46 @@
            [:tbody (submodule-rows submodules 0)]]])])))
 
 
+;;; branches ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defonce ^:private heads-only?* (reagent/atom true))
+
+(defn- branches-panel
+  "The branches this commit is on: by default only those whose head it is,
+   with a filter for all of them and how many commits behind the head it
+   is (generation numbers, as the subscripts on the commits page)."
+  []
+  (let [branches (:branches @data*)
+        shown    (if @heads-only?* (filter :head branches) branches)]
+    [:div.commit-branches.mt-4
+     [:div.d-flex.align-items-center.gap-3
+      [:h4.mb-0 [icons/code-branch] " Branches"]
+      [:div.form-check.mb-0
+       [:input.form-check-input {:type "checkbox" :id "commit-branches-heads-only"
+                                 :checked @heads-only?*
+                                 :on-change #(swap! heads-only?* not)}]
+       [:label.form-check-label {:for "commit-branches-heads-only"} "HEADs only"]]]
+     (if (empty? shown)
+       [:p.text-muted.small.mt-2
+        (if (and @heads-only?* (seq branches))
+          (str "Not the head of any branch; on " (count branches) " branch"
+               (when (not= 1 (count branches)) "es") " (uncheck HEADs only).")
+          "On no branch.")]
+       [:table.table.table-sm.mt-2.commit-branches-table
+        [:thead [:tr [:th "Branch"] [:th "Project"] [:th.text-end {:title "commits behind the head"} "Behind"] [:th "Head"]]]
+        [:tbody
+         (for [{:keys [name repository_id repository_name current_commit_id head distance]} shown]
+           ^{:key (str repository_id "/" name)}
+           [:tr {:class (when head "table-success")}
+            [:td [:a {:href (path :project-branch {:project-id repository_id :branch-name name})} name]]
+            [:td [:a {:href (path :project {:project-id repository_id})} (or repository_name repository_id)]]
+            [:td.text-end.distance (if head [:span.badge.bg-success "HEAD"] distance)]
+            [:td (if head
+                   [:span.text-muted "this commit"]
+                   [:a {:href (path :project-commit {:project-id repository_id :commit-id current_commit_id})}
+                    [:code (subs current_commit_id 0 8)]])]])]])]))
+
+
 ;;; status pushes ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- attempt-row [{:keys [id job_id job_key job_name job_state github_state
@@ -263,6 +303,7 @@
          [:a {:href (path :project-jobs {:project-id (project-id)
                                          :commit-id  (:id c)})}
           [icons/play-circle] " Jobs"]]
+        [branches-panel]
         [status-pushes-panel]
         [submodules-panel]
         [tree-attachments-panel (:tree_id c) (:tree_attachments c)]

@@ -82,6 +82,37 @@ feature 'Commit detail page' do
     expect(page).to have_content parent[0, 8]
   end
 
+  # The branches the commit is on: heads by default, all with the distance
+  # behind the head on request.
+  scenario 'lists the branches: heads only by default, all with their distance on request' do
+    commit_id   = 'a' * 40
+    head_commit = 'e' * 40
+    insert_commit(commit_id, depth: 1)
+    insert_commit(head_commit, subject: 'Newer', depth: 3)
+    release = database[:branches].insert(repository_id: @project_id, name: 'release', current_commit_id: commit_id)
+    master  = database[:branches].insert(repository_id: @project_id, name: 'master', current_commit_id: head_commit)
+    database[:branches_commits].insert(branch_id: release, commit_id: commit_id)
+    database[:branches_commits].insert(branch_id: master, commit_id: commit_id)
+    database[:branches_commits].insert(branch_id: master, commit_id: head_commit)
+
+    visit "/projects/#{@project_id}/commits/#{commit_id}"
+    within('.commit-branches') do
+      expect(page).to have_css 'tr', text: /release.*HEAD/
+      expect(page).not_to have_content 'master'
+      uncheck 'HEADs only'
+      expect(page).to have_css 'tr', text: /release.*HEAD/
+      expect(page).to have_css 'tr', text: /master.*2.*#{head_commit[0, 8]}/
+      check 'HEADs only'
+      expect(page).not_to have_content 'master'
+    end
+
+    visit "/projects/#{@project_id}/commits/#{head_commit}"
+    within('.commit-branches') do
+      expect(page).to have_css 'tr', text: /master.*HEAD/
+      expect(page).not_to have_content 'release'
+    end
+  end
+
   scenario 'unknown commit id returns 404' do
     visit "/projects/#{@project_id}/commits/0000000000000000000000000000000000000000"
     expect(page).to have_content 'Request ERROR 404'

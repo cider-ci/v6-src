@@ -16,10 +16,14 @@ ci_executor_max_load: 1
 # the role must not mask the fstab-generated tmp.mount (emergency mode at
 # boot, 2026-11-10).
 ci_executor_tmp_on_disk: false
+# 2026-11-24: every job that deploys to a ZHdK machine, from any branch. The
+# keys follow one scheme, <target>-deploy and <target>-restore-deploy
+# (staging, test, next, tom, manuel, nimaai: zhdk-inventory/cider-ci/jobs);
+# test-container-deploy (a container on the executor) does not match it.
 ci_executor_accepted_repositories:
   - url: 'https://github.com/leihs/leihs.git'
-    branches: ['^tom.*$']
-    jobs: ['^tom-deploy$', '^tom-restore-deploy$']
+    branches: ['^.*$']
+    jobs: ['^[a-z0-9]+-(restore-)?deploy$']
 
 # ZHdK network: no host firewall (init.yml had set ufw up on 2026-11-04,
 # the role removes it again on deploy).

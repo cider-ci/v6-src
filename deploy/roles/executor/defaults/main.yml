@@ -67,3 +67,11 @@ ci_executor_ssh_removed_keys: []
 ci_executor_media_codec_packages:
   trixie: [libavcodec61, libavutil59]
   bookworm: [libavcodec59, libavutil57]
+
+# Weekly reboot at noon, each executor on its own weekday (derived from the
+# machine id, so the fleet is spread over the week). The legacy CI rebooted
+# every executor every night; weekly keeps the caches (mise, git, images)
+# warm for longer while still clearing what accumulates in /tmp and memory.
+# A running trial dies with the reboot and is retried (reconciled as lost).
+ci_executor_weekly_reboot: true
+ci_executor_reboot_time: "12:00:00"

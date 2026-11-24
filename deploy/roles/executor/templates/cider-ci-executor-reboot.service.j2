@@ -1,0 +1,7 @@
+[Unit]
+Description=CIDER-CI executor weekly reboot
+
+[Service]
+Type=oneshot
+SyslogIdentifier=cider-ci-executor-reboot
+ExecStart=/bin/sh -c 'systemctl stop cider-ci-executor.service; systemctl reboot'

@@ -343,6 +343,32 @@
     name: "{{ ci_executor_media_codec_packages[ansible_facts['distribution_release']] }}"
     state: present
 
+# Weekly reboot on a weekday derived from the machine id (0..6 -> Mon..Sun)
+- name: Pick this executor's reboot weekday
+  ansible.builtin.set_fact:
+    ci_executor_reboot_weekday: >-
+      {{ ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+         [(ansible_facts['machine_id'] | hash('sha1'))[-4:] | int(base=16) % 7] }}
+
+- name: Install the weekly reboot service and timer
+  ansible.builtin.template:
+    src: "cider-ci-executor-reboot.{{ item }}.j2"
+    dest: "/etc/systemd/system/cider-ci-executor-reboot.{{ item }}"
+    mode: "0644"
+  loop: [service, timer]
+  register: reboot_units
+
+- name: Reload systemd for the reboot timer
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: reboot_units.changed
+
+- name: Enable the weekly reboot timer
+  ansible.builtin.systemd:
+    name: cider-ci-executor-reboot.timer
+    enabled: "{{ ci_executor_weekly_reboot }}"
+    state: "{{ 'started' if ci_executor_weekly_reboot else 'stopped' }}"
+
 - name: Generate locales required by projects (leihs createdb uses de_CH.UTF-8)
   community.general.locale_gen:
     name: "{{ item }}"

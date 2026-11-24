@@ -1,0 +1,10 @@
+[Unit]
+Description=CIDER-CI executor weekly reboot, {{ ci_executor_reboot_weekday }} {{ ci_executor_reboot_time }}
+
+[Timer]
+OnCalendar={{ ci_executor_reboot_weekday }} *-*-* {{ ci_executor_reboot_time }}
+# a missed reboot is not made up for at the next boot
+Persistent=false
+
+[Install]
+WantedBy=timers.target

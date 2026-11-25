@@ -85,3 +85,10 @@
   (testing "an invalid expression never fires and does not throw"
     (is (nil? (cron-trigger/due-entry {:key "x" :cron-entries [{:value "bogus" :branch_include_match "^.*$"}]}
                                       "master" (ZonedDateTime/now ZoneOffset/UTC))))))
+
+(deftest next-execution-test
+  (let [now (java.time.ZonedDateTime/of 2026 11 25 10 0 0 0 java.time.ZoneOffset/UTC)]
+    (is (= "2026-11-25T10:01Z" (str (cron/next-execution "* * * * *" now))))
+    (is (= "2026-11-26T04:30Z" (str (cron/next-execution "30 4 * * *" now))))
+    (is (= "2026-11-29T04:30Z" (str (cron/next-execution "30 4 * * 0" now))) "sunday")
+    (is (= "2026-11-25T10:00Z" (str (cron/next-execution "0 10 * * *" (.minusSeconds now 1)))) "strictly after")))

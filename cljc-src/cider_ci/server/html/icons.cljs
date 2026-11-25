@@ -46,5 +46,6 @@
 (defn external-link [] [FontAwesomeIcon {:icon (.-faArrowUpRightFromSquare solids) :className ""}])
 (defn success [] [FontAwesomeIcon {:icon (.-faCircleCheck solids) :className "text-success"}])
 (defn failure [] [FontAwesomeIcon {:icon (.-faCircleXmark solids) :className "text-danger"}])
+(defn clock [] [FontAwesomeIcon {:icon (.-faClock solids) :className ""}])
 (defn download [] [FontAwesomeIcon {:icon (.-faDownload solids) :className ""}])
 (defn spinner [] [:span.fa-4x [FontAwesomeIcon {:icon (.-faSpinner solids) :className "fa-spin"}]])

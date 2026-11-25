@@ -190,6 +190,11 @@
    ["/" {:name :jobs
          :auth-http-safe #{:user}}]])
 
+(def scheduled
+  ["/scheduled"
+   ["/" {:name :scheduled
+         :auth-http-safe #{:user}}]])
+
 (def routes
   [["/" {:name :root
          :auth-http-unsafe #{}
@@ -223,7 +228,8 @@
      :auth-http-safe   #{:public}
      :auth-http-unsafe #{:public}}]
    workspace
-   jobs-dashboard])
+   jobs-dashboard
+   scheduled])
 
 (comment (path :user {:user-id "123"})
          (path :user-password {:user-id "123"}))

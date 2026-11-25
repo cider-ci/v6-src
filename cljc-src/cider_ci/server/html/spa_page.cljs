@@ -113,6 +113,8 @@
     [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :jobs)} [icons/jobs] "Jobs"]]
     [:> bs/Nav.Item
+     [:> bs/Nav.Link {:href (path :scheduled)} [icons/clock] "Scheduled"]]
+    [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :executors {})} [icons/server] "Executors"]]
     [:> bs/Nav.Item
      [:> bs/Nav.Link {:href (path :projects)} [icons/projects] "Projects"]]]

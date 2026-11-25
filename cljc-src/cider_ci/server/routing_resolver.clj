@@ -6,6 +6,7 @@
     [cider-ci.server.resources.avatars :as avatars]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.jobs.main :as jobs-dashboard]
+    [cider-ci.server.resources.scheduled.main :as scheduled]
     [cider-ci.server.executors.handler :as executors]
     [cider-ci.server.github-sign-in.main :as github-sign-in]
     [cider-ci.server.resources.init.http :as init]
@@ -53,6 +54,7 @@
    :init                      #'init/handler
    :commits                   #'commits/handler
    :jobs                      #'jobs-dashboard/handler
+   :scheduled                 #'scheduled/handler
    :project  #'project/handler
    :project-blob #'project-blob/handler
    :project-branch #'project-branch/handler

@@ -87,6 +87,14 @@
     (when (.isPresent last)
       (.getSeconds (Duration/between (.get last) now)))))
 
+(defn next-execution
+  "The next time cron-s fires strictly after `now`, as a UTC ZonedDateTime,
+   or nil."
+  ^ZonedDateTime [cron-s ^ZonedDateTime now]
+  (let [now  (.withZoneSameInstant now ZoneOffset/UTC)
+        next (.nextExecution (execution-time cron-s) now)]
+    (when (.isPresent next) (.get next))))
+
 (defn fire?
   "True when cron-s fired less than `max-minutes` minutes before `now`
    (default: now). Strictly less: a job created at or after the scheduled

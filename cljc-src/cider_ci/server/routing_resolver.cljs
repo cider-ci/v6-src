@@ -6,6 +6,7 @@
     [cider-ci.server.resources.init.page :as init]
     [cider-ci.server.resources.commits.main :as commits]
     [cider-ci.server.resources.jobs.main :as jobs-dashboard]
+    [cider-ci.server.resources.scheduled.main :as scheduled]
     [cider-ci.server.resources.projects.blob :as project-blob]
     [cider-ci.server.resources.projects.branch :as project-branch]
     [cider-ci.server.resources.projects.commit :as project-commit]
@@ -38,6 +39,7 @@
    :init init/components
    :commits commits/components
    :jobs    jobs-dashboard/components
+   :scheduled scheduled/components
    :project      project/components
    :project-new  project/components
    :project-edit project/components

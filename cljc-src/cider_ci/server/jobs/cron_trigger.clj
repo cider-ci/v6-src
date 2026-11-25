@@ -200,6 +200,58 @@
            (note-failure! k now-ms e)))))))
 
 
+;;; the schedule ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- head-rows
+  "What the cron trigger will do for one head: a row per cron entry that
+   matches the branch, with the next firing and whether the firing will
+   create a job (no job of that key yet, or rerun; depends_on fulfilled)."
+  [ds now {:keys [project_id commit_id branch_name]}]
+  (let [jobs     (cron-jobs project_id commit_id)
+        existing (jdbc/execute! ds
+                   ["SELECT key, state, created_at FROM jobs WHERE project_id = ? AND commit_id = ?"
+                    project_id commit_id]
+                   {:builder-fn next.jdbc.result-set/as-unqualified-lower-maps})
+        by-key   (into {} (map (fn [j] [(:key j) j]) existing))]
+    (with-open [repo (repo-shared/file-repository (repo-shared/path {:project-id project_id}))]
+      (vec
+        (for [{:keys [key name spec cron-entries]} jobs
+              entry cron-entries
+              :when (entry-matches-branch? entry branch_name)
+              :let [next (try (cron/next-execution (:value entry) now)
+                              (catch clojure.lang.ExceptionInfo _ nil))]
+              :when next
+              :let [ex (get by-key key)]]
+          {:project_id  project_id
+           :branch_name branch_name
+           :commit_id   commit_id
+           :job_key     key
+           :job_name    (or name key)
+           :cron        (:value entry)
+           :cron_description (try (cron/describe (:value entry)) (catch Exception _ nil))
+           :rerun       (boolean (:rerun entry))
+           :next_at     (str (.toInstant next))
+           :existing_state (:state ex)
+           :existing_created_at (some-> (:created_at ex) str)
+           :unmet_deps  (when-not ex (dependencies/unmet ds repo commit_id spec by-key))})))))
+
+(defn scheduled
+  "The next `limit` cron firings over all cron enabled projects, soonest
+   first (the schedule page). Heads whose configuration cannot be read are
+   reported as {:error ...} rows at the end instead of silently missing."
+  ([ds limit] (scheduled ds limit (cron/now-utc)))
+  ([ds limit now]
+   (let [results (for [head (heads ds)]
+                   (try {:rows (head-rows ds now head)}
+                        (catch Exception e
+                          {:error (-> head
+                                      (select-keys [:project_id :branch_name :commit_id])
+                                      (assoc :error (.getMessage e)))})))
+         rows    (->> results (mapcat :rows) (sort-by :next_at) (take limit) vec)
+         errors  (->> results (keep :error) vec)]
+     {:rows rows :errors errors :now (str (.toInstant now))})))
+
+
 (defdaemon "cron-trigger" 30
   (try
     (run-cycle! (get-ds))

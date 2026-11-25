@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
+   [cider-ci.server.html.breadcrumbs :as breadcrumbs]
    ["date-fns" :as date-fns]
    ["elkjs/lib/elk.bundled.js" :as ELK]
    ["js-yaml" :as js-yaml]
@@ -487,14 +488,7 @@
   [:div.page.jobs-graph
    [state/hidden-routing-state-component :did-change
     #(do (reset! graph-page-data* nil) (fetch-graph-page-data!))]
-   [:nav.mb-3
-    [:a {:href (path :project {:project-id (project-id)})} [icons/projects] " " (project-id)]
-    " / "
-    [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
-     [:code (subs (commit-id) 0 8)]]
-    " / "
-    [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (commit-id)})} "Jobs"]
-    " / Dependencies"]
+   
    (if-let [{:keys [available created]} @graph-page-data*]
      (do (jdag-ensure-layout! available)
          [:<>
@@ -591,13 +585,7 @@
    (if-not (seq @data*)
      [:div "Loading..."]
      [:<>
-      [:nav.mb-3
-       [:a {:href (path :project {:project-id (project-id)})}
-        [icons/projects] " " (project-id)]
-       " / "
-       [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
-        [:code (subs (commit-id) 0 8)]]
-       " / Jobs"]
+      
       [available-jobs-panel (:available @data*) (:created @data*)]
       [created-jobs-panel (:created @data*)]
       ;; last: the graph gets big, the two tables are what one comes for
@@ -912,17 +900,7 @@
      (let [job        @data*
            abortable? (#{"pending" "executing"} (:state job))]
        [:<>
-        [:nav.mb-3
-         [:a {:href (path :project {:project-id (project-id)})}
-          [icons/projects] " " (project-id)]
-         " / "
-         [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
-          [:code (subs (commit-id) 0 8)]]
-         " / "
-         [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (commit-id)})}
-          "Jobs"]
-         " / "
-         [:code (:key job)]]
+        (breadcrumbs/label! :job-id (job-id) (:key job))
         [:h3 (:name job) " " [state-badge (:state job)]]
         [job-times-line job]
         [job-progress-bar (:tasks job)]
@@ -1064,20 +1042,7 @@
      (let [task @data*
            spec (:spec task)]
        [:<>
-        [:nav.mb-3
-         [:a {:href (path :project {:project-id (project-id)})}
-          [icons/projects] " " (project-id)]
-         " / "
-         [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
-          [:code (subs (commit-id) 0 8)]]
-         " / "
-         [:a {:href (path :project-jobs {:project-id (project-id) :commit-id (commit-id)})}
-          "Jobs"]
-         " / "
-         [:a {:href (path :project-job {:project-id (project-id) :commit-id (commit-id) :job-id (job-id)})}
-          [:code (subs (job-id) 0 8)]]
-         " / "
-         [:code (:name task)]]
+        (breadcrumbs/label! :task-id (task-id-param) (:name task))
         [:h3 (:name task) " " [state-badge (:state task)]]
         [task-trials-panel (:trials task) (:id task)]
         [commit-signature-line (:commit_signature task)]

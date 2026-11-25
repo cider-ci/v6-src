@@ -61,13 +61,7 @@
    (if-not (some? @data*)
      [:div "Loading..."]
      [:<>
-      [:nav.mb-3
-       [:a {:href (path :project {:project-id (project-id)})}
-        [icons/projects] " " (project-id)]
-       " / "
-       [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
-        [:code (subs (commit-id) 0 8)]]
-       " / Configuration"]
+      
       (if (string? @data*)
         [:div.alert.alert-warning @data*]
         (let [yml  (as-yaml @data*)

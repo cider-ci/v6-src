@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.users.user.gpg-keys
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.breadcrumbs :as breadcrumbs]
    [cider-ci.server.html.gpg-key :as gpg-key]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
@@ -109,13 +110,7 @@
 (defn- detail-page []
   [:div.page
    [state/hidden-routing-state-component :did-change #(fetch-data)]
-   [:nav.mb-3
-    [:a {:href (path :users)} "Users"]
-    " / "
-    [:a {:href (user-url)} (user-id)]
-    " / "
-    [:a {:href (keys-url)} "GPG Keys"]
-    " / " (or (:name @data*) "…")]
+   (breadcrumbs/label! :gpg-key-id (-> @state/routing* :path-params :gpg-key-id) (:name @data*))
    (if-let [k @data*]
      [:<>
       [gpg-key/details-panel k]
@@ -130,11 +125,7 @@
 (defn- list-page []
   [:div.page
    [state/hidden-routing-state-component :did-change #(fetch-data)]
-   [:nav.mb-3
-    [:a {:href (path :users)} "Users"]
-    " / "
-    [:a {:href (user-url)} (user-id)]
-    " / GPG Keys"]
+   
    [:h2 "GPG keys"]
    [gpg-keys-list]
    [add-form]

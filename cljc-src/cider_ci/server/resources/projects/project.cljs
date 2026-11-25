@@ -410,11 +410,7 @@
       [:div.page
        [state/hidden-routing-state-component :did-change
         #(do (reset! _data* nil) (reset! form* nil) (fetch!))]
-       [:nav.mb-3
-        [:a {:href (path :projects)} "Projects"]
-        " / "
-        [:a {:href (project-url)} (or (:name @_data*) (project-id))]
-        " / Edit"]
+       
        (if-not @_data*
          [:div "Loading..."]
          (let [p @_data*]
@@ -525,9 +521,7 @@
   (let [form* (reagent/atom {:id "" :name "" :git_url ""})]
     (fn []
       [:div.page
-       [:nav.mb-3
-        [:a {:href (path :projects)} "Projects"]
-        " / New"]
+       
        [:h2 "New Project"]
        [:div.col-md-6
         [:form {:on-submit (fn [e] (.preventDefault e) (create-project! form*))}

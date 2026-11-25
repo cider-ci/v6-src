@@ -278,9 +278,7 @@
      [:div "Loading..."]
      (let [c @data*]
        [:<>
-        [:nav.mb-3
-         [:a {:href (path :project {:project-id (project-id)})}
-          [icons/projects] " " (project-id)]]
+        
         [:h2 (:subject c)]
         [:p [:code (:id c)]
          (when-let [url (:origin_url c)]

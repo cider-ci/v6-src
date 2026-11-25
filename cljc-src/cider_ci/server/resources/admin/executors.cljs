@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.admin.executors
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.breadcrumbs :as breadcrumbs]
    [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
    [cider-ci.server.html.utils.forms :as forms]
@@ -256,9 +257,7 @@
   (let [form* (reagent/atom {:name "" :traits ""})]
     (fn []
       [:div.page
-       [:nav.mb-3
-        [:a {:href (path :executors {})} "Executors"]
-        " / New"]
+       
        [:h2 "Add Executor"]
        [:div.col-md-6
         [:form {:on-submit (fn [e] (.preventDefault e) (create-executor! form*))}
@@ -365,9 +364,7 @@
     [:div.page
      [state/hidden-routing-state-component :did-change
       #(do (reset! _single* nil) (fetch-single))]
-     [:nav.mb-3
-      [:a {:href (path :executors {})} "Executors"]
-      " / " (or (:name @_single*) "…")]
+     (breadcrumbs/label! :executor-id (executor-id-param) (:name @_single*))
      (if-not @_single*
        [:div "Loading..."]
        (let [ex @_single*
@@ -437,15 +434,7 @@
       [:div.page
        [state/hidden-routing-state-component :did-change
         #(do (reset! _single* nil) (reset! form* nil) (fetch-single))]
-       [:nav.mb-3
-        [:a {:href (path :executors {})} "Executors"]
-        " / "
-        (when @_single*
-          [:<>
-           [:a {:href (path :executor-detail {:executor-id (executor-id-param)})}
-            (:name @_single*)]
-           " / "])
-        "Edit"]
+       (breadcrumbs/label! :executor-id (executor-id-param) (:name @_single*))
        (if-not @_single*
          [:div "Loading..."]
          (let [ex @_single*]

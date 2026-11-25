@@ -208,7 +208,7 @@ feature 'Jobs' do
   scenario 'task detail page breadcrumb links back to the job' do
     h = insert_job_hierarchy
     visit "/projects/#{JOBS_PROJECT_ID}/commits/#{h[:commit_id]}/jobs/#{h[:job_id]}/tasks/#{h[:task_id]}"
-    within('nav.mb-3') do
+    within('ol.breadcrumb') do
       expect(page).to have_link(href: /\/jobs\/#{h[:job_id]}/)
     end
   end

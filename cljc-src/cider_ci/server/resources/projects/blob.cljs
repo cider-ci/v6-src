@@ -33,14 +33,7 @@
    (if-not (seq @data*)
      [:div "Loading..."]
      [:<>
-      [:nav.mb-3
-       [:a {:href (path :project {:project-id (project-id)})}
-        [icons/projects] " " (project-id)]
-       " / "
-       [:a {:href (path :project-commit {:project-id (project-id) :commit-id (commit-id)})}
-        [:code (subs (commit-id) 0 8)]]
-       " / "
-       [:code (blob-path)]]
+      
       [:pre.bg-light.p-3 (:content @data*)]
       (when @state/debug?*
         [:div.debug [:hr] [:pre.bg-light [:code (with-out-str (pprint @data*))]]])])])

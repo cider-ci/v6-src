@@ -1,6 +1,7 @@
 (ns cider-ci.server.html.spa-page
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.breadcrumbs :as breadcrumbs]
    ["react-bootstrap" :as bs]
    [cider-ci.server.html.avatar :as avatar]
    [cider-ci.server.html.icons :as icons]
@@ -130,7 +131,7 @@
 (defn page-nav []
   [:> bs/Navbar {:bg :light}
    [:> bs/Container {:class "justify-content-start"}
-    [:> bs/Navbar.Text  "Tree-Nav-Here"]]
+    [breadcrumbs/component]]
    [:> bs/Container {:class "justify-content-end"}
     (when-let [page-nav (:page-nav @state/routing*)]
       [page-nav])

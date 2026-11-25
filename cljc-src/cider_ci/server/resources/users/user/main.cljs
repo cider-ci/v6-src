@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.users.user.main
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.breadcrumbs :as breadcrumbs]
     ["react-bootstrap" :as bs]
     [cider-ci.server.html.avatar :as avatar]
     [cider-ci.server.html.icons :as icons]
@@ -160,14 +161,7 @@
       [:div.page
        [state/hidden-routing-state-component :did-change
         #(do (reset! _data* nil) (reset! form* nil) (fetch!))]
-       [:nav.mb-3
-        [:a {:href (path :users)} "Users"]
-        " / "
-        (when @_data*
-          [:<>
-           [:a {:href (user-url)} (or (:login @_data*) (:github_login @_data*) (user-id-param))]
-           " / "])
-        "Edit"]
+       (breadcrumbs/label! :user-id (user-id-param) (or (:login @_data*) (:github_login @_data*)))
        (if-not @_data*
          [:div "Loading..."]
          (let [u @_data*]
@@ -222,9 +216,7 @@
   (let [form* (reagent/atom {:login "" :name "" :password "" :is_admin false})]
     (fn []
       [:div.page
-       [:nav.mb-3
-        [:a {:href (path :users)} "Users"]
-        " / New"]
+       
        [:h2 "New User"]
        [new-form form*]])))
 

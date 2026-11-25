@@ -43,7 +43,7 @@
     [:div.page
      [state/hidden-routing-state-component :did-change
       #(do (reset! _data* nil) (fetch!))]
-     [:nav.mb-3 "Admin / Settings"]
+     
      [:h2 "Settings"]
      (if-not @_data*
        [:p "Loading..."]
@@ -93,9 +93,7 @@
       [:div.page
        [state/hidden-routing-state-component :did-change
         #(do (reset! _data* nil) (reset! form* nil) (fetch!))]
-       [:nav.mb-3
-        [:a {:href (path :admin-settings)} "Settings"]
-        " / Edit"]
+       
        [:h2 "Edit Settings"]
        (if-not @_data*
          [:p "Loading..."]

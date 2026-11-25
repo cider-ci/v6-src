@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.trials
   (:require
+   [cider-ci.server.html.breadcrumbs :as breadcrumbs]
     [cider-ci.server.html.icons :as icons]
     [cider-ci.server.html.utils.times :as times]
     [cider-ci.server.http.client.main :as http-client]
@@ -328,24 +329,20 @@
            tree-id          (:tree_id trial)
            tree-attachments (:tree_attachments trial)]
        [:<>
-        [:nav.mb-3
-         [:a {:href (path :project {:project-id (:project_id trial)})}
-          [icons/projects] " " (:project_id trial)]
-         " / "
-         [:a {:href (path :project-commit {:project-id (:project_id trial)
-                                           :commit-id  (:commit_id trial)})}
-          [:code (subs (:commit_id trial) 0 8)]]
-         " / "
-         [:a {:href (path :project-jobs {:project-id (:project_id trial)
-                                         :commit-id  (:commit_id trial)})}
-          "Jobs"]
-         " / "
-         [:a {:href (path :project-job {:project-id (:project_id trial)
-                                        :commit-id  (:commit_id trial)
-                                        :job-id     (:job_id trial)})}
-          [:code (:job_key trial)]]
-         " / "
-         (:task_name trial)]
+        (breadcrumbs/override!
+            (remove nil?
+                    [{:label "Projects" :href (path :projects) :icon :projects}
+                     {:label (:project_id trial) :href (path :project {:project-id (:project_id trial)})}
+                     {:label (subs (:commit_id trial) 0 8) :code? true
+                      :href (path :project-commit {:project-id (:project_id trial) :commit-id (:commit_id trial)})}
+                     {:label "Jobs" :href (path :project-jobs {:project-id (:project_id trial) :commit-id (:commit_id trial)})}
+                     {:label (:job_key trial) :code? true
+                      :href (path :project-job {:project-id (:project_id trial) :commit-id (:commit_id trial) :job-id (:job_id trial)})}
+                     (when (:task_id trial)
+                       {:label (or (:task_name trial) (subs (:task_id trial) 0 8)) :code? true
+                        :href (path :project-job-task {:project-id (:project_id trial) :commit-id (:commit_id trial)
+                                                       :job-id (:job_id trial) :task-id (:task_id trial)})})
+                     {:label (subs trial-id 0 8) :code? true}]))
         [:h3
          (:task_name trial) " "
          [state-badge (:trial_state trial)]

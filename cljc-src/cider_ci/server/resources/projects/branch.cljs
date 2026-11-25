@@ -137,9 +137,7 @@
      [:div "Loading..."]
      (let [b @data*]
        [:<>
-        [:nav.mb-3
-         [:a {:href (path :project {:project-id (project-id)})}
-          [icons/projects] " " (project-id)]]
+        
         [:h2 [icons/code-branch] " " (:name b)]
         [tip-commit-panel]
         [:h3.mt-4 "Recent commits"]

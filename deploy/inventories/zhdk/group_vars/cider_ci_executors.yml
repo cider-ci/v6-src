@@ -14,6 +14,9 @@ ci_executor_accepted_gpg_keys:
   # 9BF934B66F907217DF7C20AF2ABABC6E63C40EE1
   - "{{ lookup('file', inventory_dir ~ '/files/gpg/manuel-radl-C1110893.asc') }}"
   - "{{ lookup('file', inventory_dir ~ '/files/gpg/manuel-radl-63C40EE1.asc') }}"
+  # Matus Kmit (GitHub nimaai), 24C06CA8B7189DB8BCA749DFA7D4C7D0AA8CF012
+  # (the key the server imported at his GitHub sign-in, 2026-11-26)
+  - "{{ lookup('file', inventory_dir ~ '/files/gpg/matus-kmit-AA8CF012.asc') }}"
 
 # Developers who may ssh into the executors as the service user (the user the
 # trials run as): ssh cider-ci@<executor>. Keys in files/ssh/.

@@ -88,6 +88,8 @@
         :down (partial exec-resource-sql! "migrations/00042_jobs_abort_reason_down.sql")}
     43 {:up (partial exec-resource-sql! "migrations/00043_branches_current_commit_idx_up.sql")
         :down (partial exec-resource-sql! "migrations/00043_branches_current_commit_idx_down.sql")}
+    44 {:up (partial exec-resource-sql! "migrations/00044_trials_pending_idx_up.sql")
+        :down (partial exec-resource-sql! "migrations/00044_trials_pending_idx_down.sql")}
     ))
 
 (defn available []

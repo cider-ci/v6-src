@@ -45,10 +45,13 @@
         (force (:value (get (swap! git-proxies-cache* update k #(or % {:at now :value d})) k)))))))
 
 (def ^:private candidates-query
-  "The pending trials this executor may run, in dispatch order (legacy
-   parity): highest job priority first, then the oldest job, then task
-   priority and name, then the oldest trial. SKIP LOCKED makes concurrent
-   syncs take the next trials in that order."
+  "The pending trials this executor may run, in dispatch order: the work of
+   branch heads before the work of commits behind them (head_distance: 0
+   for a current head, else the generation distance to the nearest head
+   that reaches the commit, NULL = no head reaches it, last), then (legacy
+   parity) highest job priority first, the oldest job, task priority and
+   name, the oldest trial. SKIP LOCKED makes concurrent syncs take the next
+   trials in that order."
   "SELECT t.id, t.token, t.task_id,
           tsk.name AS task_name,
           tsk.spec AS task_spec,
@@ -65,6 +68,16 @@
    LEFT JOIN commits c ON c.id = j.commit_id
    JOIN repositories r ON r.id = j.project_id
    JOIN executors e  ON e.id   = ?::uuid
+   LEFT JOIN LATERAL (
+     SELECT CASE
+              WHEN EXISTS (SELECT 1 FROM branches b WHERE b.current_commit_id = j.commit_id) THEN 0
+              ELSE (SELECT min(hc.depth - c.depth)
+                    FROM branches_commits bc
+                    JOIN branches b ON b.id = bc.branch_id
+                    JOIN commits hc ON hc.id = b.current_commit_id
+                    WHERE bc.commit_id = j.commit_id)
+            END AS head_distance
+   ) hd ON true
    WHERE t.state = 'pending'
      AND tsk.traits <@ e.traits
      AND cider_ci_trial_accepted(r.id, r.git_url, j.commit_id, j.key, e.accepted_repositories)
@@ -78,7 +91,8 @@
            AND t2.dispatched_at > now() - (tsk.spec->>'dispatch_storm_delay_seconds')::float * interval '1 second'
        )
      )
-   ORDER BY j.priority DESC, j.created_at ASC,
+   ORDER BY hd.head_distance ASC NULLS LAST,
+            j.priority DESC, j.created_at ASC,
             tsk.priority DESC, tsk.name ASC,
             t.created_at ASC
    LIMIT ?

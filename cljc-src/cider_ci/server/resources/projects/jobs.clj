@@ -221,6 +221,24 @@
            :commit_signature (commit-signature (:commit_id task)))))
 
 
+(defn- abort-all-jobs!
+  "Every unfinished job of the commit (not only those a state filter shows):
+   pending trials aborted, running ones aborting and killed by their
+   executor at its next sync."
+  [project-id commit-id user]
+  (let [reason (str "aborted by " (or (:login user) (:github_login user) "a user")
+                    " with all jobs of the commit")
+        jobs   (jdbc/with-transaction [tx (get-ds)]
+                 (let [jobs (jdbc/execute! tx
+                              ["SELECT id FROM jobs WHERE project_id = ? AND commit_id = ?
+                                AND state NOT IN ('passed', 'failed', 'defective', 'aborted', 'aborting')"
+                               project-id commit-id]
+                              {:builder-fn next.jdbc.result-set/as-unqualified-lower-maps})]
+                   (doseq [{:keys [id]} jobs]
+                     (abort/abort-job! tx id :reason reason))
+                   jobs))]
+    {:status 200 :body {:jobs (count jobs)}}))
+
 (defn- abort-job! [project-id job-id]
   (let [job-uuid (java.util.UUID/fromString job-id)]
     (when-not (first (jdbc-sql/query (get-ds)
@@ -348,6 +366,11 @@
     :project-job-task-retry
     (case request-method
       :post (retry-task! project-id job-id task-id)
+      {:status 405 :body "Method not allowed"})
+
+    :project-jobs-abort-all
+    (case request-method
+      :post (abort-all-jobs! project-id commit-id user)
       {:status 405 :body "Method not allowed"})
 
     :project-jobs

@@ -579,6 +579,31 @@
 
 
 
+(defn- unfinished-jobs []
+  (remove #(or (terminal-states (:state %)) (= "aborting" (:state %))) (:created @data*)))
+
+(defn- abort-all! []
+  (-> (js/fetch (path :project-jobs-abort-all {:project-id (project-id) :commit-id (commit-id)})
+                (clj->js {:method      "POST"
+                          :credentials "same-origin"
+                          :headers     {"accept" "application/json" "x-csrf-token" (anti-csrf/token)}}))
+      (.then (fn [_] (http-client/route-cached-fetch _data* :reload true)))))
+
+(defn page-nav
+  "Right of the tree nav on the commit's jobs page: abort every unfinished
+   job of the commit (legacy parity), with a confirmation."
+  []
+  (when (= :project-jobs (:name @state/routing*))
+    (let [n (count (unfinished-jobs))]
+      (when (pos? n)
+        [:button.btn.btn-sm.btn-outline-danger.abort-all
+         {:type "button"
+          :title "Abort every unfinished job of this commit: pending trials are aborted, running ones killed"
+          :on-click #(when (js/confirm (str "Abort all " n " unfinished job" (when (not= 1 n) "s")
+                                            " of this commit? Running trials are killed."))
+                       (abort-all!))}
+         [icons/stop] (str " Abort all (" n ")")]))))
+
 (defn- jobs-list-page []
   [:div.page.jobs
    [state/hidden-routing-state-component :did-change #(fetch-data)]
@@ -1067,4 +1092,4 @@
     [:div "Unknown route"]))
 
 
-(def components {:page page})
+(def components {:page page :page-nav page-nav})

@@ -40,6 +40,8 @@
                      :auth-http-unsafe #{:user}}]
      ["/blob/*blob-path" {:name :project-blob
                           :auth-http-safe #{:user}}]
+     ["/jobs-abort-all" {:name :project-jobs-abort-all
+                         :auth-http-unsafe #{:user}}]
      ["/jobs"
       ["" {:name :project-jobs
            :auth-http-safe #{:user}

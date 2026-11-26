@@ -67,6 +67,7 @@
    :admin-settings-push-statuses #'admin-settings/handler
    :project-push-notification #'project-push-notification/handler
    :project-git   #'project-git/http-handler
+   :project-jobs-abort-all #'project-jobs/handler
    :project-jobs            #'project-jobs/handler
    :project-job             #'project-jobs/handler
    :project-job-abort       #'project-jobs/handler

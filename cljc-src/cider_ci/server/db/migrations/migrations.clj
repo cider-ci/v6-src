@@ -84,6 +84,8 @@
         :down (partial exec-resource-sql! "migrations/00040_github_status_context_down.sql")}
     41 {:up (partial exec-resource-sql! "migrations/00041_status_push_repost_up.sql")
         :down (partial exec-resource-sql! "migrations/00041_status_push_repost_down.sql")}
+    42 {:up (partial exec-resource-sql! "migrations/00042_jobs_abort_reason_up.sql")
+        :down (partial exec-resource-sql! "migrations/00042_jobs_abort_reason_down.sql")}
     ))
 
 (defn available []

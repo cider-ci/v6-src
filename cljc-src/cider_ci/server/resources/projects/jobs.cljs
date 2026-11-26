@@ -902,6 +902,8 @@
        [:<>
         (breadcrumbs/label! :job-id (job-id) (:key job))
         [:h3 (:name job) " " [state-badge (:state job)]]
+  (when-let [reason (:abort_reason job)]
+    [:p.text-muted.abort-reason "aborted by the server: " reason])
         [job-times-line job]
         [job-progress-bar (:tasks job)]
         [trial-fail-rate (:tasks job)]

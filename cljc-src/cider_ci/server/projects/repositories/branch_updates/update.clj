@@ -10,6 +10,7 @@
    [cider-ci.server.projects.repositories.branch-updates.shared :refer :all]
    [cider-ci.server.projects.repositories.branches :as branches]
    [cider-ci.server.projects.repositories.git.repositories :as git.repositories]
+   [cider-ci.server.jobs.abort :as abort]
    [cider-ci.server.jobs.auto-trigger :as auto-trigger]
    [cider-ci.server.projects.submodule-resolutions :as submodule-resolutions]
    [cider-ci.server.projects.repositories.shared :refer [repository-fs-path]]
@@ -64,11 +65,17 @@
   (Thread/sleep 1000)
   (jdbc/with-transaction [tx (get-ds)]
     (let [git-branches (get-git-branches path)
-          ;canonic-id (git.repositories/canonic-id repository)
-          ]
-      {:created (branches/create-new tx git-branches (:id repository) path)
-       :updated (branches/update-outdated tx git-branches (:id repository) path)
-       :deleted (delete-removed-branches tx git-branches (:git_url repository))})))
+          ;; commits of unfinished jobs that a head reaches now: whichever of
+          ;; them no head reaches after this update has its jobs aborted
+          candidates   (abort/active-reachable-commits tx (:id repository))
+          result       {:created (branches/create-new tx git-branches (:id repository) path)
+                        :updated (branches/update-outdated tx git-branches (:id repository) path)
+                        :deleted (delete-removed-branches tx git-branches (:git_url repository))}
+          revoked      (abort/revoke-unreachable! tx (:id repository) candidates)]
+      (when (seq revoked)
+        (info "branch update of" (:id repository) ": aborted" (count revoked)
+              "job(s) whose commit is no longer reachable from any branch head"))
+      (assoc result :revoked revoked))))
 
 
 ;### update branches in db ####################################################

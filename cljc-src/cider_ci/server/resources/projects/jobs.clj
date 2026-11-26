@@ -1,6 +1,7 @@
 (ns cider-ci.server.resources.projects.jobs
   (:require
     [cider-ci.server.db.core :refer [get-ds]]
+    [cider-ci.server.jobs.abort :as abort]
     [cider-ci.server.jobs.auto-trigger :as auto-trigger]
     [cider-ci.server.jobs.decompose :as decompose]
     [cider-ci.server.jobs.dependencies :as dependencies]
@@ -230,34 +231,7 @@
                            sql-format)))
       (throw (ex-info "Job not found" {:status 404})))
     (jdbc/with-transaction [tx (get-ds)]
-      ;; Pending trials have no executor — abort them immediately.
-      (jdbc/execute! tx
-        ["UPDATE trials t SET state = 'aborted', finished_at = now(), updated_at = now()
-          FROM tasks tsk WHERE t.task_id = tsk.id AND tsk.job_id = ?
-            AND t.state = 'pending'"
-         job-uuid])
-      ;; Active trials (dispatching/executing) — signal the executor to abort.
-      (jdbc/execute! tx
-        ["UPDATE trials t SET state = 'aborting', updated_at = now()
-          FROM tasks tsk WHERE t.task_id = tsk.id AND tsk.job_id = ?
-            AND t.state IN ('dispatching', 'executing')"
-         job-uuid])
-      ;; Propagate aborting/aborted state up to tasks.
-      (jdbc/execute! tx
-        ["UPDATE tasks
-          SET state = CASE
-            WHEN EXISTS (SELECT 1 FROM trials WHERE task_id = tasks.id AND state = 'aborting')
-            THEN 'aborting'
-            ELSE 'aborted'
-          END,
-          updated_at = now()
-          WHERE job_id = ?
-            AND state NOT IN ('passed', 'failed', 'defective', 'aborted', 'aborting')"
-         job-uuid])
-      (jdbc/execute-one! tx
-        ["UPDATE jobs SET state = 'aborting', updated_at = now()
-          WHERE id = ? AND state NOT IN ('passed', 'failed', 'defective', 'aborted')"
-         job-uuid]))
+      (abort/abort-job! tx job-uuid))
     {:status 200 :body {:status "aborting"}}))
 
 

@@ -45,7 +45,9 @@ feature 'Job and trial timestamps' do
     visit '/jobs/'
     row = find('tr', text: 'Deploy Job', wait: 10)
     created = @created.getlocal.strftime('%Y-%m-%d %H:%M')
-    expect(row.all('.timestamp').map { |s| s[:title] }.join(' ')).to include created
+    titles = row.all('.timestamp').map { |s| s[:title] }
+    expect(titles.join(' ')).to include created
+    expect(titles.first).to match(/\d{2}:\d{2}:\d{2} \S+\z/)   # the browser's zone, e.g. CET or GMT+1
 
     check 'times-absolute'                             # the switch in the filter bar (the footer has one too)
     expect(row).to have_css '.timestamp.absolute', text: created

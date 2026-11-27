@@ -42,10 +42,23 @@
     (let [d (js/Date. v)]
       (when-not (js/isNaN (.getTime d)) d))))
 
+(defn- zone-abbreviation
+  "The browser's zone for d, as its locale names it (CET, MEZ, GMT+1 ...)."
+  [d]
+  (try
+    (some->> (.formatToParts (js/Intl.DateTimeFormat. js/undefined #js {:timeZoneName "short"}) d)
+             (filter #(= "timeZoneName" (.-type %)))
+             first
+             .-value)
+    (catch :default _ nil)))
+
 (defn absolute
-  "Local time, e.g. 2026-11-12 10:00:18."
+  "Local time with the zone, e.g. 2026-11-12 10:00:18 CET: the browser's
+   zone, so two viewers in different zones see different numbers."
   [v]
-  (some-> (date v) (date-fns/format "yyyy-MM-dd HH:mm:ss")))
+  (when-let [d (date v)]
+    (str (date-fns/format d "yyyy-MM-dd HH:mm:ss")
+         (when-let [z (zone-abbreviation d)] (str " " z)))))
 
 (defn relative
   "e.g. '3 minutes ago' or 'in 2 hours'."

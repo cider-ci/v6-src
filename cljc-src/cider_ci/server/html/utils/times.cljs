@@ -3,7 +3,38 @@
    time in the tooltip, and durations."
   (:require
     ["date-fns" :as date-fns]
-    [clojure.string :as str]))
+    [clojure.string :as str]
+    [reagent.core :as reagent]))
+
+
+;;; relative or absolute, the viewer's choice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def ^:private storage-key "cider-ci.times.absolute")
+
+(defn- stored-absolute? []
+  (try (= "true" (.getItem js/localStorage storage-key))
+       (catch :default _ false)))
+
+(defonce absolute?*
+  (reagent/atom (stored-absolute?)))
+
+(defn set-absolute!
+  "Show every timestamp as the absolute local time (the relative one in the
+   tooltip) instead of the other way round; remembered per browser."
+  [on?]
+  (reset! absolute?* (boolean on?))
+  (try (.setItem js/localStorage storage-key (str (boolean on?)))
+       (catch :default _ nil)))
+
+(defn mode-toggle
+  "The checkbox for set-absolute!; id distinguishes several on one page
+   (the footer has one on every page)."
+  [& {:keys [id] :or {id "times-absolute"}}]
+  [:div.form-check.form-check-inline.mb-0.times-mode
+   [:input.form-check-input {:type "checkbox" :id id
+                             :checked @absolute?*
+                             :on-change #(set-absolute! (not @absolute?*))}]
+   [:label.form-check-label.small {:for id} "absolute times"]])
 
 
 (defn- date [v]
@@ -37,10 +68,13 @@
            :else       (str s "s")))))))
 
 (defn stamp
-  "Relative time with the absolute time as tooltip; a dash when unset."
+  "Relative time with the absolute time as tooltip, or the other way round
+   when the viewer switched to absolute times; a dash when unset."
   [v & {:keys [class]}]
   (if-let [a (absolute v)]
-    [:span.timestamp {:class class :title a} (relative v)]
+    (if @absolute?*
+      [:span.timestamp.absolute {:class class :title (relative v)} a]
+      [:span.timestamp {:class class :title a} (relative v)])
     [:span.text-muted "—"]))
 
 (defn stamps-line

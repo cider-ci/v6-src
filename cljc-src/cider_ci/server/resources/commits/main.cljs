@@ -1,5 +1,6 @@
 (ns cider-ci.server.resources.commits.main
   (:require
+   [cider-ci.server.html.utils.times :as times]
     ["date-fns" :as date-fns]
     [cider-ci.server.html.avatar :as avatar]
     [cider-ci.server.html.icons :as icons]
@@ -151,13 +152,7 @@
   (let [short-id   (subs (:id c) 0 7)
         ;; a superseded commit (heads=false) is no branch head: its project
         ;; comes from the branches it is an ancestor of
-        project-id (-> (concat (:branches c) (:ancestor_branches c)) first :repository_id)
-        date-str   (when (:committer_date c)
-                     (try
-                       (date-fns/formatDistanceToNow
-                         (js/Date. (:committer_date c))
-                         #js{:addSuffix true})
-                       (catch js/Error _ (str (:committer_date c)))))]
+        project-id (-> (concat (:branches c) (:ancestor_branches c)) first :repository_id)]
     ^{:key (:id c)}
     [:tr
      [jobs-summary-cell c project-id]
@@ -171,7 +166,7 @@
          (if (> (count s) 72) (str (subs s 0 72) "…") s))]]
      [project-cell (concat (:branches c) (:ancestor_branches c))]
      [author-cell c]
-     [:td [:span.text-muted {:title (str (:committer_date c))} date-str]]
+     [:td.text-muted [times/stamp (:committer_date c)]]
      [:td
       (for [b (:branches c)] [branch-tag b])
       (for [b (:ancestor_branches c)] [ancestor-branch-tag b])]]))

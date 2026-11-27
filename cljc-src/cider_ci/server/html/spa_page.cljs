@@ -1,6 +1,7 @@
 (ns cider-ci.server.html.spa-page
   (:refer-clojure :exclude [keyword str])
   (:require
+   [cider-ci.server.html.utils.times :as times]
    [cider-ci.server.html.breadcrumbs :as breadcrumbs]
    ["react-bootstrap" :as bs]
    [cider-ci.server.html.avatar :as avatar]
@@ -158,6 +159,7 @@
   [:> bs/Navbar {:bg :light}
    [build-info]
    [:> bs/Navbar.Collapse {:class_name "justify-content-end"}]
+   [:div.px-2 [times/mode-toggle :id "times-absolute-footer"]]
    [:> bs/Form {:inline "true" :class "px-2"}
     [:> bs/Form.Group {:control-id "debug"}
      [:> bs/Form.Check {:type "checkbox" :label "Debug"

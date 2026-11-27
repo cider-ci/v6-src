@@ -145,6 +145,9 @@
             :on-click #(apply-filters "" "" "")}
            "Clear"]])
        [:div.col-auto
+        [:label.form-label.small.text-muted " "]
+        [:div [times/mode-toggle]]]
+       [:div.col-auto
         [:label.form-label.small.text-muted " "]
         [:button.btn.btn-sm.btn-outline-secondary
          {:type     "button"

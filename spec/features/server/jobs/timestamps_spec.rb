@@ -39,6 +39,25 @@ feature 'Job and trial timestamps' do
     expect(row).to have_content 'about 2 hours ago'   # finished
   end
 
+  # The precise time: in the tooltip of every relative time, or everywhere
+  # at once with the "absolute times" switch (remembered per browser).
+  scenario 'the precise time is in the tooltip, and the switch shows it everywhere' do
+    visit '/jobs/'
+    row = find('tr', text: 'Deploy Job', wait: 10)
+    created = @created.getlocal.strftime('%Y-%m-%d %H:%M')
+    expect(row.all('.timestamp').map { |s| s[:title] }.join(' ')).to include created
+
+    check 'times-absolute'                             # the switch in the filter bar (the footer has one too)
+    expect(row).to have_css '.timestamp.absolute', text: created
+    expect(row).not_to have_content 'about 3 hours ago'
+    expect(row.find('.timestamp.absolute', text: created)[:title]).to eq 'about 3 hours ago'
+
+    visit '/jobs/'                                     # remembered
+    expect(find('tr', text: 'Deploy Job')).to have_css '.timestamp.absolute', text: created
+    uncheck 'times-absolute-footer'                    # either one flips it
+    expect(find('tr', text: 'Deploy Job')).to have_content 'about 3 hours ago'
+  end
+
   scenario 'the job page shows created and finished, the task page the trials with their times' do
     visit "/projects/#{project_id}/commits/#{commit_id}/jobs/#{@job_id}"
     within('.job-times') do
